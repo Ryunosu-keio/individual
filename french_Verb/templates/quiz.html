@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <title>French Verb Quiz</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #f8f9fa;
+        text-align: center;
+        padding: 30px;
+      }
+
+      #quiz-area {
+        margin-top: 20px;
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        display: inline-block;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        max-width: 600px;
+        width: 100%;
+      }
+
+      input,
+      button {
+        padding: 10px;
+        font-size: 16px;
+      }
+
+      input {
+        width: 80%;
+        margin-top: 15px;
+      }
+
+      .button-row {
+        display: flex;
+        justify-content: center;
+        gap: 15px;
+        flex-wrap: wrap;
+        margin-top: 20px;
+      }
+
+      .bottom-button {
+        margin-top: 20px;
+      }
+
+      .button-row button,
+      .bottom-button button {
+        min-width: 150px;
+        background-color: #3498db;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: opacity 0.15s ease-in-out;
+      }
+
+      .button-row button:hover,
+      .bottom-button button:hover {
+        background-color: #2980b9;
+      }
+
+      #result {
+        margin-top: 20px;
+        font-size: 18px;
+        font-weight: bold;
+      }
+
+      #streak {
+        margin-top: 10px;
+        font-size: 16px;
+        color: #555;
+      }
+
+      #gif {
+        margin-top: 20px;
+        height: 200px;
+        display: none;
+        display: block;
+        margin-left: auto;
+        margin-right: auto;
+      }
+
+      #hintText {
+        display: none;
+        margin-top: 15px;
+        font-size: 14px;
+        color: #666;
+      }
+
+      /* 方法①：重ねるボタン用 */
+      .button-stack {
+        position: relative;
+        width: 150px;
+        height: 42px;
+      }
+
+      .button-stack button {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        top: 0;
+        left: 0;
+      }
+
+      #next-button {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>French Verb Conjugation Quiz</h1>
+
+    <div id="quiz-area">
+      <div id="verb"></div>
+      <div id="subject"></div>
+      <div id="tense"></div>
+
+      <input type="text" id="user-answer" placeholder="ここに活用を書いてね" />
+
+      <div class="button-row">
+        <button onclick="toggleHint()">ヒントを表示</button>
+        <div class="button-stack">
+          <button id="check-button" onclick="checkAnswer()">答え合わせ</button>
+          <button id="next-button" onclick="fetchQuiz()">次の問題</button>
+        </div>
+      </div>
+
+      <div id="result"></div>
+      <div id="streak"></div>
+      <img id="gif" src="" alt="Result GIF" />
+      <div id="hintText"></div>
+
+      <div class="bottom-button">
+        <button onclick="endQuiz()">メニューへ戻る</button>
+      </div>
+    </div>
+
+    <script>
+      let currentStreak = 0;
+      let answered = false;
+
+      function fetchQuiz() {
+        answered = false;
+        document.getElementById("next-button").style.display = "none";
+        document.getElementById("check-button").style.display = "inline-block";
+
+        const mode = sessionStorage.getItem("quiz_mode") || "normal";
+
+        fetch("/quiz", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ tense: "random", mode: mode }),
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.finished) {
+              alert("復習モードの問題はすべて解き終わりました！");
+              sessionStorage.setItem("quiz_mode", "normal");
+              window.location.href = "/";
+              return;
+            }
+
+            document.getElementById("verb").innerText = "動詞: " + data.verb;
+            document.getElementById("subject").innerText =
+              "主語: " + data.subject;
+            document.getElementById("tense").innerText = "時制: " + data.tense;
+            document.getElementById("user-answer").value = "";
+            document.getElementById("result").innerText = "";
+            document.getElementById("streak").innerText =
+              "現在の連続正解数: " + data.streak;
+            document.getElementById("gif").style.display = "none";
+            document.getElementById("hintText").style.display = "none";
+            document.getElementById("hintText").innerText =
+              "💡 ヒント: " + data.hint;
+            currentStreak = data.streak;
+          })
+          .catch((error) => console.error("Error:", error));
+      }
+
+      function checkAnswer() {
+        if (answered) return;
+        answered = true;
+        document.getElementById("check-button").style.display = "none";
+        document.getElementById("next-button").style.display = "inline-block";
+
+        const userAnswer = document.getElementById("user-answer").value.trim();
+
+        fetch("/answer", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ user_answer: userAnswer }),
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            const resultElement = document.getElementById("result");
+            const gifElement = document.getElementById("gif");
+
+            if (data.correct) {
+              resultElement.innerText = "✅ 正解！";
+              resultElement.style.color = "green";
+              gifElement.src = "/static/correct.gif";
+            } else {
+              resultElement.innerText =
+                "❌ 不正解！正解は: " + data.correct_answer;
+              resultElement.style.color = "red";
+              gifElement.src = "/static/incorrect.gif";
+            }
+
+            gifElement.style.display = "block";
+            document.getElementById("streak").innerText =
+              "現在の連続正解数: " + data.streak;
+          })
+          .catch((error) => console.error("Error:", error));
+      }
+
+      function toggleHint() {
+        const hintText = document.getElementById("hintText");
+        hintText.style.display =
+          hintText.style.display === "none" ? "block" : "none";
+      }
+
+      function endQuiz() {
+        window.location.href = "/";
+      }
+
+      window.onload = fetchQuiz;
+
+      document
+        .getElementById("user-answer")
+        .addEventListener("keydown", function (event) {
+          if (event.key === "Enter") {
+            event.preventDefault();
+
+            if (!answered) {
+              checkAnswer();
+            } else {
+              fetchQuiz();
+            }
+          }
+        });
+    </script>
+  </body>
+</html>

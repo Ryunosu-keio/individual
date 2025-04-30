@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <title>French Verb Quiz - メニュー</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #f0f0f0;
+        text-align: center;
+        padding: 50px;
+      }
+      h1 {
+        font-size: 2.2em;
+        margin-bottom: 40px;
+      }
+      .button {
+        margin: 15px;
+        padding: 15px 30px;
+        font-size: 18px;
+        background-color: #3498db;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        display: block;
+        width: 280px;
+        margin-left: auto;
+        margin-right: auto;
+      }
+      .button:hover {
+        background-color: #2980b9;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>French Verb Quiz - メニュー</h1>
+
+    <button class="button" onclick="startQuiz('normal')">
+      ▶ 通常モードで開始
+    </button>
+
+    <button class="button" id="review-button" onclick="startQuiz('review')">
+      🔁 間違えた問題を復習
+    </button>
+
+    <button class="button" onclick="resetQuiz()">❌ リセットして終了</button>
+
+    <script>
+      function startQuiz(mode) {
+        // 選択したモードを保存してクイズ画面へ
+        sessionStorage.setItem("quiz_mode", mode);
+        window.location.href = "/quizpage";
+      }
+
+      function resetQuiz() {
+        // 完全リセットしてメニュー画面をリロード
+        fetch("/reset")
+          .then(() => {
+            sessionStorage.clear();
+            window.location.href = "/";
+          })
+          .catch((error) => console.error("Error:", error));
+      }
+
+      window.onload = function () {
+        fetch("/wrongcount")
+          .then((response) => response.json())
+          .then((data) => {
+            const count = data.count || 0;
+            const button = document.getElementById("review-button");
+            if (count > 0) {
+              button.textContent = `🔁 間違えた問題を復習 (${count})`;
+            } else {
+              button.textContent = "🔁 間違えた問題を復習";
+            }
+          })
+          .catch((error) => {
+            console.error("復習数の取得に失敗しました:", error);
+          });
+      };
+    </script>
+  </body>
+</html>
