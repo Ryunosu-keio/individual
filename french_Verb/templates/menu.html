@@ -2,13 +2,13 @@
 <html lang="ja">
   <head>
     <meta charset="UTF-8" />
-    <title>French Verb Quiz - メニュー</title>
+    <title>French Verb Quiz</title>
     <style>
       body {
         font-family: Arial, sans-serif;
         background-color: #f0f0f0;
         text-align: center;
-        padding: 50px;
+        padding: 0px;
       }
       h1 {
         font-size: 2.2em;
@@ -31,11 +31,73 @@
       .button:hover {
         background-color: #2980b9;
       }
+
+      select {
+        padding: 10px;
+        font-size: 16px;
+        margin-bottom: 50px;
+      }
     </style>
   </head>
   <body>
-    <h1>French Verb Quiz - メニュー</h1>
+    <h1>French Verb Conjugation Quiz</h1>
 
+    <!-- ✅ 追加：出題する時制の選択欄（複数選択可） -->
+    <h3>出題する時制を選んでください（複数可）</h3>
+    <div
+      id="tense-options"
+      style="
+        display: flex;
+        justify-content: center;
+        gap: 40px;
+        margin-bottom: 20px;
+        text-align: left;
+      "
+    >
+      <div>
+        <label><input type="checkbox" value="ALL" checked /> すべて</label
+        ><br />
+        <label
+          ><input type="checkbox" value="présent" /> 現在形（présent）</label
+        ><br />
+        <label
+          ><input type="checkbox" value="futur simple" /> 単純未来（futur
+          simple）</label
+        ><br />
+        <label
+          ><input type="checkbox" value="imparfait" />
+          半過去（imparfait）</label
+        ><br />
+        <label
+          ><input type="checkbox" value="passé composé" /> 複合過去（passé
+          composé）</label
+        ><br />
+      </div>
+      <div>
+        <label
+          ><input type="checkbox" value="impératif" />
+          命令形（impératif）</label
+        ><br />
+        <label
+          ><input type="checkbox" value="subjonctif_présent" />
+          接続法現在（subjonctif présent）</label
+        ><br />
+        <label
+          ><input type="checkbox" value="subjonctif_passé" />
+          接続法過去（subjonctif passé）</label
+        ><br />
+        <label
+          ><input type="checkbox" value="conditionnel_présent" />
+          条件法現在（conditionnel présent）</label
+        ><br />
+        <label
+          ><input type="checkbox" value="conditionnel_passé" />
+          条件法過去（conditionnel passé）</label
+        ><br />
+      </div>
+    </div>
+
+    <!-- 元のボタン群 -->
     <button class="button" onclick="startQuiz('normal')">
       ▶ 通常モードで開始
     </button>
@@ -44,17 +106,64 @@
       🔁 間違えた問題を復習
     </button>
 
-    <button class="button" onclick="resetQuiz()">❌ リセットして終了</button>
+    <button class="button" onclick="resetQuiz()">❌ 解答状況をリセット</button>
+
+    <!-- ✅ GIF画像を中央に表示 -->
+    <div style="margin-top: 30px">
+      <img
+        src="/static/menu.gif"
+        alt="menuGIF"
+        style="height: 200px; display: block; margin: 0 auto"
+      />
+    </div>
 
     <script>
+      // チェックボックスの排他処理
+      window.addEventListener("DOMContentLoaded", function () {
+        const checkboxes = document.querySelectorAll(
+          "#tense-options input[type='checkbox']"
+        );
+        const allBox = document.querySelector(
+          "#tense-options input[value='ALL']"
+        );
+
+        checkboxes.forEach((box) => {
+          box.addEventListener("change", () => {
+            if (box.value === "ALL" && box.checked) {
+              // 「すべて」がチェックされたら他を全部外す
+              checkboxes.forEach((cb) => {
+                if (cb !== box) cb.checked = false;
+              });
+            } else if (box.value !== "ALL" && box.checked) {
+              // 他が1つでもチェックされたら「すべて」を外す
+              allBox.checked = false;
+            } else {
+              // 何もチェックされていなければ「すべて」を戻す
+              const anyChecked = Array.from(checkboxes).some(
+                (cb) => cb.checked && cb.value !== "ALL"
+              );
+              if (!anyChecked) allBox.checked = true;
+            }
+          });
+        });
+      });
+
       function startQuiz(mode) {
-        // 選択したモードを保存してクイズ画面へ
+        const checkboxes = document.querySelectorAll(
+          "#tense-options input[type='checkbox']"
+        );
+        const selected = Array.from(checkboxes)
+          .filter((cb) => cb.checked)
+          .map((cb) => cb.value);
+
+        const tenseList = selected.includes("ALL") ? ["ALL"] : selected;
+
         sessionStorage.setItem("quiz_mode", mode);
+        sessionStorage.setItem("selected_tenses", JSON.stringify(tenseList));
         window.location.href = "/quizpage";
       }
 
       function resetQuiz() {
-        // 完全リセットしてメニュー画面をリロード
         fetch("/reset")
           .then(() => {
             sessionStorage.clear();
@@ -69,11 +178,10 @@
           .then((data) => {
             const count = data.count || 0;
             const button = document.getElementById("review-button");
-            if (count > 0) {
-              button.textContent = `🔁 間違えた問題を復習 (${count})`;
-            } else {
-              button.textContent = "🔁 間違えた問題を復習";
-            }
+            button.textContent =
+              count > 0
+                ? `🔁 間違えた問題を復習 (${count})`
+                : "🔁 間違えた問題を復習";
           })
           .catch((error) => {
             console.error("復習数の取得に失敗しました:", error);

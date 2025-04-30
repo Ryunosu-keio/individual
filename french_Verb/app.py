@@ -23,16 +23,12 @@ HINTS = {
 def get_conjugation(df, subject, tense):
     return df.loc[subject, tense]
 
-def select_tense(selected_tense):
-    if selected_tense == "random":
-        tenses = list(HINTS.keys())
-        selected_tense = random.choice(tenses)
-    return selected_tense
-
 @app.route('/quiz', methods=['POST'])
 def quiz_endpoint():
     mode = request.json.get('mode', 'normal')
-    selected_tense = request.json.get('tense', 'random')
+
+    # ✅ 追加：複数時制を受け取る（リスト形式）
+    tenses = request.json.get('tenses', [])
 
     if 'wrong_list' not in session:
         session['wrong_list'] = []
@@ -45,11 +41,17 @@ def quiz_endpoint():
         df = pd.read_csv(f"french_Verb/verbs/csv/{verb}.csv", index_col=0)
         conjugation = get_conjugation(df, subject, tense)
     else:
+        # ✅ 空 or "ALL" の場合は全時制を使う
+        if not tenses or "ALL" in tenses:
+            possible_tenses = list(HINTS.keys())
+        else:
+            possible_tenses = [t for t in tenses if t in HINTS]
+
         files = glob.glob("french_Verb/verbs/csv/*.csv")
         selected_file = random.choice(files)
         verb = os.path.basename(selected_file).replace(".csv", "")
         df = pd.read_csv(selected_file, index_col=0)
-        tense = select_tense(selected_tense)
+        tense = random.choice(possible_tenses)
 
         subjects = df.index.tolist()
         while True:
@@ -107,10 +109,9 @@ def show_quiz_page():
 
 @app.route('/wrongcount')
 def wrongcount():
-    # セッションなどに保存された間違いリストの数を返す
-    wrong_list = session.get("wrong_", [])
+    # ✅ 修正：セッションキーのタイプミス修正
+    wrong_list = session.get("wrong_list", [])
     return jsonify({"count": len(wrong_list)})
-
 
 @app.route('/reset')
 def reset_quiz():
