@@ -26,12 +26,15 @@ def get_conjugation(df, subject, tense):
 @app.route('/quiz', methods=['POST'])
 def quiz_endpoint():
     mode = request.json.get('mode', 'normal')
-
-    # ✅ 追加：複数時制を受け取る（リスト形式）
     tenses = request.json.get('tenses', [])
 
     if 'wrong_list' not in session:
         session['wrong_list'] = []
+
+    if not tenses or "ALL" in tenses:
+        possible_tenses = list(HINTS.keys())
+    else:
+        possible_tenses = [t for t in tenses if t in HINTS]
 
     if mode == 'review':
         if not session['wrong_list']:
@@ -40,13 +43,46 @@ def quiz_endpoint():
         verb, subject, tense = entry['verb'], entry['subject'], entry['tense']
         df = pd.read_csv(f"french_Verb/verbs/csv/{verb}.csv", index_col=0)
         conjugation = get_conjugation(df, subject, tense)
-    else:
-        # ✅ 空 or "ALL" の場合は全時制を使う
-        if not tenses or "ALL" in tenses:
-            possible_tenses = list(HINTS.keys())
-        else:
-            possible_tenses = [t for t in tenses if t in HINTS]
 
+    elif mode == 'by_subject':
+        subjects = ["je", "tu", "il", "elle", "nous", "vous", "ils", "elles"]
+        index = session.get('subject_index', 0)
+        verb = session.get('current_verb')
+        tense = session.get('current_tense')
+
+        if not verb or not tense:
+            files = glob.glob("french_Verb/verbs/csv/*.csv")
+            selected_file = random.choice(files)
+            verb = os.path.basename(selected_file).replace(".csv", "")
+            tense = random.choice(possible_tenses)
+            session['current_verb'] = verb
+            session['current_tense'] = tense
+            index = 0
+
+        subject = subjects[index]
+        df = pd.read_csv(f"french_Verb/verbs/csv/{verb}.csv", index_col=0)
+        conjugation = get_conjugation(df, subject, tense)
+
+        session['subject_index'] = index + 1
+        if index + 1 >= len(subjects):
+            session.pop('current_verb', None)
+            session.pop('subject_index', None)
+
+        session['answer'] = conjugation
+        session['verb'] = verb
+        session['subject'] = subject
+        session['tense'] = tense
+
+        return jsonify({
+            "verb": verb,
+            "subject": subject,
+            "tense": tense,
+            "conjugation": "",
+            "hint": HINTS.get(tense, "ヒントはありません"),
+            "streak": session.get('streak', 0)
+        })
+
+    else:
         files = glob.glob("french_Verb/verbs/csv/*.csv")
         selected_file = random.choice(files)
         verb = os.path.basename(selected_file).replace(".csv", "")
@@ -109,7 +145,6 @@ def show_quiz_page():
 
 @app.route('/wrongcount')
 def wrongcount():
-    # ✅ 修正：セッションキーのタイプミス修正
     wrong_list = session.get("wrong_list", [])
     return jsonify({"count": len(wrong_list)})
 
