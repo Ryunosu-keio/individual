@@ -148,10 +148,18 @@
 
         const mode = sessionStorage.getItem("quiz_mode") || "normal";
 
+        // ✅ 追加：複数時制を読み取って送信
+        const selectedTenses = JSON.parse(
+          sessionStorage.getItem("selected_tenses") || "[]"
+        );
+
         fetch("/quiz", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ tense: "random", mode: mode }),
+          body: JSON.stringify({
+            mode: mode,
+            tenses: selectedTenses, // ✅ 複数時制をここに含める（`tense`ではなく）
+          }),
         })
           .then((response) => response.json())
           .then((data) => {
