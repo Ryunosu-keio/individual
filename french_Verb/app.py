@@ -10,7 +10,7 @@ app.secret_key = 'your_secret_key_here'  # セッション使用のために必�
 # ヒント辞書（時制 → 説明）
 HINTS = {
     "présent": "主語に応じた現在形の語尾",
-    "futur simple": "原形（または未来の語幹）＋未来形の語尾",
+    "futur simple": "原形（または未来の語幹）＋未来形の語尾  le futur simple se construit toujours à partir d’un seul et même radical (base) pour les six personnes",
     "imparfait": "直説法現在の1人称複数形の語幹＋半過去の語尾",
     "passé composé": "avoir または être ＋ 過去分詞",
     "impératif": "命令の主語に対応した語尾",
@@ -58,6 +58,7 @@ def quiz_endpoint():
             session['current_verb'] = verb
             session['current_tense'] = tense
             index = 0
+            # session['subject_index'] = 0
 
         subject = subjects[index]
         df = pd.read_csv(f"french_Verb/verbs/csv/{verb}.csv", index_col=0)
@@ -66,6 +67,7 @@ def quiz_endpoint():
         session['subject_index'] = index + 1
         if index + 1 >= len(subjects):
             session.pop('current_verb', None)
+            
             session.pop('subject_index', None)
 
         session['answer'] = conjugation
