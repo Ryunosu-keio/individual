@@ -121,6 +121,12 @@
 
       <div class="button-row">
         <button onclick="toggleHint()">ヒントを表示</button>
+
+        <!-- ★ 追加：動詞スキップボタン（デフォルト非表示） -->
+        <button id="skip-button" style="display: none" onclick="skipVerb()">
+          この動詞をスキップ
+        </button>
+
         <div class="button-stack">
           <button id="check-button" onclick="checkAnswer()">答え合わせ</button>
           <button id="next-button" onclick="fetchQuiz()">次の問題</button>
@@ -138,17 +144,19 @@
     </div>
 
     <script>
-      let currentStreak = 0;
       let answered = false;
 
+      /* ------------------- 問題取得 ------------------- */
       function fetchQuiz() {
         answered = false;
         document.getElementById("next-button").style.display = "none";
         document.getElementById("check-button").style.display = "inline-block";
 
         const mode = sessionStorage.getItem("quiz_mode") || "normal";
+        /* ★ モード判定でスキップボタン表示切替 */
+        document.getElementById("skip-button").style.display =
+          mode === "by_subject" ? "inline-block" : "none";
 
-        // ✅ 追加：複数時制を読み取って送信
         const selectedTenses = JSON.parse(
           sessionStorage.getItem("selected_tenses") || "[]"
         );
@@ -156,20 +164,16 @@
         fetch("/quiz", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            mode: mode,
-            tenses: selectedTenses, // ✅ 複数時制をここに含める（`tense`ではなく）
-          }),
+          body: JSON.stringify({ mode: mode, tenses: selectedTenses }),
         })
-          .then((response) => response.json())
+          .then((r) => r.json())
           .then((data) => {
             if (data.finished) {
               alert("復習モードの問題はすべて解き終わりました！");
               sessionStorage.setItem("quiz_mode", "normal");
-              window.location.href = "/";
+              location.href = "/";
               return;
             }
-
             document.getElementById("verb").innerText = "動詞: " + data.verb;
             document.getElementById("subject").innerText =
               "主語: " + data.subject;
@@ -179,14 +183,29 @@
             document.getElementById("streak").innerText =
               "現在の連続正解数: " + data.streak;
             document.getElementById("gif").style.display = "none";
-            document.getElementById("hintText").style.display = "none";
-            document.getElementById("hintText").innerText =
-              "💡 ヒント: " + data.hint;
-            currentStreak = data.streak;
+            const hint = document.getElementById("hintText");
+            hint.style.display = "none";
+            hint.innerText = "💡 ヒント: " + data.hint;
           })
-          .catch((error) => console.error("Error:", error));
+          .catch((err) => console.error(err));
       }
 
+      /* ------------------- 動詞をスキップ ------------------- */
+      function skipVerb() {
+        const selectedTenses = JSON.parse(
+          sessionStorage.getItem("selected_tenses") || "[]"
+        );
+
+        fetch("/skipverb", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ tenses: selectedTenses }), // ★ ここ大事
+        })
+          .then(() => fetchQuiz())
+          .catch((err) => console.error("skip error", err));
+      }
+
+      /* ------------------- 答え合わせ ------------------- */
       function checkAnswer() {
         if (answered) return;
         answered = true;
@@ -200,54 +219,46 @@
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ user_answer: userAnswer }),
         })
-          .then((response) => response.json())
+          .then((r) => r.json())
           .then((data) => {
-            const resultElement = document.getElementById("result");
-            const gifElement = document.getElementById("gif");
-
+            const res = document.getElementById("result");
+            const gif = document.getElementById("gif");
             if (data.correct) {
-              resultElement.innerText = "✅ 正解！";
-              resultElement.style.color = "green";
-              gifElement.src = "/static/correct.gif";
+              res.innerText = "✅ 正解！";
+              res.style.color = "green";
+              gif.src = "/static/correct.gif";
             } else {
-              resultElement.innerText =
-                "❌ 不正解！正解は: " + data.correct_answer;
-              resultElement.style.color = "red";
-              gifElement.src = "/static/incorrect.gif";
+              res.innerText = `❌ 不正解！正解は: ${data.correct_answer}`;
+              res.style.color = "red";
+              gif.src = "/static/incorrect.gif";
             }
-
-            gifElement.style.display = "block";
+            gif.style.display = "block";
             document.getElementById("streak").innerText =
               "現在の連続正解数: " + data.streak;
           })
-          .catch((error) => console.error("Error:", error));
+          .catch((err) => console.error(err));
       }
 
+      /* ------------------- その他 ------------------- */
       function toggleHint() {
-        const hintText = document.getElementById("hintText");
-        hintText.style.display =
-          hintText.style.display === "none" ? "block" : "none";
+        const h = document.getElementById("hintText");
+        h.style.display = h.style.display === "none" ? "block" : "none";
       }
-
       function endQuiz() {
-        window.location.href = "/";
+        location.href = "/";
       }
 
-      window.onload = fetchQuiz;
-
+      /* Enter キー挙動 */
       document
         .getElementById("user-answer")
-        .addEventListener("keydown", function (event) {
-          if (event.key === "Enter") {
-            event.preventDefault();
-
-            if (!answered) {
-              checkAnswer();
-            } else {
-              fetchQuiz();
-            }
+        .addEventListener("keydown", (e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            !answered ? checkAnswer() : fetchQuiz();
           }
         });
+
+      window.onload = fetchQuiz;
     </script>
   </body>
 </html>
