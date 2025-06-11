@@ -7,3 +7,4 @@ DrissionPage
 gunicorn>=22.0
 Flask>=3.0
 pandas>=2.2
+seaborn>=0.12
