@@ -6,6 +6,10 @@ certifi==2021.10.8
 DrissionPage
 gunicorn>=22.0
 Flask>=3.0
+<<<<<<< HEAD
 pandas>=2.2
 seaborn>=0.12
 
+=======
+pandas>=2.2
+>>>>>>> 4f2b6f2 (fix: add Flask & gunicorn back)
