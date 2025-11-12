@@ -1,264 +1,425 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="ja">
   <head>
     <meta charset="UTF-8" />
-    <title>French Verb Quiz</title>
+    <title>Quiz</title>
     <style>
+      :root {
+        --maxw: 780px;
+        --card-bg: #fff;
+        --card-br: 12px;
+        --border: #e5e7eb;
+        --text: #111827;
+        --muted: #6b7280;
+        --primary: #2563eb;
+        --primary-hover: #1d4ed8;
+        --ok: #16a34a;
+        --ng: #dc2626;
+        --hint-bg: #fff7ed;
+        --hint-bd: #fed7aa;
+        --hint-fg: #7c2d12;
+      }
+      * {
+        box-sizing: border-box;
+      }
       body {
-        font-family: Arial, sans-serif;
-        background-color: #f8f9fa;
-        text-align: center;
-        padding: 30px;
-      }
-
-      #quiz-area {
-        margin-top: 20px;
-        background: white;
+        font-family: system-ui, -apple-system, Segoe UI, Roboto,
+          "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, sans-serif;
+        background: #f3f4f6;
+        color: var(--text);
+        margin: 0;
         padding: 20px;
-        border-radius: 8px;
-        display: inline-block;
-        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-        max-width: 600px;
-        width: 100%;
-      }
-
-      input,
-      button {
-        padding: 10px;
-        font-size: 16px;
-      }
-
-      input {
-        width: 80%;
-        margin-top: 15px;
-      }
-
-      .button-row {
         display: flex;
         justify-content: center;
-        gap: 15px;
-        flex-wrap: wrap;
-        margin-top: 20px;
       }
-
-      .bottom-button {
-        margin-top: 20px;
-      }
-
-      .button-row button,
-      .bottom-button button {
-        min-width: 150px;
-        background-color: #3498db;
-        color: white;
-        border: none;
-        border-radius: 5px;
-        cursor: pointer;
-        transition: opacity 0.15s ease-in-out;
-      }
-
-      .button-row button:hover,
-      .bottom-button button:hover {
-        background-color: #2980b9;
-      }
-
-      #result {
-        margin-top: 20px;
-        font-size: 18px;
-        font-weight: bold;
-      }
-
-      #streak {
-        margin-top: 10px;
-        font-size: 16px;
-        color: #555;
-      }
-
-      #gif {
-        margin-top: 20px;
-        height: 200px;
-        display: none;
-        display: block;
-        margin-left: auto;
-        margin-right: auto;
-      }
-
-      #hintText {
-        display: none;
-        margin-top: 15px;
-        font-size: 14px;
-        color: #666;
-      }
-
-      /* 方法①：重ねるボタン用 */
-      .button-stack {
-        position: relative;
-        width: 150px;
-        height: 42px;
-      }
-
-      .button-stack button {
-        position: absolute;
+      .wrap {
         width: 100%;
-        height: 100%;
-        top: 0;
-        left: 0;
+        max-width: var(--maxw);
+      }
+      .topbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 14px;
+        color: var(--muted);
+      }
+      .topbar a {
+        color: var(--muted);
+        text-decoration: none;
       }
 
-      #next-button {
+      .card {
+        background: var(--card-bg);
+        border: 1px solid var(--border);
+        border-radius: var(--card-br);
+        padding: 18px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+      }
+      .headline {
+        display: flex;
+        gap: 8px;
+        align-items: baseline;
+        flex-wrap: wrap;
+      }
+      .langTag {
+        font-size: 13px;
+        color: #374151;
+        background: #eef2ff;
+        padding: 2px 8px;
+        border-radius: 999px;
+      }
+      .verb {
+        font-weight: 700;
+        font-size: 22px;
+      }
+      .tense {
+        font-size: 18px;
+        color: var(--muted);
+      }
+      .sub {
+        margin-top: 6px;
+      }
+
+      .row {
+        display: flex;
+        gap: 10px;
+        margin-top: 14px;
+      }
+      input[type="text"] {
+        flex: 1 1 auto;
+        padding: 12px 14px;
+        font-size: 18px;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        outline: none;
+        background: #fff;
+      }
+      input[type="text"]:focus {
+        border-color: #93c5fd;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+      }
+      button {
+        padding: 12px 16px;
+        font-size: 16px;
+        border: none;
+        border-radius: 10px;
+        cursor: pointer;
+      }
+      .primary {
+        background: var(--primary);
+        color: #fff;
+      }
+      .primary:hover {
+        background: var(--primary-hover);
+      }
+      .ghost {
+        background: #eef2f7;
+        color: #111;
+      }
+      .ghost:hover {
+        background: #e5eaf2;
+      }
+
+      /* 解答欄の左下に置くヒントトグル */
+      .hint-bar {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-top: 6px;
+      }
+      .hint-toggle-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: #eef2ff;
+        color: #3730a3;
+        border: 1px solid #c7d2fe;
+        padding: 6px 10px;
+        border-radius: 999px;
+        cursor: pointer;
+        font-size: 12px;
+        user-select: none;
+      }
+      .hint-toggle-btn input {
+        margin: 0;
+      }
+      .kbd {
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        background: #f3f4f6;
+        border: 1px solid #e5e7eb;
+        border-bottom-width: 2px;
+        border-radius: 6px;
+        padding: 0 6px;
+        font-size: 11px;
+        color: #374151;
+      }
+
+      /* 回答欄の “下” に大きめで読みやすいヒントパネル */
+      .hint-panel {
+        margin-top: 10px;
+        padding: 14px 16px;
+        background: var(--hint-bg);
+        border: 1px solid var(--hint-bd);
+        border-radius: 10px;
+        color: var(--hint-fg);
+        line-height: 1.6;
+      }
+      .hint-panel.hidden {
         display: none;
+      }
+      .hint-title {
+        font-weight: 700;
+        margin-bottom: 6px;
+      }
+      .hint-text {
+        font-size: 16px;
+      }
+
+      /* 結果表示（採点後は中央・大きめGIF） */
+      .result {
+        margin-top: 14px;
+        display: grid;
+        grid-template-columns: 56px 1fr;
+        gap: 12px;
+        align-items: center;
+        min-height: 56px;
+        transition: all 0.15s ease;
+      }
+      .result img {
+        width: 56px;
+        height: 56px;
+        display: none;
+        object-fit: contain; /* 比率保持の保険 */
+      }
+      .result.ok .txt {
+        color: var(--ok);
+      }
+      .result.ng .txt {
+        color: var(--ng);
+      }
+      .result .txt {
+        font-size: 16px;
+      }
+
+      .result.show {
+        grid-template-columns: 1fr;
+        justify-items: center;
+        text-align: center;
+        padding: 6px 0;
+      }
+      .result.show img {
+        display: block;
+        max-width: 160px;
+        max-height: 160px;
+        width: auto;
+        height: auto; /* アスペクト比保持 */
+      }
+      .result.show .txt {
+        margin-top: 6px;
+        font-size: 18px;
+      }
+
+      .streak {
+        margin-top: 10px;
+        color: var(--muted);
       }
     </style>
   </head>
   <body>
-    <h1>French Verb Conjugation Quiz</h1>
-
-    <div id="quiz-area">
-      <div id="verb"></div>
-      <div id="subject"></div>
-      <div id="tense"></div>
-
-      <input type="text" id="user-answer" placeholder="ここに活用を書いてね" />
-
-      <div class="button-row">
-        <button onclick="toggleHint()">ヒントを表示</button>
-
-        <!-- ★ 追加：動詞スキップボタン（デフォルト非表示） -->
-        <button id="skip-button" style="display: none" onclick="skipVerb()">
-          この動詞をスキップ
-        </button>
-
-        <div class="button-stack">
-          <button id="check-button" onclick="checkAnswer()">答え合わせ</button>
-          <button id="next-button" onclick="fetchQuiz()">次の問題</button>
-        </div>
+    <div class="wrap">
+      <div class="topbar">
+        <a href="/">← メニューへ戻る</a>
       </div>
 
-      <div id="result"></div>
-      <div id="streak"></div>
-      <img id="gif" src="" alt="Result GIF" />
-      <div id="hintText"></div>
+      <div class="card">
+        <div class="headline">
+          <span class="langTag" id="langTag">fr</span>
+          <div class="verb" id="verb">—</div>
+          <div class="tense">/ <span id="tense">—</span></div>
+        </div>
+        <div class="sub">主語：<b id="subject">—</b></div>
 
-      <div class="bottom-button">
-        <button onclick="endQuiz()">メニューへ戻る</button>
+        <div class="row">
+          <input id="answer" type="text" placeholder="解答を入力して Enter" />
+          <button class="primary" id="sendBtn">送信</button>
+        </div>
+
+        <!-- 解答欄の左下：ヒントトグル -->
+        <div class="hint-bar">
+          <label class="hint-toggle-btn" title="ヒントの表示/非表示（F1）">
+            <input id="hintToggle" type="checkbox" />
+            ヒントを表示 <span class="kbd">F1</span>
+          </label>
+        </div>
+
+        <!-- ✅ 回答欄 “より下のスペース” に大きめで見やすいヒント -->
+        <div id="hintPanel" class="hint-panel hidden" aria-live="polite">
+          <div class="hint-title">ヒント</div>
+          <div id="hintText" class="hint-text">—</div>
+        </div>
+
+        <!-- 結果（テキスト＋GIF） -->
+        <div id="result" class="result">
+          <img id="statusImg" alt="status" />
+          <div id="statusTxt" class="txt"></div>
+        </div>
+
+        <div class="row">
+          <button class="ghost" id="nextBtn">次の問題</button>
+          <button class="ghost" id="skipBtn">この動詞をスキップ</button>
+        </div>
+
+        <div class="streak">Streak: <span id="streak">0</span></div>
       </div>
     </div>
 
     <script>
-      let answered = false;
+      // Flask static
+      const IMG_OK = "{{ url_for('static', filename='correct.gif') }}";
+      const IMG_NG = "{{ url_for('static', filename='incorrect.gif') }}";
 
-      /* ------------------- 問題取得 ------------------- */
-      function fetchQuiz() {
-        answered = false;
-        document.getElementById("next-button").style.display = "none";
-        document.getElementById("check-button").style.display = "inline-block";
+      let canAdvance = false; // 採点後に Enter で次へ
 
+      function applyHintVisibility() {
+        const on = sessionStorage.getItem("show_hint") === "1";
+        document.getElementById("hintToggle").checked = on;
+        document.getElementById("hintPanel").classList.toggle("hidden", !on);
+      }
+
+      function render(q) {
+        document.getElementById("langTag").textContent = q.lang || "fr";
+        document.getElementById("verb").textContent = q.verb || "—";
+        document.getElementById("tense").textContent = q.tense || "—";
+        document.getElementById("subject").textContent = q.subject || "—";
+        document.getElementById("streak").textContent = q.streak ?? 0;
+
+        // ヒント本文はパネルに表示
+        document.getElementById("hintText").textContent = q.hint || "—";
+        applyHintVisibility();
+
+        // 結果リセット
+        const res = document.getElementById("result");
+        res.className = "result";
+        document.getElementById("statusTxt").textContent = "";
+        const img = document.getElementById("statusImg");
+        img.src = "";
+        img.style.display = "none";
+
+        // 入力初期化
+        const ans = document.getElementById("answer");
+        ans.value = "";
+        ans.focus();
+        canAdvance = false;
+      }
+
+      async function fetchQuiz() {
         const mode = sessionStorage.getItem("quiz_mode") || "normal";
-        /* ★ モード判定でスキップボタン表示切替 */
-        document.getElementById("skip-button").style.display =
-          mode === "by_subject" ? "inline-block" : "none";
-
-        const selectedTenses = JSON.parse(
+        const tenses = JSON.parse(
           sessionStorage.getItem("selected_tenses") || "[]"
         );
+        const lang = sessionStorage.getItem("quiz_lang") || "fr";
 
-        fetch("/quiz", {
+        const res = await fetch("/quiz", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ mode: mode, tenses: selectedTenses }),
-        })
-          .then((r) => r.json())
-          .then((data) => {
-            if (data.finished) {
-              alert("復習モードの問題はすべて解き終わりました！");
-              sessionStorage.setItem("quiz_mode", "normal");
-              location.href = "/";
-              return;
-            }
-            document.getElementById("verb").innerText = "動詞: " + data.verb;
-            document.getElementById("subject").innerText =
-              "主語: " + data.subject;
-            document.getElementById("tense").innerText = "時制: " + data.tense;
-            document.getElementById("user-answer").value = "";
-            document.getElementById("result").innerText = "";
-            document.getElementById("streak").innerText =
-              "現在の連続正解数: " + data.streak;
-            document.getElementById("gif").style.display = "none";
-            const hint = document.getElementById("hintText");
-            hint.style.display = "none";
-            hint.innerText = "💡 ヒント: " + data.hint;
-          })
-          .catch((err) => console.error(err));
+          body: JSON.stringify({ mode, tenses, lang }),
+        });
+        const q = await res.json();
+        if (q.finished) {
+          document.getElementById("statusTxt").textContent =
+            "復習は完了しました。";
+          return;
+        }
+        render(q);
       }
 
-      /* ------------------- 動詞をスキップ ------------------- */
-      function skipVerb() {
-        const selectedTenses = JSON.parse(
+      async function nextQuiz() {
+        await fetchQuiz();
+      }
+
+      async function skipVerb() {
+        const tenses = JSON.parse(
           sessionStorage.getItem("selected_tenses") || "[]"
         );
-
-        fetch("/skipverb", {
+        const lang = sessionStorage.getItem("quiz_lang") || "fr";
+        const res = await fetch("/skipverb", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ tenses: selectedTenses }), // ★ ここ大事
-        })
-          .then(() => fetchQuiz())
-          .catch((err) => console.error("skip error", err));
+          body: JSON.stringify({ tenses, lang }),
+        });
+        const q = await res.json();
+        if (q && q.skipped) await fetchQuiz();
+        else render(q);
       }
 
-      /* ------------------- 答え合わせ ------------------- */
-      function checkAnswer() {
-        if (answered) return;
-        answered = true;
-        document.getElementById("check-button").style.display = "none";
-        document.getElementById("next-button").style.display = "inline-block";
-
-        const userAnswer = document.getElementById("user-answer").value.trim();
-
-        fetch("/answer", {
+      async function submitAnswer() {
+        const ans = document.getElementById("answer").value;
+        const res = await fetch("/answer", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ user_answer: userAnswer }),
-        })
-          .then((r) => r.json())
-          .then((data) => {
-            const res = document.getElementById("result");
-            const gif = document.getElementById("gif");
-            if (data.correct) {
-              res.innerText = "✅ 正解！";
-              res.style.color = "green";
-              gif.src = "/static/correct.gif";
-            } else {
-              res.innerText = `❌ 不正解！正解は: ${data.correct_answer}`;
-              res.style.color = "red";
-              gif.src = "/static/incorrect.gif";
-            }
-            gif.style.display = "block";
-            document.getElementById("streak").innerText =
-              "現在の連続正解数: " + data.streak;
-          })
-          .catch((err) => console.error(err));
+          body: JSON.stringify({ user_answer: ans }),
+        });
+        const r = await res.json();
+        const box = document.getElementById("result");
+        const txt = document.getElementById("statusTxt");
+        const img = document.getElementById("statusImg");
+
+        if (r.correct) {
+          box.className = "result ok show";
+          txt.textContent = "✔ 正解！";
+          img.src = IMG_OK;
+          img.style.display = "block";
+        } else {
+          box.className = "result ng show";
+          txt.innerHTML = `✘ 不正解。正解：<b>${r.correct_answer}</b>`;
+          img.src = IMG_NG;
+          img.style.display = "block";
+        }
+        document.getElementById("streak").textContent = r.streak ?? 0;
+        canAdvance = true; // 採点後Enterで次へ
       }
 
-      /* ------------------- その他 ------------------- */
-      function toggleHint() {
-        const h = document.getElementById("hintText");
-        h.style.display = h.style.display === "none" ? "block" : "none";
-      }
-      function endQuiz() {
-        location.href = "/";
-      }
+      // 初期化とキーバインド
+      window.addEventListener("DOMContentLoaded", () => {
+        // ヒントトグル（デフォOFF）
+        if (sessionStorage.getItem("show_hint") === null) {
+          sessionStorage.setItem("show_hint", "0");
+        }
+        applyHintVisibility();
 
-      /* Enter キー挙動 */
-      document
-        .getElementById("user-answer")
-        .addEventListener("keydown", (e) => {
-          if (e.key === "Enter") {
+        // クリック
+        document
+          .getElementById("sendBtn")
+          .addEventListener("click", submitAnswer);
+        document.getElementById("nextBtn").addEventListener("click", nextQuiz);
+        document.getElementById("skipBtn").addEventListener("click", skipVerb);
+        document
+          .getElementById("hintToggle")
+          .addEventListener("change", (e) => {
+            sessionStorage.setItem("show_hint", e.target.checked ? "1" : "0");
+            applyHintVisibility();
+          });
+
+        // キー操作：F1=ヒント、Enter=送信/次へ
+        window.addEventListener("keydown", (e) => {
+          if (e.key === "F1") {
             e.preventDefault();
-            !answered ? checkAnswer() : fetchQuiz();
+            const on = sessionStorage.getItem("show_hint") === "1";
+            sessionStorage.setItem("show_hint", on ? "0" : "1");
+            applyHintVisibility();
+          } else if (e.key === "Enter") {
+            if (canAdvance) nextQuiz();
+            else submitAnswer();
           }
         });
 
-      window.onload = fetchQuiz;
+        // 入力欄内のEnterはデフォ送信を抑止（上のハンドラで制御）
+        document.getElementById("answer").addEventListener("keydown", (e) => {
+          if (e.key === "Enter") e.preventDefault();
+        });
+
+        fetchQuiz();
+      });
     </script>
   </body>
 </html>
