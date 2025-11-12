@@ -1,6 +1,10 @@
 <!DOCTYPE html>
 <html lang="ja">
   <head>
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
     <meta charset="UTF-8" />
     <title>Quiz</title>
     <style>
@@ -222,6 +226,105 @@
       .streak {
         margin-top: 10px;
         color: var(--muted);
+      }
+
+      /* ======= Responsive (quiz) ======= */
+      @media (max-width: 900px) {
+        :root {
+          --maxw: 680px;
+        }
+      }
+
+      @media (max-width: 768px) {
+        :root {
+          --maxw: 620px;
+        }
+        body {
+          padding: 12px;
+        }
+
+        .headline {
+          gap: 6px;
+        }
+        .verb {
+          font-size: 20px;
+        }
+        .tense {
+          font-size: 16px;
+        }
+        .sub {
+          font-size: 15px;
+        }
+
+        .row {
+          gap: 8px;
+        }
+        /* iOS の自動ズーム防止：入力は16px以上 */
+        input[type="text"] {
+          font-size: 18px;
+          padding: 12px;
+        }
+
+        .hint-panel,
+        .hint-text {
+          font-size: 15px;
+        }
+
+        .result {
+          gap: 10px;
+        }
+        .result.show img {
+          max-width: 50vw;
+          max-height: 40vh;
+          width: auto;
+          height: auto; /* 比率保持 */
+          object-fit: contain;
+        }
+      }
+
+      @media (max-width: 520px) {
+        :root {
+          --maxw: 100%;
+        }
+
+        /* 入力とボタンを縦積み＆全幅 */
+        .row {
+          flex-direction: column;
+          align-items: stretch;
+        }
+        #sendBtn,
+        #nextBtn,
+        #skipBtn {
+          width: 100%;
+          font-size: 16px;
+          padding: 12px 14px;
+        }
+
+        /* ヒントトグルは回答欄左下に残しつつ余白調整 */
+        .hint-bar {
+          justify-content: flex-start;
+        }
+        .hint-toggle-btn {
+          font-size: 12px;
+          padding: 6px 10px;
+        }
+        .kbd {
+          font-size: 10px;
+        }
+
+        .result {
+          grid-template-columns: 1fr;
+        }
+        .result.show img {
+          max-width: 70vw;
+          max-height: 35vh;
+        }
+      }
+
+      /* タップ遅延対策 */
+      button,
+      .hint-toggle-btn {
+        touch-action: manipulation;
       }
     </style>
   </head>

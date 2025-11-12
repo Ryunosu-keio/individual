@@ -1,6 +1,10 @@
 <!DOCTYPE html>
 <html lang="ja">
   <head>
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
     <meta charset="UTF-8" />
     <title>Verb Quiz</title>
     <style>
@@ -58,6 +62,81 @@
         color: #666;
         font-size: 13px;
         margin-top: 6px;
+      }
+
+      /* ======= Responsive (menu) ======= */
+      @media (max-width: 768px) {
+        body {
+          padding: 12px;
+        }
+        h1 {
+          font-size: 1.6em;
+          margin-bottom: 10px;
+        }
+        .row {
+          gap: 12px;
+        }
+        .lang-select {
+          font-size: 15px;
+          padding: 10px;
+        }
+
+        .tense-grid {
+          gap: 16px;
+          margin: 10px 0 18px;
+        }
+        .tense-col label {
+          margin: 8px 0;
+        }
+
+        .button {
+          width: 100%;
+          max-width: 560px;
+          font-size: 17px;
+          padding: 14px 20px;
+        }
+        .note {
+          font-size: 12px;
+        }
+      }
+
+      @media (max-width: 520px) {
+        h1 {
+          font-size: 1.4em;
+        }
+        .row {
+          flex-direction: column;
+          align-items: stretch;
+          gap: 8px;
+        }
+        .lang-select {
+          width: 100%;
+        }
+
+        /* 時制欄：2列→1列にして読みやすく */
+        .tense-grid {
+          flex-direction: column;
+          gap: 8px;
+        }
+        .tense-col label {
+          font-size: 15px;
+        }
+        .tense-grid input[type="checkbox"] {
+          width: 18px;
+          height: 18px;
+        }
+
+        .button {
+          font-size: 16px;
+          padding: 12px 16px;
+          max-width: 100%;
+        }
+      }
+
+      /* メニューGIFを画面幅にフィット（比率保持） */
+      img[alt="menuGIF"] {
+        max-width: 90vw;
+        height: auto !important;
       }
     </style>
   </head>
