@@ -29,16 +29,17 @@ def _norm(s: str) -> str:
 
 # ---- ヒント ----
 HINTS_FR = {
-    "présent":"主語に応じた現在形語尾",
-    "futur simple":"原形＋未来形語尾（全人称共通語幹）",
-    "imparfait":"現在 1複 語幹＋半過去語尾",
-    "passé composé":"avoir / être ＋ 過去分詞",
-    "impératif":"tu / nous / vous の命令語尾",
-    "subjonctif_présent":"que＋現在3複語幹＋接続法語尾",
-    "subjonctif_passé":"que＋接続法現在 avoir / être ＋ 過去分詞",
-    "conditionnel_présent":"未来語幹＋半過去語尾",
-    "conditionnel_passé":"条件法現在 avoir / être ＋ 過去分詞",
+    "présent": "語尾：-er → -e, -es, -e, -ons, -ez, -ent ／ -ir → -is, -is, -it, -issons, -issez, -issent ／ -re → -s, -s, -, -ons, -ez, -ent｜主語に応じて現在の動作・習慣・事実を表す。",
+    "futur simple": "語尾：-ai, -as, -a, -ons, -ez, -ont｜動詞の原形（-re動詞はeを取る）＋未来語尾。将来の出来事を表す。",
+    "imparfait": "語尾：-ais, -ais, -ait, -ions, -iez, -aient｜現在形のnousから-onsを取った語幹＋半過去語尾。過去の習慣・状態を表す。",
+    "passé composé": "構成：avoir / être（現在形）＋過去分詞｜過去の完了した出来事を表す。移動・再帰動詞はêtreを使用。",
+    "impératif": "語尾：-er → -e, -ons, -ez ／ -ir → -is, -issons, -issez ／ -re → -s, -ons, -ez｜主語を省いて命令・勧誘を表す（tu, nous, vous形）。",
+    "subjonctif_présent": "語尾：-e, -es, -e, -ions, -iez, -ent｜que＋現在形のils語幹＋接続法語尾。感情・疑い・願望など主観的内容を表す。",
+    "subjonctif_passé": "構成：que＋（接続法現在のavoir / être）＋過去分詞｜主節より前に起こった行為を表す接続法過去。",
+    "conditionnel_présent": "語尾：-ais, -ais, -ait, -ions, -iez, -aient｜未来語幹（原形）＋半過去語尾。「～するだろう」「もし～なら～する」など仮定や丁寧表現に用いる。",
+    "conditionnel_passé": "構成：条件法現在のavoir / être＋過去分詞｜「もし～だったら～しただろう」など過去の仮定を表す。",
 }
+
 HINTS_IT = {
     "presente":               "現在：-are系(-o,-i,-a,-iamo,-ate,-ano)／-ere系(-o,-i,-e,-iamo,-ete,-ono)／-ire系(-o,-i,-e,-iamo,-ite,-ono)・‘-isc-’型は(isco, isci, isce, iamo, ite, iscono)",
     "futuro semplice":        "不定形語幹＋未来語尾(-ò,-ai,-à,-emo,-ete,-anno)／-care,-gareは語幹にh／-ciare,-giareはi脱落",
