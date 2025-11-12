@@ -92,8 +92,37 @@
     <button class="button" onclick="resetQuiz()">❌ 解答状況をリセット</button>
 
     <div style="margin-top: 30px">
+      <script>
+        (function () {
+          const GIFS = {
+            fr: "/static/menu_fr.gif",
+            it: "/static/menu_it.gif",
+          };
+
+          function setMenuGif(lang) {
+            const img = document.querySelector('img[alt="menuGIF"]');
+            if (!img) return;
+            img.src = GIFS[lang] || GIFS.fr;
+          }
+
+          window.addEventListener("DOMContentLoaded", () => {
+            const savedLang =
+              sessionStorage.getItem("quiz_lang") ||
+              document.getElementById("lang")?.value ||
+              "fr";
+            setMenuGif(savedLang);
+
+            const langSelect = document.getElementById("lang");
+            if (langSelect) {
+              langSelect.addEventListener("change", (e) =>
+                setMenuGif(e.target.value)
+              );
+            }
+          });
+        })();
+      </script>
       <img
-        src="/static/menu.gif"
+        src="/static/menu_fr.gif"
         alt="menuGIF"
         style="height: 200px; display: block; margin: 0 auto"
       />
