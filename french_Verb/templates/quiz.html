@@ -124,7 +124,7 @@
         background: #e5eaf2;
       }
 
-      /* 解答欄の左下に置くヒントトグル */
+      /* ヒントトグル（解答欄の左下） */
       .hint-bar {
         display: flex;
         align-items: center;
@@ -158,7 +158,7 @@
         color: #374151;
       }
 
-      /* 回答欄の “下” に大きめで読みやすいヒントパネル */
+      /* 回答欄の下に大きめヒント */
       .hint-panel {
         margin-top: 10px;
         padding: 14px 16px;
@@ -193,7 +193,7 @@
         width: 56px;
         height: 56px;
         display: none;
-        object-fit: contain; /* 比率保持の保険 */
+        object-fit: contain;
       }
       .result.ok .txt {
         color: var(--ok);
@@ -204,7 +204,6 @@
       .result .txt {
         font-size: 16px;
       }
-
       .result.show {
         grid-template-columns: 1fr;
         justify-items: center;
@@ -216,7 +215,7 @@
         max-width: 160px;
         max-height: 160px;
         width: auto;
-        height: auto; /* アスペクト比保持 */
+        height: auto;
       }
       .result.show .txt {
         margin-top: 6px;
@@ -228,23 +227,18 @@
         color: var(--muted);
       }
 
-      /* ======= Responsive (quiz) ======= */
+      /* ===== Responsive ===== */
       @media (max-width: 900px) {
         :root {
           --maxw: 680px;
         }
       }
-
       @media (max-width: 768px) {
         :root {
           --maxw: 620px;
         }
         body {
           padding: 12px;
-        }
-
-        .headline {
-          gap: 6px;
         }
         .verb {
           font-size: 20px;
@@ -255,39 +249,29 @@
         .sub {
           font-size: 15px;
         }
-
         .row {
           gap: 8px;
         }
-        /* iOS の自動ズーム防止：入力は16px以上 */
         input[type="text"] {
           font-size: 18px;
           padding: 12px;
-        }
-
+        } /* iOSズーム防止 */
         .hint-panel,
         .hint-text {
           font-size: 15px;
         }
-
         .result {
           gap: 10px;
         }
         .result.show img {
           max-width: 50vw;
           max-height: 40vh;
-          width: auto;
-          height: auto; /* 比率保持 */
-          object-fit: contain;
         }
       }
-
       @media (max-width: 520px) {
         :root {
           --maxw: 100%;
         }
-
-        /* 入力とボタンを縦積み＆全幅 */
         .row {
           flex-direction: column;
           align-items: stretch;
@@ -299,8 +283,6 @@
           font-size: 16px;
           padding: 12px 14px;
         }
-
-        /* ヒントトグルは回答欄左下に残しつつ余白調整 */
         .hint-bar {
           justify-content: flex-start;
         }
@@ -311,7 +293,6 @@
         .kbd {
           font-size: 10px;
         }
-
         .result {
           grid-template-columns: 1fr;
         }
@@ -320,8 +301,6 @@
           max-height: 35vh;
         }
       }
-
-      /* タップ遅延対策 */
       button,
       .hint-toggle-btn {
         touch-action: manipulation;
@@ -330,9 +309,7 @@
   </head>
   <body>
     <div class="wrap">
-      <div class="topbar">
-        <a href="/">← メニューへ戻る</a>
-      </div>
+      <div class="topbar"><a href="/">← メニューへ戻る</a></div>
 
       <div class="card">
         <div class="headline">
@@ -347,21 +324,18 @@
           <button class="primary" id="sendBtn">送信</button>
         </div>
 
-        <!-- 解答欄の左下：ヒントトグル -->
         <div class="hint-bar">
           <label class="hint-toggle-btn" title="ヒントの表示/非表示（F1）">
-            <input id="hintToggle" type="checkbox" />
-            ヒントを表示 <span class="kbd">F1</span>
+            <input id="hintToggle" type="checkbox" /> ヒントを表示
+            <span class="kbd">F1</span>
           </label>
         </div>
 
-        <!-- ✅ 回答欄 “より下のスペース” に大きめで見やすいヒント -->
         <div id="hintPanel" class="hint-panel hidden" aria-live="polite">
           <div class="hint-title">ヒント</div>
           <div id="hintText" class="hint-text">—</div>
         </div>
 
-        <!-- 結果（テキスト＋GIF） -->
         <div id="result" class="result">
           <img id="statusImg" alt="status" />
           <div id="statusTxt" class="txt"></div>
@@ -389,6 +363,15 @@
         document.getElementById("hintPanel").classList.toggle("hidden", !on);
       }
 
+      // ★ iOS/Android でキーボードを確実に閉じる
+      function hideKeyboard() {
+        const el = document.getElementById("answer");
+        if (!el) return;
+        el.setAttribute("readonly", "true");
+        el.blur();
+        setTimeout(() => el.removeAttribute("readonly"), 80);
+      }
+
       function render(q) {
         document.getElementById("langTag").textContent = q.lang || "fr";
         document.getElementById("verb").textContent = q.verb || "—";
@@ -396,11 +379,9 @@
         document.getElementById("subject").textContent = q.subject || "—";
         document.getElementById("streak").textContent = q.streak ?? 0;
 
-        // ヒント本文はパネルに表示
         document.getElementById("hintText").textContent = q.hint || "—";
         applyHintVisibility();
 
-        // 結果リセット
         const res = document.getElementById("result");
         res.className = "result";
         document.getElementById("statusTxt").textContent = "";
@@ -408,7 +389,6 @@
         img.src = "";
         img.style.display = "none";
 
-        // 入力初期化
         const ans = document.getElementById("answer");
         ans.value = "";
         ans.focus();
@@ -479,18 +459,24 @@
           img.style.display = "block";
         }
         document.getElementById("streak").textContent = r.streak ?? 0;
-        canAdvance = true; // 採点後Enterで次へ
+        canAdvance = true;
+
+        // 採点直後にキーボードを閉じる（モバイル用）
+        hideKeyboard();
+
+        // 結果を中央に（任意）
+        document
+          .getElementById("result")
+          .scrollIntoView({ block: "center", behavior: "smooth" });
       }
 
       // 初期化とキーバインド
       window.addEventListener("DOMContentLoaded", () => {
-        // ヒントトグル（デフォOFF）
         if (sessionStorage.getItem("show_hint") === null) {
           sessionStorage.setItem("show_hint", "0");
         }
         applyHintVisibility();
 
-        // クリック
         document
           .getElementById("sendBtn")
           .addEventListener("click", submitAnswer);
@@ -503,7 +489,7 @@
             applyHintVisibility();
           });
 
-        // キー操作：F1=ヒント、Enter=送信/次へ
+        // F1=ヒント、Enter=送信/次へ（物理キーボードにも対応）
         window.addEventListener("keydown", (e) => {
           if (e.key === "F1") {
             e.preventDefault();
@@ -516,7 +502,7 @@
           }
         });
 
-        // 入力欄内のEnterはデフォ送信を抑止（上のハンドラで制御）
+        // 入力欄内のEnterはブラウザ既定送信を抑止（上のハンドラで制御）
         document.getElementById("answer").addEventListener("keydown", (e) => {
           if (e.key === "Enter") e.preventDefault();
         });
