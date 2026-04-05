@@ -530,7 +530,19 @@ def generate_token_route(participant_id):
 @admin_bp.route("/roster")
 def roster():
     """名簿管理画面"""
-    participants = Participant.query.order_by(Participant.name).all()
+    from sqlalchemy import case
+    # クラス31-39 → 出席番号昇順 → 教師（クラスなし or 役割が教師/学年主任）は各クラスの後
+    role_order = case(
+        (Participant.role == "生徒", 0),
+        (Participant.role == "教師", 1),
+        (Participant.role == "学年主任", 2),
+        else_=3,
+    )
+    participants = Participant.query.order_by(
+        Participant.class_name.asc(),
+        role_order,
+        Participant.student_number.asc(),
+    ).all()
     return render_template("admin/roster.html", participants=participants)
 
 
