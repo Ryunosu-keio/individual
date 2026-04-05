@@ -65,11 +65,12 @@
 
               <!-- 振込名義 -->
               <div class="mb-3">
-                <label for="transfer_name" class="form-label fw-bold">振込名義（カタカナ）</label>
+                <label for="transfer_name" class="form-label fw-bold">振込名義（学籍番号4桁＋カナ氏名　例：3140ヤマダタロウ）</label>
                 <input type="text" class="form-control" id="transfer_name" name="transfer_name"
                        value="{{ existing.transfer_name if existing else '' }}"
-                       placeholder="ヤマダ タロウ">
-                <div class="form-text">銀行振込の際の名義をご入力ください。</div>
+                       placeholder="3140ヤマダタロウ"
+                       inputmode="text">
+                <div class="form-text">ひらがなで入力すると自動でカタカナに変換されます。</div>
               </div>
 
               <!-- 支払予定金額 -->
@@ -115,5 +116,14 @@
     </div>
   </div>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    // ひらがな→カタカナ自動変換
+    const transferInput = document.getElementById('transfer_name');
+    transferInput.addEventListener('input', function() {
+      this.value = this.value.replace(/[\u3041-\u3096]/g, c =>
+        String.fromCharCode(c.charCodeAt(0) + 0x60)
+      );
+    });
+  </script>
 </body>
 </html>
