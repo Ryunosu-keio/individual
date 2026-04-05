@@ -34,7 +34,8 @@
               </div>
             {% endif %}
 
-            <form method="POST" action="{{ url_for('forms.final', token=token) }}">
+            <form method="POST" action="{{ url_for('forms.final', token=token) }}"
+                  id="finalForm" onsubmit="return validateForm()">
               <!-- 参加・不参加 -->
               <div class="mb-3">
                 <label class="form-label fw-bold">出欠 <span class="text-danger">*</span></label>
@@ -56,7 +57,7 @@
               </div>
 
               <!-- 同伴者数 -->
-              <div class="mb-3" id="attending-fields">
+              <div class="mb-3">
                 <label for="companions" class="form-label fw-bold">同伴者数</label>
                 <input type="number" class="form-control" id="companions" name="companions"
                        value="{{ existing.companions if existing else 0 }}" min="0" max="10">
@@ -65,12 +66,12 @@
 
               <!-- 振込名義 -->
               <div class="mb-3">
-                <label for="transfer_name" class="form-label fw-bold">振込名義（学籍番号4桁＋カナ氏名　例：3140ヤマダタロウ）</label>
+                <label for="transfer_name" class="form-label fw-bold">振込名義（カタカナでご入力ください）</label>
                 <input type="text" class="form-control" id="transfer_name" name="transfer_name"
                        value="{{ existing.transfer_name if existing else '' }}"
-                       placeholder="3140ヤマダタロウ"
-                       inputmode="text">
-                <div class="form-text">ひらがなで入力すると自動でカタカナに変換されます。</div>
+                       placeholder="ヤマダタロウ">
+                <div id="transfer_error" class="text-danger small d-none">カタカナで入力してください。</div>
+                <div class="form-text">銀行振込の際に使用した名義をカタカナでご入力ください。</div>
               </div>
 
               <!-- 支払予定金額 -->
@@ -117,12 +118,29 @@
   </div>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
   <script>
-    // ひらがな→カタカナ自動変換
-    const transferInput = document.getElementById('transfer_name');
-    transferInput.addEventListener('input', function() {
-      this.value = this.value.replace(/[\u3041-\u3096]/g, c =>
-        String.fromCharCode(c.charCodeAt(0) + 0x60)
-      );
+    // エンターキーで送信しない（送信ボタン以外）
+    document.getElementById('finalForm').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' && e.target.type !== 'submit') {
+        e.preventDefault();
+      }
+    });
+
+    // カタカナバリデーション
+    function validateForm() {
+      const val = document.getElementById('transfer_name').value.trim();
+      const err = document.getElementById('transfer_error');
+      // 空欄はOK、入力がある場合はカタカナ・数字・スペース・長音のみ許可
+      if (val && !/^[ァ-ヶー\d\s　]+$/.test(val)) {
+        err.classList.remove('d-none');
+        document.getElementById('transfer_name').focus();
+        return false;
+      }
+      err.classList.add('d-none');
+      return true;
+    }
+
+    document.getElementById('transfer_name').addEventListener('input', function() {
+      document.getElementById('transfer_error').classList.add('d-none');
     });
   </script>
 </body>
