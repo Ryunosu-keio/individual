@@ -12,6 +12,23 @@ from config import Config
 from extensions import db
 
 
+def _migrate(db):
+    """既存テーブルへのカラム追加マイグレーション"""
+    migrations = [
+        "ALTER TABLE participants ADD COLUMN IF NOT EXISTS name_kana VARCHAR(100) DEFAULT ''",
+        "ALTER TABLE final_responses ADD COLUMN IF NOT EXISTS bank_name VARCHAR(100) DEFAULT ''",
+        "ALTER TABLE final_responses ADD COLUMN IF NOT EXISTS branch_name VARCHAR(100) DEFAULT ''",
+        "ALTER TABLE final_responses ADD COLUMN IF NOT EXISTS account_number VARCHAR(50) DEFAULT ''",
+    ]
+    with db.engine.connect() as conn:
+        for sql in migrations:
+            try:
+                conn.execute(db.text(sql))
+                conn.commit()
+            except Exception:
+                conn.rollback()
+
+
 def create_app():
     app = Flask(__name__, instance_relative_config=True)
     app.config.from_object(Config)
@@ -44,6 +61,8 @@ def create_app():
     with app.app_context():
         from models import Participant, ProvisionalResponse, FinalResponse, Payment, BankImport, MailLog, AppSetting
         db.create_all()
+        # カラム追加マイグレーション（既存DBへの追加カラム）
+        _migrate(db)
 
     # -----------------------------------------------
     # config_obj: メールサービスから参照できるよう
