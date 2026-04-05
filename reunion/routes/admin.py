@@ -538,10 +538,18 @@ def roster():
         (Participant.role == "学年主任", 2),
         else_=3,
     )
+    from sqlalchemy import func
+    num_order = db.func.cast(
+        db.func.nullif(
+            db.func.regexp_replace(Participant.student_number, r'\D', '', 'g'),
+            ''
+        ),
+        db.Integer
+    )
     participants = Participant.query.order_by(
         Participant.class_name.asc(),
         role_order,
-        db.func.cast(Participant.student_number, db.Integer).asc(),
+        num_order.asc(),
     ).all()
     return render_template("admin/roster.html", participants=participants)
 
