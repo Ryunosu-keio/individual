@@ -98,14 +98,18 @@ def index():
 # -----------------------------------------------
 @admin_bp.route("/participants")
 def participants():
-    """参加者一覧（検索・絞り込み対応）"""
-    # 検索・絞り込みパラメータ
-    q = request.args.get("q", "").strip()
+    """参加者一覧（検索・絞り込み・並べ替え対応）"""
+    from sqlalchemy import case as sa_case
+
+    q             = request.args.get("q", "").strip()
     status_filter = request.args.get("status", "all")
+    role_filter   = request.args.get("role", "all")
+    class_filter  = request.args.get("class_name", "all")
+    sort          = request.args.get("sort", "class")
+    order         = request.args.get("order", "asc")
 
     query = Participant.query
 
-    # 名前・メールで検索
     if q:
         query = query.filter(
             db.or_(
@@ -113,10 +117,38 @@ def participants():
                 Participant.email.ilike(f"%{q}%"),
             )
         )
+    if role_filter != "all":
+        query = query.filter(Participant.role == role_filter)
+    if class_filter != "all":
+        query = query.filter(Participant.class_name == class_filter)
 
-    all_participants = query.order_by(Participant.created_at.desc()).all()
+    # 並べ替え
+    role_order = sa_case(
+        (Participant.role == "生徒", 0),
+        (Participant.role == "教師", 1),
+        (Participant.role == "学年主任", 2),
+        else_=3,
+    )
+    num_order = db.func.cast(
+        db.func.nullif(
+            db.func.regexp_replace(Participant.student_number, r'\D', '', 'g'), ''
+        ), db.Integer
+    )
+    sort_map = {
+        "class":  [Participant.class_name, role_order, num_order],
+        "name":   [Participant.name],
+        "number": [Participant.class_name, num_order],
+        "role":   [role_order, Participant.class_name, num_order],
+        "created":[Participant.created_at],
+    }
+    cols = sort_map.get(sort, sort_map["class"])
+    if order == "desc":
+        cols = [c.desc() for c in cols]
+    query = query.order_by(*cols)
 
-    # 仮出欠ステータスで絞り込み（Python側でフィルタ）
+    all_participants = query.all()
+
+    # 仮出欠ステータスで絞り込み（Python側）
     if status_filter != "all":
         filtered = []
         for p in all_participants:
@@ -127,10 +159,32 @@ def participants():
                 filtered.append(p)
         all_participants = filtered
 
+    # クラス一覧（絞り込み用）
+    classes = [r[0] for r in db.session.query(Participant.class_name)
+               .filter(Participant.class_name != "")
+               .distinct().order_by(Participant.class_name).all()]
+
+    def sort_url(col):
+        new_order = "desc" if (sort == col and order == "asc") else "asc"
+        return url_for("admin.participants", q=q, status=status_filter,
+                       role=role_filter, class_name=class_filter,
+                       sort=col, order=new_order)
+
+    def sort_icon(col):
+        if sort != col:
+            return "bi-arrow-down-up text-muted"
+        return "bi-sort-up" if order == "asc" else "bi-sort-down"
+
     return render_template("admin/participants.html",
                            participants=all_participants,
                            q=q,
-                           status_filter=status_filter)
+                           status_filter=status_filter,
+                           role_filter=role_filter,
+                           class_filter=class_filter,
+                           sort=sort, order=order,
+                           classes=classes,
+                           sort_url=sort_url,
+                           sort_icon=sort_icon)
 
 
 @admin_bp.route("/participant/<int:participant_id>")

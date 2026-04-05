@@ -14,17 +14,35 @@
 
 <!-- 検索・絞り込み -->
 <form method="GET" class="row g-2 mb-3">
-  <div class="col-md-4">
+  <input type="hidden" name="sort" value="{{ sort }}">
+  <input type="hidden" name="order" value="{{ order }}">
+  <div class="col-md-3">
     <input type="text" class="form-control form-control-sm" name="q"
            value="{{ q }}" placeholder="氏名・メールで検索">
   </div>
-  <div class="col-md-3">
+  <div class="col-md-2">
     <select class="form-select form-select-sm" name="status">
-      <option value="all" {% if status_filter == 'all' %}selected{% endif %}>すべて</option>
-      <option value="attending" {% if status_filter == 'attending' %}selected{% endif %}>仮参加</option>
+      <option value="all" {% if status_filter == 'all' %}selected{% endif %}>仮出欠：全て</option>
+      <option value="attending" {% if status_filter == 'attending' %}selected{% endif %}>参加</option>
       <option value="not_attending" {% if status_filter == 'not_attending' %}selected{% endif %}>不参加</option>
       <option value="undecided" {% if status_filter == 'undecided' %}selected{% endif %}>未定</option>
-      <option value="no_response" {% if status_filter == 'no_response' %}selected{% endif %}>仮出欠未回答</option>
+      <option value="no_response" {% if status_filter == 'no_response' %}selected{% endif %}>未回答</option>
+    </select>
+  </div>
+  <div class="col-md-2">
+    <select class="form-select form-select-sm" name="role">
+      <option value="all" {% if role_filter == 'all' %}selected{% endif %}>役割：全て</option>
+      <option value="生徒" {% if role_filter == '生徒' %}selected{% endif %}>生徒</option>
+      <option value="教師" {% if role_filter == '教師' %}selected{% endif %}>教師</option>
+      <option value="学年主任" {% if role_filter == '学年主任' %}selected{% endif %}>学年主任</option>
+    </select>
+  </div>
+  <div class="col-md-2">
+    <select class="form-select form-select-sm" name="class_name">
+      <option value="all" {% if class_filter == 'all' %}selected{% endif %}>クラス：全て</option>
+      {% for c in classes %}
+      <option value="{{ c }}" {% if class_filter == c %}selected{% endif %}>{{ c }}</option>
+      {% endfor %}
     </select>
   </div>
   <div class="col-auto">
@@ -39,14 +57,20 @@
     <thead class="table-light">
       <tr>
         <th>ID</th>
-        <th>氏名</th>
-        <th>クラス</th>
-        <th>番号</th>
-        <th>役割</th>
+        <th><a href="{{ sort_url('name') }}" class="text-decoration-none text-dark">
+          氏名 <i class="bi {{ sort_icon('name') }}"></i></a></th>
+        <th><a href="{{ sort_url('class') }}" class="text-decoration-none text-dark">
+          クラス <i class="bi {{ sort_icon('class') }}"></i></a></th>
+        <th><a href="{{ sort_url('number') }}" class="text-decoration-none text-dark">
+          番号 <i class="bi {{ sort_icon('number') }}"></i></a></th>
+        <th><a href="{{ sort_url('role') }}" class="text-decoration-none text-dark">
+          役割 <i class="bi {{ sort_icon('role') }}"></i></a></th>
         <th>メール</th>
         <th>仮出欠</th>
         <th>本出欠</th>
         <th>入金</th>
+        <th><a href="{{ sort_url('created') }}" class="text-decoration-none text-dark">
+          登録日 <i class="bi {{ sort_icon('created') }}"></i></a></th>
         <th>詳細</th>
       </tr>
     </thead>
@@ -70,41 +94,31 @@
         </td>
         <td>
           {% if prov %}
-            {% if prov.status == 'attending' %}
-              <span class="badge bg-success">参加</span>
-            {% elif prov.status == 'not_attending' %}
-              <span class="badge bg-secondary">不参加</span>
-            {% else %}
-              <span class="badge bg-warning text-dark">未定</span>
-            {% endif %}
+            {% if prov.status == 'attending' %}<span class="badge bg-success">参加</span>
+            {% elif prov.status == 'not_attending' %}<span class="badge bg-secondary">不参加</span>
+            {% else %}<span class="badge bg-warning text-dark">未定</span>{% endif %}
           {% else %}
             <span class="badge bg-light text-muted border">未回答</span>
           {% endif %}
         </td>
         <td>
           {% if final %}
-            {% if final.status == 'attending' %}
-              <span class="badge bg-success">参加</span>
-            {% else %}
-              <span class="badge bg-secondary">不参加</span>
-            {% endif %}
+            {% if final.status == 'attending' %}<span class="badge bg-success">参加</span>
+            {% else %}<span class="badge bg-secondary">不参加</span>{% endif %}
           {% else %}
             <span class="badge bg-light text-muted border">未回答</span>
           {% endif %}
         </td>
         <td>
           {% if p.payment %}
-            {% if p.payment.payment_status == 'paid' %}
-              <span class="badge bg-success">済</span>
-            {% elif p.payment.payment_status == 'partial' %}
-              <span class="badge bg-warning text-dark">一部</span>
-            {% else %}
-              <span class="badge bg-danger">未</span>
-            {% endif %}
+            {% if p.payment.payment_status == 'paid' %}<span class="badge bg-success">済</span>
+            {% elif p.payment.payment_status == 'partial' %}<span class="badge bg-warning text-dark">一部</span>
+            {% else %}<span class="badge bg-danger">未</span>{% endif %}
           {% else %}
             <span class="text-muted small">-</span>
           {% endif %}
         </td>
+        <td class="small text-muted">{{ p.created_at.strftime('%m/%d') }}</td>
         <td>
           <a href="{{ url_for('admin.participant_detail', participant_id=p.id) }}"
              class="btn btn-outline-primary btn-sm">詳細</a>
@@ -112,7 +126,7 @@
       </tr>
       {% else %}
       <tr>
-        <td colspan="8" class="text-center text-muted py-4">参加者が見つかりません</td>
+        <td colspan="11" class="text-center text-muted py-4">参加者が見つかりません</td>
       </tr>
       {% endfor %}
     </tbody>
