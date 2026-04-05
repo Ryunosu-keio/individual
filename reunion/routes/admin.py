@@ -541,7 +541,7 @@ def roster():
     participants = Participant.query.order_by(
         Participant.class_name.asc(),
         role_order,
-        Participant.student_number.asc(),
+        db.func.cast(Participant.student_number, db.Integer).asc(),
     ).all()
     return render_template("admin/roster.html", participants=participants)
 
