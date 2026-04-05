@@ -199,10 +199,12 @@ def send_final_url_single(participant_id):
 
 @admin_bp.route("/send-final-url-bulk", methods=["POST"])
 def send_final_url_bulk():
-    """本出欠URLを一括送信（仮出欠が「参加」で、まだ本出欠未回答の参加者に送信）"""
+    """本出欠URLを一括送信（バックグラウンドスレッドで実行）"""
+    import threading
+    import time
+
     base_url = current_app.config.get("APP_BASE_URL", "http://localhost:5000")
 
-    # 対象: 仮出欠で「参加」、かつ本出欠未回答
     participants = Participant.query.all()
     targets = []
     for p in participants:
@@ -211,25 +213,35 @@ def send_final_url_bulk():
         if prov and prov.status == "attending" and final is None:
             targets.append(p)
 
-    sent = 0
-    failed = 0
-    errors = []
-    for p in targets:
-        final_url = generate_final_url(p, base_url)
-        try:
-            send_final_url(p, final_url)
-            sent += 1
-        except Exception as e:
-            logger.error(f"一括送信失敗: {p.email} - {e}", exc_info=True)
-            errors.append(f"{p.name} ({p.email}): {e}")
-            failed += 1
+    if not targets:
+        flash("送信対象の参加者がいません。", "info")
+        return redirect(url_for("admin.participants"))
 
-    if failed == 0:
-        flash(f"一括送信完了: {sent} 件送信しました。", "success")
-    else:
-        flash(f"一括送信完了: {sent} 件成功 / {failed} 件失敗", "warning")
-        for msg in errors:
-            flash(f"送信失敗 — {msg}", "danger")
+    # 対象IDとURLだけ先に確定（スレッド内でDBアクセスを最小化）
+    app = current_app._get_current_object()
+    jobs = [(p.id, generate_final_url(p, base_url)) for p in targets]
+
+    def bulk_send():
+        with app.app_context():
+            sent = 0
+            failed = 0
+            for pid, final_url in jobs:
+                p = db.session.get(Participant, pid)
+                if p is None:
+                    continue
+                try:
+                    send_final_url(p, final_url)
+                    sent += 1
+                except Exception as e:
+                    logger.error(f"一括送信失敗: {p.email} - {e}", exc_info=True)
+                    failed += 1
+                time.sleep(0.3)  # Gmail レート制限対策
+            logger.info(f"一括送信完了: {sent} 件成功 / {failed} 件失敗")
+
+    thread = threading.Thread(target=bulk_send, daemon=True)
+    thread.start()
+
+    flash(f"{len(jobs)} 件の送信をバックグラウンドで開始しました。ログで結果を確認できます。", "info")
     return redirect(url_for("admin.participants"))
 
 

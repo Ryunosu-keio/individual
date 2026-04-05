@@ -28,6 +28,10 @@ class Config:
         _db_url = _db_url.replace("postgres://", "postgresql://", 1)
     SQLALCHEMY_DATABASE_URI = _db_url
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        "pool_pre_ping": True,      # 使用前に接続が生きているか確認
+        "pool_recycle": 280,        # 280秒で接続を再作成（Renderの5分タイムアウト対策）
+    }
 
     # -----------------------------------------------
     # メール設定
