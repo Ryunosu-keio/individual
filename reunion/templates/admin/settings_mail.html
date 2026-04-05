@@ -33,6 +33,14 @@
                   SMTP送信（実際に送信する）
                 </label>
               </div>
+              <div class="form-check">
+                <input class="form-check-input" type="radio" name="mail_mode"
+                       id="mode_gas" value="gas"
+                       {% if settings.get('mail_mode') == 'gas' %}checked{% endif %}>
+                <label class="form-check-label" for="mode_gas">
+                  GAS送信（Render環境向け）
+                </label>
+              </div>
             </div>
           </div>
 

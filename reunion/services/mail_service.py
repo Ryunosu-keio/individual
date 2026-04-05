@@ -3,11 +3,12 @@ services/mail_service.py - メール送信サービス
 
 MAIL_MODE=console の場合: コンソールに出力するだけ（開発用）
 MAIL_MODE=smtp    の場合: SMTPで実際に送信する
-
-.env の設定で切り替え可能。
+MAIL_MODE=gas     の場合: GAS Webhookで送信する
 """
+import json
 import smtplib
 import logging
+import urllib.request
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from datetime import datetime
@@ -89,11 +90,37 @@ def _build_reminder_mail_body(participant_name: str, final_url: str, config=None
     return subject, body
 
 
+def _send_gas(to_email: str, subject: str, body: str, from_name: str) -> None:
+    """GAS Webhookを使ってメールを送信する"""
+    cfg = current_app.config
+    webhook_url = cfg.get("GAS_WEBHOOK_URL", "")
+    secret = cfg.get("GAS_SECRET", "")
+
+    if not webhook_url:
+        raise ValueError("GAS_WEBHOOK_URL が設定されていません")
+
+    payload = json.dumps({
+        "secret": secret,
+        "to": to_email,
+        "subject": subject,
+        "body": body,
+        "from_name": from_name,
+    }).encode("utf-8")
+
+    req = urllib.request.Request(
+        webhook_url,
+        data=payload,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    with urllib.request.urlopen(req, timeout=30) as res:
+        result = json.loads(res.read().decode("utf-8"))
+        if not result.get("ok"):
+            raise RuntimeError(f"GAS送信エラー: {result.get('error')}")
+
+
 def _send_smtp_cfg(to_email: str, subject: str, body: str, cfg: dict) -> None:
-    """
-    SMTPでメールを送信する（DB設定辞書を使用）。
-    Gmail の場合はアプリパスワードを使用すること。
-    """
+    """SMTPでメールを送信する"""
     msg = MIMEMultipart("alternative")
     msg["Subject"] = subject
     msg["From"] = f"{cfg['from_name']} <{cfg['from_addr']}>"
@@ -110,10 +137,7 @@ def _send_smtp_cfg(to_email: str, subject: str, body: str, cfg: dict) -> None:
 
 
 def _send_console(to_email: str, subject: str, body: str) -> None:
-    """
-    コンソール（ログ）にメール内容を出力する。開発用。
-    実際の送信は行わない。
-    """
+    """コンソールにメール内容を出力する。開発用。"""
     separator = "=" * 60
     logger.info(f"\n{separator}\n[メール送信シミュレーション]\nTo: {to_email}\nSubject: {subject}\n\n{body}\n{separator}")
     print(f"\n{separator}")
@@ -125,9 +149,7 @@ def _send_console(to_email: str, subject: str, body: str) -> None:
 
 
 def _get_mail_config():
-    """
-    DB設定を優先、なければ .env（current_app.config）を使う。
-    """
+    """DB設定を優先、なければ .env（current_app.config）を使う。"""
     def get(key, fallback):
         s = AppSetting.query.filter_by(key=key).first()
         return s.value if (s and s.value) else fallback
@@ -144,14 +166,23 @@ def _get_mail_config():
     }
 
 
-def send_final_url(participant, final_url: str) -> MailLog:
-    """
-    参加者に本出欠URLを送信する。
-    送信結果を mail_logs テーブルに記録して返す。
-    """
-    mail_cfg = _get_mail_config()
-    mail_mode = mail_cfg["mode"]
+def _dispatch_send(to_email: str, subject: str, body: str, mail_cfg: dict) -> str:
+    """モードに応じてメール送信し、ステータス文字列を返す"""
+    mode = mail_cfg["mode"]
+    if mode == "gas":
+        _send_gas(to_email, subject, body, mail_cfg["from_name"])
+        return "sent"
+    elif mode == "smtp":
+        _send_smtp_cfg(to_email, subject, body, mail_cfg)
+        return "sent"
+    else:
+        _send_console(to_email, subject, body)
+        return "simulated"
 
+
+def send_final_url(participant, final_url: str) -> MailLog:
+    """参加者に本出欠URLを送信する。"""
+    mail_cfg = _get_mail_config()
     subject, body = _build_final_url_mail_body(participant.name, final_url)
 
     log = MailLog(
@@ -161,17 +192,11 @@ def send_final_url(participant, final_url: str) -> MailLog:
     )
 
     try:
-        if mail_mode == "smtp":
-            _send_smtp_cfg(participant.email, subject, body, mail_cfg)
-            log.status = "sent"
+        log.status = _dispatch_send(participant.email, subject, body, mail_cfg)
+        if log.status == "sent":
             logger.info(f"本出欠URL送信成功: {participant.email}")
-        else:
-            _send_console(participant.email, subject, body)
-            log.status = "simulated"
-
         db.session.add(log)
         db.session.commit()
-
     except Exception as e:
         log.status = "failed"
         log.error_message = str(e)
@@ -184,12 +209,8 @@ def send_final_url(participant, final_url: str) -> MailLog:
 
 
 def send_reminder(participant, final_url: str) -> MailLog:
-    """
-    参加者にリマインドメールを送信する。
-    """
+    """参加者にリマインドメールを送信する。"""
     mail_cfg = _get_mail_config()
-    mail_mode = mail_cfg["mode"]
-
     subject, body = _build_reminder_mail_body(participant.name, final_url)
 
     log = MailLog(
@@ -199,16 +220,11 @@ def send_reminder(participant, final_url: str) -> MailLog:
     )
 
     try:
-        if mail_mode == "smtp":
-            _send_smtp_cfg(participant.email, subject, body, mail_cfg)
-            log.status = "sent"
-        else:
-            _send_console(participant.email, subject, body)
-            log.status = "simulated"
-
+        log.status = _dispatch_send(participant.email, subject, body, mail_cfg)
+        if log.status == "sent":
+            logger.info(f"リマインド送信成功: {participant.email}")
         db.session.add(log)
         db.session.commit()
-
     except Exception as e:
         log.status = "failed"
         log.error_message = str(e)
