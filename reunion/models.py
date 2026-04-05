@@ -22,6 +22,7 @@ class Participant(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)          # 氏名
+    name_kana = db.Column(db.String(100), default="")         # 氏名（カナ）
     email = db.Column(db.String(200), nullable=False, unique=True)  # メールアドレス（重複排除の基準）
     token = db.Column(db.String(64), unique=True, nullable=True)    # 本出欠フォームURL用トークン
     class_name = db.Column(db.String(50), default="")         # クラス（2桁数字: 31=3年1組、学年主任は空）

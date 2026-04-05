@@ -591,12 +591,13 @@ def roster_import():
         return redirect(url_for("admin.roster"))
 
     # ヘッダー行の検出と列インデックスの解決
-    NAME_HEADERS    = {"氏名", "名前", "name"}
-    EMAIL_HEADERS   = {"メールアドレス", "メール", "email", "mail"}
-    CLASS_HEADERS   = {"クラス", "class", "組", "担当クラス"}
-    NUMBER_HEADERS  = {"出席番号", "番号", "number", "no"}
-    ROLE_HEADERS    = {"役割", "role", "種別", "区分"}
-    MEMO_HEADERS    = {"幹事メモ", "メモ", "memo", "備考"}
+    NAME_HEADERS      = {"氏名", "名前", "name"}
+    NAME_KANA_HEADERS = {"氏名カナ", "氏名（カナ）", "フリガナ", "ふりがな", "kana", "name_kana"}
+    EMAIL_HEADERS     = {"メールアドレス", "メール", "email", "mail"}
+    CLASS_HEADERS     = {"クラス", "class", "組", "担当クラス"}
+    NUMBER_HEADERS    = {"出席番号", "番号", "number", "no"}
+    ROLE_HEADERS      = {"役割", "role", "種別", "区分"}
+    MEMO_HEADERS      = {"幹事メモ", "メモ", "memo", "備考"}
 
     first = [h.strip().lower() for h in rows[0]]
     has_header = any(h in NAME_HEADERS or h in EMAIL_HEADERS for h in first)
@@ -608,16 +609,17 @@ def roster_import():
                     return i
             return None
 
-        idx_name   = find_idx(NAME_HEADERS)
-        idx_email  = find_idx(EMAIL_HEADERS)
-        idx_class  = find_idx(CLASS_HEADERS)
-        idx_number = find_idx(NUMBER_HEADERS)
-        idx_role   = find_idx(ROLE_HEADERS)
-        idx_memo   = find_idx(MEMO_HEADERS)
-        data_rows  = rows[1:]
+        idx_name      = find_idx(NAME_HEADERS)
+        idx_name_kana = find_idx(NAME_KANA_HEADERS)
+        idx_email     = find_idx(EMAIL_HEADERS)
+        idx_class     = find_idx(CLASS_HEADERS)
+        idx_number    = find_idx(NUMBER_HEADERS)
+        idx_role      = find_idx(ROLE_HEADERS)
+        idx_memo      = find_idx(MEMO_HEADERS)
+        data_rows     = rows[1:]
     else:
-        # ヘッダーなし → 固定順: 氏名, メール, クラス, 出席番号, 役割, 幹事メモ
-        idx_name, idx_email, idx_class, idx_number, idx_role, idx_memo = 0, 1, 2, 3, 4, 5
+        # ヘッダーなし → 固定順: 氏名, 氏名カナ, メール, クラス, 出席番号, 役割, 幹事メモ
+        idx_name, idx_name_kana, idx_email, idx_class, idx_number, idx_role, idx_memo = 0, 1, 2, 3, 4, 5, 6
         data_rows = rows
 
     if idx_name is None:
@@ -641,12 +643,13 @@ def roster_import():
         if not row or all(cell.strip() == "" for cell in row):
             continue
 
-        name   = get_col(row, idx_name)
-        email  = get_col(row, idx_email).lower()
-        class_ = get_col(row, idx_class)
-        number = get_col(row, idx_number)
-        role   = get_col(row, idx_role) or "生徒"
-        memo   = get_col(row, idx_memo)
+        name      = get_col(row, idx_name)
+        name_kana = get_col(row, idx_name_kana)
+        email     = get_col(row, idx_email).lower()
+        class_    = get_col(row, idx_class)
+        number    = get_col(row, idx_number)
+        role      = get_col(row, idx_role) or "生徒"
+        memo      = get_col(row, idx_memo)
 
         if not name:
             skipped += 1
@@ -666,7 +669,7 @@ def roster_import():
             email = f"__no_email_{name}_{class_}_{role}@placeholder.local"
 
         new_participants.append(dict(
-            name=name, email=email, class_name=class_,
+            name=name, name_kana=name_kana, email=email, class_name=class_,
             student_number=number, role=role, teacher_memo=memo,
         ))
 
@@ -691,12 +694,13 @@ def roster_import():
 @admin_bp.route("/roster/add", methods=["POST"])
 def roster_add():
     """参加者を1名手動追加"""
-    name   = request.form.get("name", "").strip()
-    email  = request.form.get("email", "").strip().lower()
-    class_ = request.form.get("class_name", "").strip()
-    number = request.form.get("student_number", "").strip()
-    role   = request.form.get("role", "生徒").strip()
-    memo   = request.form.get("teacher_memo", "").strip()
+    name      = request.form.get("name", "").strip()
+    name_kana = request.form.get("name_kana", "").strip()
+    email     = request.form.get("email", "").strip().lower()
+    class_    = request.form.get("class_name", "").strip()
+    number    = request.form.get("student_number", "").strip()
+    role      = request.form.get("role", "生徒").strip()
+    memo      = request.form.get("teacher_memo", "").strip()
 
     if not name or not email or "@" not in email:
         flash("氏名と正しいメールアドレスを入力してください。", "danger")
@@ -711,7 +715,7 @@ def roster_add():
         return redirect(url_for("admin.roster"))
 
     p = Participant(
-        name=name, email=email,
+        name=name, name_kana=name_kana, email=email,
         class_name=class_, student_number=number,
         role=role, teacher_memo=memo,
     )
@@ -750,13 +754,13 @@ def roster_export():
     writer = csv.writer(output)
 
     # ヘッダー行（次回取込時にそのまま使えるフォーマット）
-    writer.writerow(["氏名", "メールアドレス", "クラス", "出席番号", "役割", "幹事メモ"])
+    writer.writerow(["氏名", "氏名（カナ）", "メールアドレス", "クラス", "出席番号", "役割", "幹事メモ"])
 
     for p in participants:
-        # プレースホルダーメールは空欄で出力
         email_out = "" if p.email and "@placeholder.local" in p.email else (p.email or "")
         writer.writerow([
             p.name,
+            p.name_kana or "",
             email_out,
             p.class_name or "",
             p.student_number or "",

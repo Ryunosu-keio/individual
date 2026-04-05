@@ -49,7 +49,12 @@
           <div class="mb-2">
             <label class="form-label form-label-sm fw-bold">氏名 <span class="text-danger">*</span></label>
             <input type="text" class="form-control form-control-sm" name="name"
-                   placeholder="山田 太郎" required>
+                   placeholder="山田太郎" required>
+          </div>
+          <div class="mb-2">
+            <label class="form-label form-label-sm fw-bold">氏名（カナ）</label>
+            <input type="text" class="form-control form-control-sm" name="name_kana"
+                   placeholder="ヤマダタロウ">
           </div>
           <div class="mb-2">
             <label class="form-label form-label-sm fw-bold">メールアドレス <span class="text-danger">*</span></label>
@@ -99,6 +104,7 @@
       <tr>
         <th>ID</th>
         <th>氏名</th>
+        <th>氏名（カナ）</th>
         <th>メールアドレス</th>
         <th>役割</th>
         <th>クラス</th>
@@ -119,6 +125,7 @@
         <td>
           <a href="{{ url_for('admin.participant_detail', participant_id=p.id) }}">{{ p.name }}</a>
         </td>
+        <td class="small text-muted">{{ p.name_kana or '' }}</td>
         <td class="small">
           {% if p.email and '@placeholder.local' not in p.email %}{{ p.email }}{% else %}<span class="text-muted">未登録</span>{% endif %}
         </td>
