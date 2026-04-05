@@ -192,6 +192,9 @@ def final(token):
     status               = request.form.get("status", "").strip()
     companions_str       = request.form.get("companions", "0").strip()
     transfer_name        = request.form.get("transfer_name", "").strip()
+    bank_name            = request.form.get("bank_name", "").strip()
+    branch_name          = request.form.get("branch_name", "").strip()
+    account_number       = request.form.get("account_number", "").strip()
     payment_expected_str = request.form.get("payment_expected", "0").strip()
     payment_method       = request.form.get("payment_method", "bank_transfer").strip()
     remarks              = request.form.get("remarks", "").strip()
@@ -226,6 +229,9 @@ def final(token):
         status=status,
         companions=companions,
         transfer_name=transfer_name,
+        bank_name=bank_name,
+        branch_name=branch_name,
+        account_number=account_number,
         payment_expected=payment_expected,
         payment_method=payment_method,
         remarks=remarks,

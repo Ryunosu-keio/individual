@@ -106,7 +106,10 @@ class FinalResponse(db.Model):
     # status: attending=参加 / not_attending=不参加
     status = db.Column(db.String(20), nullable=False)
     companions = db.Column(db.Integer, default=0)              # 同伴者数
-    transfer_name = db.Column(db.String(100), default="")      # 振込名義
+    transfer_name = db.Column(db.String(100), default="")      # 振込名義（カタカナ）
+    bank_name = db.Column(db.String(100), default="")          # 銀行名
+    branch_name = db.Column(db.String(100), default="")        # 支店名
+    account_number = db.Column(db.String(50), default="")      # 口座番号
     payment_expected = db.Column(db.Integer, default=0)        # 支払予定金額（円）
     payment_method = db.Column(db.String(50), default="bank_transfer")  # 支払方法
     remarks = db.Column(db.Text, default="")                   # 備考
