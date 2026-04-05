@@ -92,9 +92,9 @@ def _build_reminder_mail_body(participant_name: str, final_url: str, config=None
 
 def _send_gas(to_email: str, subject: str, body: str, from_name: str) -> None:
     """GAS Webhookを使ってメールを送信する"""
-    cfg = current_app.config
-    webhook_url = cfg.get("GAS_WEBHOOK_URL", "")
-    secret = cfg.get("GAS_SECRET", "")
+    import os
+    webhook_url = os.environ.get("GAS_WEBHOOK_URL", "") or current_app.config.get("GAS_WEBHOOK_URL", "")
+    secret = os.environ.get("GAS_SECRET", "") or current_app.config.get("GAS_SECRET", "")
 
     if not webhook_url:
         raise ValueError("GAS_WEBHOOK_URL が設定されていません")
