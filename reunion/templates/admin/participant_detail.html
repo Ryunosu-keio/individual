@@ -47,15 +47,21 @@
               <span class="badge bg-warning text-dark">未定</span>
             {% endif %}
           </p>
-          <p class="small text-muted mb-0">
+          <p class="small text-muted mb-2">
             回答日時: {{ prov.submitted_at.strftime('%Y/%m/%d %H:%M') }}
           </p>
           {% if participant.provisional_responses | length > 1 %}
             <p class="small text-muted mt-1">（{{ participant.provisional_responses | length }} 回回答）</p>
           {% endif %}
         {% else %}
-          <p class="text-muted">未回答</p>
+          <p class="text-muted mb-2">未回答</p>
         {% endif %}
+        <form method="POST" action="{{ url_for('admin.set_provisional_status', participant_id=participant.id) }}" class="d-flex gap-1 flex-wrap">
+          <span class="small fw-bold me-1 align-self-center">手動変更:</span>
+          <button name="status" value="attending" class="btn btn-success btn-sm">参加</button>
+          <button name="status" value="not_attending" class="btn btn-secondary btn-sm">不参加</button>
+          <button name="status" value="undecided" class="btn btn-warning btn-sm">未定</button>
+        </form>
       </div>
     </div>
   </div>
@@ -67,7 +73,7 @@
       <div class="card-body">
         {% set final = participant.latest_final %}
         {% if final %}
-          <dl class="row mb-0">
+          <dl class="row mb-2">
             <dt class="col-5">ステータス</dt>
             <dd class="col-7">
               {% if final.status == 'attending' %}
@@ -85,8 +91,13 @@
             <dd class="col-7 small text-muted">{{ final.submitted_at.strftime('%Y/%m/%d %H:%M') }}</dd>
           </dl>
         {% else %}
-          <p class="text-muted">未回答</p>
+          <p class="text-muted mb-2">未回答</p>
         {% endif %}
+        <form method="POST" action="{{ url_for('admin.set_final_status', participant_id=participant.id) }}" class="d-flex gap-1 flex-wrap">
+          <span class="small fw-bold me-1 align-self-center">手動変更:</span>
+          <button name="status" value="attending" class="btn btn-success btn-sm">参加</button>
+          <button name="status" value="not_attending" class="btn btn-secondary btn-sm">不参加</button>
+        </form>
       </div>
     </div>
   </div>

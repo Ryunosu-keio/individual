@@ -155,6 +155,56 @@ def participant_detail(participant_id):
                            mail_logs=mail_logs)
 
 
+@admin_bp.route("/participant/<int:participant_id>/set-provisional-status", methods=["POST"])
+def set_provisional_status(participant_id):
+    """仮出欠ステータスを手動変更"""
+    from models import ProvisionalResponse
+    participant = db.session.get(Participant, participant_id)
+    if participant is None:
+        flash("参加者が見つかりません。", "danger")
+        return redirect(url_for("admin.participants"))
+    status = request.form.get("status", "").strip()
+    if status not in ("attending", "not_attending", "undecided"):
+        flash("無効なステータスです。", "danger")
+        return redirect(url_for("admin.participant_detail", participant_id=participant_id))
+    response = ProvisionalResponse(
+        participant_id=participant.id,
+        status=status,
+        submitted_at=datetime.utcnow(),
+        ip_address="admin",
+    )
+    db.session.add(response)
+    participant.updated_at = datetime.utcnow()
+    db.session.commit()
+    flash(f"仮出欠を「{response.status_label}」に変更しました。", "success")
+    return redirect(url_for("admin.participant_detail", participant_id=participant_id))
+
+
+@admin_bp.route("/participant/<int:participant_id>/set-final-status", methods=["POST"])
+def set_final_status(participant_id):
+    """本出欠ステータスを手動変更"""
+    participant = db.session.get(Participant, participant_id)
+    if participant is None:
+        flash("参加者が見つかりません。", "danger")
+        return redirect(url_for("admin.participants"))
+    status = request.form.get("status", "").strip()
+    if status not in ("attending", "not_attending"):
+        flash("無効なステータスです。", "danger")
+        return redirect(url_for("admin.participant_detail", participant_id=participant_id))
+    from models import FinalResponse
+    response = FinalResponse(
+        participant_id=participant.id,
+        status=status,
+        submitted_at=datetime.utcnow(),
+        ip_address="admin",
+    )
+    db.session.add(response)
+    participant.updated_at = datetime.utcnow()
+    db.session.commit()
+    flash(f"本出欠を「{response.status_label}」に変更しました。", "success")
+    return redirect(url_for("admin.participant_detail", participant_id=participant_id))
+
+
 @admin_bp.route("/participant/<int:participant_id>/memo", methods=["POST"])
 def update_memo(participant_id):
     """幹事メモを更新"""
