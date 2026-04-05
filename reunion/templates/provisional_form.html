@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>仮出欠フォーム</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="bg-light">
+  <div class="container py-5">
+    <div class="row justify-content-center">
+      <div class="col-md-6">
+        <div class="card shadow-sm">
+          <div class="card-header bg-primary text-white text-center py-3">
+            <h4 class="mb-0"><i class="bi bi-calendar-check me-2"></i>仮出欠フォーム</h4>
+          </div>
+          <div class="card-body p-4">
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+              {% if messages %}
+                {% for category, message in messages %}
+                  <div class="alert alert-{{ category }}">{{ message }}</div>
+                {% endfor %}
+              {% endif %}
+            {% endwith %}
+
+            <p class="text-muted mb-4">
+              同窓会への参加意思をお知らせください。<br>
+              後日、詳細をメールでご案内いたします。
+            </p>
+
+            <form method="POST" action="{{ url_for('forms.provisional') }}" id="provForm">
+              <!-- hidden: 選択された参加者ID（名簿マッチング用） -->
+              <input type="hidden" name="participant_id" id="participant_id" value="">
+              <!-- hidden: 氏名（選択またはテキスト入力） -->
+              <input type="hidden" name="name" id="name_hidden" value="{{ name | default('') }}">
+
+              <!-- ① クラス選択 -->
+              <div class="mb-3">
+                <label for="class_select" class="form-label fw-bold">
+                  クラス <span class="text-danger">*</span>
+                </label>
+                <select class="form-select" id="class_select" required>
+                  <option value="">-- クラスを選択 --</option>
+                  <option value="31">3年1組</option>
+                  <option value="32">3年2組</option>
+                  <option value="33">3年3組</option>
+                  <option value="34">3年4組</option>
+                  <option value="35">3年5組</option>
+                  <option value="36">3年6組</option>
+                  <option value="37">3年7組</option>
+                  <option value="38">3年8組</option>
+                  <option value="39">3年9組</option>
+                  <option value="other">クラスが分からない / 教職員</option>
+                </select>
+              </div>
+
+              <!-- ② 名前選択（クラス選択後に表示） -->
+              <div class="mb-3 d-none" id="name_select_group">
+                <label for="name_select" class="form-label fw-bold">
+                  お名前 <span class="text-danger">*</span>
+                </label>
+                <select class="form-select" id="name_select">
+                  <option value="">-- 名前を選択 --</option>
+                </select>
+                <div class="form-text">名前が一覧にない場合は下のテキスト欄に入力してください。</div>
+              </div>
+
+              <!-- ③ 名前テキスト入力（「一覧にない」場合 or クラス不明時） -->
+              <div class="mb-3 d-none" id="name_text_group">
+                <label for="name_text" class="form-label fw-bold">
+                  お名前（直接入力） <span class="text-danger">*</span>
+                </label>
+                <input type="text" class="form-control" id="name_text"
+                       value="{{ name | default('') }}" placeholder="山田太郎">
+              </div>
+
+              <!-- ④ メールアドレス -->
+              <div class="mb-3">
+                <label for="email" class="form-label fw-bold">
+                  メールアドレス <span class="text-danger">*</span>
+                </label>
+                <input type="email" class="form-control" id="email" name="email"
+                       value="{{ email | default('') }}" placeholder="example@example.com" required>
+                <div class="form-text">本出欠フォームのご案内をお送りします。</div>
+              </div>
+
+              <!-- ⑤ クラス（hidden: サーバーへ送信用） -->
+              <input type="hidden" name="class_name" id="class_name_hidden" value="">
+
+              <!-- ⑥ 参加意思 -->
+              <div class="mb-4">
+                <label class="form-label fw-bold">参加意思 <span class="text-danger">*</span></label>
+                <div class="d-flex gap-3">
+                  <div class="form-check">
+                    <input class="form-check-input" type="radio" name="status" id="attending"
+                           value="attending" {% if status | default('') == 'attending' %}checked{% endif %}>
+                    <label class="form-check-label" for="attending">参加予定</label>
+                  </div>
+                  <div class="form-check">
+                    <input class="form-check-input" type="radio" name="status" id="not_attending"
+                           value="not_attending" {% if status | default('') == 'not_attending' %}checked{% endif %}>
+                    <label class="form-check-label" for="not_attending">不参加</label>
+                  </div>
+                  <div class="form-check">
+                    <input class="form-check-input" type="radio" name="status" id="undecided"
+                           value="undecided" {% if status | default('undecided') == 'undecided' %}checked{% endif %}>
+                    <label class="form-check-label" for="undecided">未定</label>
+                  </div>
+                </div>
+              </div>
+
+              <div class="d-grid">
+                <button type="submit" class="btn btn-primary btn-lg" id="submitBtn" disabled>送信する</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    const classSelect     = document.getElementById('class_select');
+    const nameSelectGroup = document.getElementById('name_select_group');
+    const nameSelect      = document.getElementById('name_select');
+    const nameTextGroup   = document.getElementById('name_text_group');
+    const nameText        = document.getElementById('name_text');
+    const participantId   = document.getElementById('participant_id');
+    const nameHidden      = document.getElementById('name_hidden');
+    const classHidden     = document.getElementById('class_name_hidden');
+    const submitBtn       = document.getElementById('submitBtn');
+    const emailInput      = document.getElementById('email');
+
+    // 送信ボタン有効化チェック
+    function checkReady() {
+      const hasName = participantId.value || nameText.value.trim();
+      const hasEmail = emailInput.value.trim() && emailInput.value.includes('@');
+      submitBtn.disabled = !(hasName && hasEmail);
+    }
+
+    emailInput.addEventListener('input', checkReady);
+    nameText.addEventListener('input', () => {
+      nameHidden.value = nameText.value.trim();
+      participantId.value = '';  // テキスト入力時はIDをクリア
+      checkReady();
+    });
+
+    // クラス選択時
+    classSelect.addEventListener('change', async () => {
+      const cls = classSelect.value;
+      classHidden.value = cls;
+      participantId.value = '';
+      nameHidden.value = '';
+      nameSelect.innerHTML = '<option value="">読み込み中...</option>';
+      nameSelect.disabled = true;
+
+      if (!cls || cls === 'other') {
+        // クラス不明 or 教職員 → テキスト入力
+        nameSelectGroup.classList.add('d-none');
+        nameTextGroup.classList.remove('d-none');
+        checkReady();
+        return;
+      }
+
+      nameSelectGroup.classList.remove('d-none');
+      nameTextGroup.classList.add('d-none');
+
+      // APIから名前リストを取得
+      const res = await fetch(`{{ url_for('forms.api_names') }}?class=${cls}`);
+      const names = await res.json();
+
+      nameSelect.innerHTML = '<option value="">-- 名前を選択 --</option>';
+      names.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p.id;
+        opt.textContent = p.name;
+        nameSelect.appendChild(opt);
+      });
+      // 「一覧にない」選択肢を追加
+      const notFound = document.createElement('option');
+      notFound.value = 'other';
+      notFound.textContent = '一覧にない（直接入力）';
+      nameSelect.appendChild(notFound);
+
+      nameSelect.disabled = false;
+      checkReady();
+    });
+
+    // 名前選択時
+    nameSelect.addEventListener('change', () => {
+      const val = nameSelect.value;
+      if (!val) {
+        participantId.value = '';
+        nameHidden.value = '';
+        nameTextGroup.classList.add('d-none');
+      } else if (val === 'other') {
+        // 一覧にない → テキスト入力を表示
+        participantId.value = '';
+        nameHidden.value = '';
+        nameTextGroup.classList.remove('d-none');
+        nameText.focus();
+      } else {
+        // 名簿から選択
+        participantId.value = val;
+        nameHidden.value = nameSelect.options[nameSelect.selectedIndex].textContent;
+        nameTextGroup.classList.add('d-none');
+      }
+      checkReady();
+    });
+  </script>
+</body>
+</html>

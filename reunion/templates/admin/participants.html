@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% block title %}参加者一覧 | 同窓会管理{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4 class="mb-0"><i class="bi bi-person-lines-fill me-2"></i>参加者一覧</h4>
+  <form method="POST" action="{{ url_for('admin.send_final_url_bulk') }}"
+        onsubmit="return confirm('仮参加かつ本出欠未回答の方に一括送信します。よろしいですか？')">
+    <button type="submit" class="btn btn-success btn-sm">
+      <i class="bi bi-envelope-fill me-1"></i>本出欠URL一括送信
+    </button>
+  </form>
+</div>
+
+<!-- 検索・絞り込み -->
+<form method="GET" class="row g-2 mb-3">
+  <div class="col-md-4">
+    <input type="text" class="form-control form-control-sm" name="q"
+           value="{{ q }}" placeholder="氏名・メールで検索">
+  </div>
+  <div class="col-md-3">
+    <select class="form-select form-select-sm" name="status">
+      <option value="all" {% if status_filter == 'all' %}selected{% endif %}>すべて</option>
+      <option value="attending" {% if status_filter == 'attending' %}selected{% endif %}>仮参加</option>
+      <option value="not_attending" {% if status_filter == 'not_attending' %}selected{% endif %}>不参加</option>
+      <option value="undecided" {% if status_filter == 'undecided' %}selected{% endif %}>未定</option>
+      <option value="no_response" {% if status_filter == 'no_response' %}selected{% endif %}>仮出欠未回答</option>
+    </select>
+  </div>
+  <div class="col-auto">
+    <button type="submit" class="btn btn-primary btn-sm">絞り込み</button>
+    <a href="{{ url_for('admin.participants') }}" class="btn btn-outline-secondary btn-sm ms-1">リセット</a>
+  </div>
+</form>
+
+<!-- 参加者テーブル -->
+<div class="table-responsive">
+  <table class="table table-hover table-sm align-middle">
+    <thead class="table-light">
+      <tr>
+        <th>ID</th>
+        <th>氏名</th>
+        <th>クラス</th>
+        <th>番号</th>
+        <th>役割</th>
+        <th>メール</th>
+        <th>仮出欠</th>
+        <th>本出欠</th>
+        <th>入金</th>
+        <th>詳細</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in participants %}
+      {% set prov = p.latest_provisional %}
+      {% set final = p.latest_final %}
+      <tr>
+        <td class="text-muted small">{{ p.id }}</td>
+        <td>{{ p.name }}</td>
+        <td class="small text-center">{{ p.class_name or '' }}</td>
+        <td class="small text-center">{{ p.student_number or '' }}</td>
+        <td class="small">
+          {% if p.role == '教師' %}<span class="badge bg-warning text-dark">教師</span>
+          {% elif p.role == '学年主任' %}<span class="badge bg-danger">学年主任</span>
+          {% else %}<span class="badge bg-primary">生徒</span>{% endif %}
+        </td>
+        <td class="small">
+          {% if p.email and '@placeholder.local' not in p.email %}{{ p.email }}
+          {% else %}<span class="text-muted">未登録</span>{% endif %}
+        </td>
+        <td>
+          {% if prov %}
+            {% if prov.status == 'attending' %}
+              <span class="badge bg-success">参加</span>
+            {% elif prov.status == 'not_attending' %}
+              <span class="badge bg-secondary">不参加</span>
+            {% else %}
+              <span class="badge bg-warning text-dark">未定</span>
+            {% endif %}
+          {% else %}
+            <span class="badge bg-light text-muted border">未回答</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if final %}
+            {% if final.status == 'attending' %}
+              <span class="badge bg-success">参加</span>
+            {% else %}
+              <span class="badge bg-secondary">不参加</span>
+            {% endif %}
+          {% else %}
+            <span class="badge bg-light text-muted border">未回答</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if p.payment %}
+            {% if p.payment.payment_status == 'paid' %}
+              <span class="badge bg-success">済</span>
+            {% elif p.payment.payment_status == 'partial' %}
+              <span class="badge bg-warning text-dark">一部</span>
+            {% else %}
+              <span class="badge bg-danger">未</span>
+            {% endif %}
+          {% else %}
+            <span class="text-muted small">-</span>
+          {% endif %}
+        </td>
+        <td>
+          <a href="{{ url_for('admin.participant_detail', participant_id=p.id) }}"
+             class="btn btn-outline-primary btn-sm">詳細</a>
+        </td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="8" class="text-center text-muted py-4">参加者が見つかりません</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+<div class="text-muted small">{{ participants | length }} 件</div>
+{% endblock %}

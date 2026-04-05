@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -m venv venv)",
+      "Bash(curl:*)",
+      "Bash(./venv/Scripts/pip install:*)",
+      "Read(//c/Users/ryuno/Documents/individual/**)",
+      "Bash(PYTHONIOENCODING=utf-8 ./venv/Scripts/python:*)",
+      "Bash(./venv/Scripts/python -c ':*)",
+      "Bash(python3 -c ':*)"
+    ]
+  }
+}

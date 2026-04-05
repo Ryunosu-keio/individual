@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}同窓会情報設定 | 同窓会管理{% endblock %}
+
+{% block content %}
+<h4 class="mb-4"><i class="bi bi-calendar-event me-2"></i>同窓会情報設定</h4>
+
+<p class="text-muted small mb-4">
+  ここで設定した値がメール文章の変数として使われます。<br>
+  <code>{reunion_name}</code> 同窓会名 &nbsp;
+  <code>{reunion_date}</code> 日程 &nbsp;
+  <code>{reunion_venue}</code> 会場 &nbsp;
+  <code>{reunion_fee}</code> 会費
+</p>
+
+<div class="row">
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header fw-bold bg-light">同窓会情報</div>
+      <div class="card-body">
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="alert alert-{{ category }} py-2">{{ message }}</div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
+        <form method="POST" action="{{ url_for('admin.settings_reunion') }}">
+
+          <div class="mb-3">
+            <label class="form-label fw-bold">同窓会名</label>
+            <input type="text" class="form-control" name="reunion_name"
+                   value="{{ settings.get('reunion_name', '') }}"
+                   placeholder="〇〇年度同窓会">
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-bold">日程</label>
+            <input type="text" class="form-control" name="reunion_date"
+                   value="{{ settings.get('reunion_date', '') }}"
+                   placeholder="2025年〇月〇日（〇）〇〇:〇〇〜">
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-bold">会場</label>
+            <input type="text" class="form-control" name="reunion_venue"
+                   value="{{ settings.get('reunion_venue', '') }}"
+                   placeholder="〇〇ホテル 〇〇の間">
+          </div>
+
+          <div class="mb-4">
+            <label class="form-label fw-bold">会費</label>
+            <input type="text" class="form-control" name="reunion_fee"
+                   value="{{ settings.get('reunion_fee', '') }}"
+                   placeholder="10,000円">
+          </div>
+
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary">保存する</button>
+            <a href="{{ url_for('admin.settings_mail_template') }}" class="btn btn-outline-secondary">
+              <i class="bi bi-envelope-paper me-1"></i>メール文章を編集
+            </a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+{% block title %}名簿管理 | 同窓会管理{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4 class="mb-0"><i class="bi bi-journal-text me-2"></i>名簿管理</h4>
+  <a href="{{ url_for('admin.roster_export') }}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-download me-1"></i>CSVエクスポート（来年用）
+  </a>
+</div>
+
+<div class="row g-3 mb-4">
+
+  <!-- CSV取込 -->
+  <div class="col-md-6">
+    <div class="card h-100">
+      <div class="card-header fw-bold bg-light">
+        <i class="bi bi-file-earmark-arrow-up me-1"></i>名簿CSVを取込む
+      </div>
+      <div class="card-body">
+        <p class="text-muted small mb-2">
+          ヘッダー行の列名で自動判別します。列の順番は問いません。<br>
+          既存のメールアドレスはデータを更新します（重複登録になりません）。
+        </p>
+        <p class="text-muted small mb-3">
+          <strong>CSV形式の例（エクスポートと同じ形式）:</strong><br>
+          <code>氏名,メールアドレス,クラス,出席番号,幹事メモ</code><br>
+          <code>山田太郎,yamada@example.com,1-A,5,幹事</code><br>
+          <code>鈴木花子,suzuki@example.com,2-B,12,</code>
+        </p>
+        <form method="POST" action="{{ url_for('admin.roster_import') }}" enctype="multipart/form-data">
+          <div class="mb-2">
+            <input type="file" class="form-control form-control-sm" name="csv_file" accept=".csv">
+          </div>
+          <button type="submit" class="btn btn-primary btn-sm">取込む</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- 1名手動追加 -->
+  <div class="col-md-6">
+    <div class="card h-100">
+      <div class="card-header fw-bold bg-light">
+        <i class="bi bi-person-plus me-1"></i>1名手動追加
+      </div>
+      <div class="card-body">
+        <form method="POST" action="{{ url_for('admin.roster_add') }}">
+          <div class="mb-2">
+            <label class="form-label form-label-sm fw-bold">氏名 <span class="text-danger">*</span></label>
+            <input type="text" class="form-control form-control-sm" name="name"
+                   placeholder="山田 太郎" required>
+          </div>
+          <div class="mb-2">
+            <label class="form-label form-label-sm fw-bold">メールアドレス <span class="text-danger">*</span></label>
+            <input type="email" class="form-control form-control-sm" name="email"
+                   placeholder="yamada@example.com" required>
+          </div>
+          <div class="mb-2">
+            <label class="form-label form-label-sm fw-bold">役割</label>
+            <select class="form-select form-select-sm" name="role">
+              <option value="生徒">生徒</option>
+              <option value="教師">教師（担任・副担任）</option>
+              <option value="学年主任">学年主任</option>
+            </select>
+          </div>
+          <div class="row g-2 mb-2">
+            <div class="col">
+              <label class="form-label form-label-sm fw-bold">クラス <span class="text-muted small">（2桁: 31=3年1組）</span></label>
+              <input type="text" class="form-control form-control-sm" name="class_name"
+                     placeholder="31">
+            </div>
+            <div class="col">
+              <label class="form-label form-label-sm fw-bold">出席番号</label>
+              <input type="text" class="form-control form-control-sm" name="student_number"
+                     placeholder="5">
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label form-label-sm fw-bold">幹事メモ（任意）</label>
+            <input type="text" class="form-control form-control-sm" name="teacher_memo"
+                   placeholder="備考など">
+          </div>
+          <button type="submit" class="btn btn-success btn-sm">追加する</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 名簿一覧 -->
+<div class="d-flex justify-content-between align-items-center mb-2">
+  <h5 class="mb-0">現在の名簿（{{ participants | length }} 名）</h5>
+</div>
+
+<div class="table-responsive">
+  <table class="table table-hover table-sm align-middle">
+    <thead class="table-light">
+      <tr>
+        <th>ID</th>
+        <th>氏名</th>
+        <th>メールアドレス</th>
+        <th>役割</th>
+        <th>クラス</th>
+        <th>出席番号</th>
+        <th>幹事メモ</th>
+        <th>仮出欠</th>
+        <th>本出欠</th>
+        <th>登録日</th>
+        <th>操作</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in participants %}
+      {% set prov = p.latest_provisional %}
+      {% set final = p.latest_final %}
+      <tr>
+        <td class="text-muted small">{{ p.id }}</td>
+        <td>
+          <a href="{{ url_for('admin.participant_detail', participant_id=p.id) }}">{{ p.name }}</a>
+        </td>
+        <td class="small">
+          {% if p.email and '@placeholder.local' not in p.email %}{{ p.email }}{% else %}<span class="text-muted">未登録</span>{% endif %}
+        </td>
+        <td>
+          {% if p.role == '教師' %}<span class="badge bg-warning text-dark">教師</span>
+          {% elif p.role == '学年主任' %}<span class="badge bg-danger">学年主任</span>
+          {% else %}<span class="badge bg-primary">生徒</span>{% endif %}
+        </td>
+        <td class="small text-center">{{ p.class_name or '' }}</td>
+        <td class="small text-center">{{ p.student_number or '' }}</td>
+        <td class="small text-muted">{{ p.teacher_memo or '' }}</td>
+        <td>
+          {% if prov %}
+            {% if prov.status == 'attending' %}<span class="badge bg-success">参加</span>
+            {% elif prov.status == 'not_attending' %}<span class="badge bg-secondary">不参加</span>
+            {% else %}<span class="badge bg-warning text-dark">未定</span>{% endif %}
+          {% else %}
+            <span class="badge bg-light text-muted border">未回答</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if final %}
+            {% if final.status == 'attending' %}<span class="badge bg-success">参加</span>
+            {% else %}<span class="badge bg-secondary">不参加</span>{% endif %}
+          {% else %}
+            <span class="badge bg-light text-muted border">未回答</span>
+          {% endif %}
+        </td>
+        <td class="small text-muted">{{ p.created_at.strftime('%Y/%m/%d') }}</td>
+        <td>
+          <form method="POST"
+                action="{{ url_for('admin.roster_delete', participant_id=p.id) }}"
+                onsubmit="return confirm('{{ p.name }} を削除しますか？関連する回答・入金データも削除されます。')">
+            <button type="submit" class="btn btn-outline-danger btn-sm">削除</button>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="8" class="text-center text-muted py-5">
+          名簿がありません。CSVを取込むか、1名ずつ追加してください。
+        </td>
+      </tr>
+      {% endfor %}
+
+    </tbody>
+  </table>
+</div>
+{% endblock %}

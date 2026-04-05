@@ -1,3 +1,4 @@
+**/*.xlsx
 /bot.py
 /myenv
 /output.csv

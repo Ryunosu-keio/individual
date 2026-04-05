@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+{% block title %}メール設定 | 同窓会管理{% endblock %}
+
+{% block content %}
+<h4 class="mb-4"><i class="bi bi-envelope-gear me-2"></i>メール設定</h4>
+
+<div class="row g-3">
+
+  <!-- 設定フォーム -->
+  <div class="col-md-7">
+    <div class="card">
+      <div class="card-header fw-bold bg-light">送信アカウント設定</div>
+      <div class="card-body">
+        <form method="POST" action="{{ url_for('admin.settings_mail') }}">
+
+          <!-- 送信モード -->
+          <div class="mb-3">
+            <label class="form-label fw-bold">送信モード</label>
+            <div class="d-flex gap-3">
+              <div class="form-check">
+                <input class="form-check-input" type="radio" name="mail_mode"
+                       id="mode_console" value="console"
+                       {% if settings.get('mail_mode','console') == 'console' %}checked{% endif %}>
+                <label class="form-check-label" for="mode_console">
+                  コンソール出力（テスト用・実送信しない）
+                </label>
+              </div>
+              <div class="form-check">
+                <input class="form-check-input" type="radio" name="mail_mode"
+                       id="mode_smtp" value="smtp"
+                       {% if settings.get('mail_mode') == 'smtp' %}checked{% endif %}>
+                <label class="form-check-label" for="mode_smtp">
+                  SMTP送信（実際に送信する）
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <hr class="my-3">
+
+          <!-- 送信元 -->
+          <div class="mb-3">
+            <label class="form-label fw-bold">送信元メールアドレス</label>
+            <input type="email" class="form-control" name="mail_from"
+                   value="{{ settings.get('mail_from', '') }}"
+                   placeholder="walkzkiyota@gmail.com">
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-bold">送信元表示名</label>
+            <input type="text" class="form-control" name="mail_from_name"
+                   value="{{ settings.get('mail_from_name', '同窓会幹事') }}"
+                   placeholder="同窓会幹事">
+          </div>
+
+          <hr class="my-3">
+          <p class="text-muted small mb-3">以下はSMTPモードの場合のみ使用します。</p>
+
+          <!-- SMTPサーバー -->
+          <div class="row g-2 mb-3">
+            <div class="col-8">
+              <label class="form-label fw-bold">SMTPサーバー</label>
+              <input type="text" class="form-control" name="mail_smtp_host"
+                     value="{{ settings.get('mail_smtp_host', 'smtp.gmail.com') }}"
+                     placeholder="smtp.gmail.com">
+            </div>
+            <div class="col-4">
+              <label class="form-label fw-bold">ポート</label>
+              <input type="number" class="form-control" name="mail_smtp_port"
+                     value="{{ settings.get('mail_smtp_port', '587') }}"
+                     placeholder="587">
+            </div>
+          </div>
+
+          <!-- SMTPユーザー -->
+          <div class="mb-3">
+            <label class="form-label fw-bold">SMTPユーザー名（メールアドレス）</label>
+            <input type="email" class="form-control" name="mail_smtp_user"
+                   value="{{ settings.get('mail_smtp_user', '') }}"
+                   placeholder="walkzkiyota@gmail.com">
+          </div>
+
+          <!-- アプリパスワード -->
+          <div class="mb-4">
+            <label class="form-label fw-bold">アプリパスワード</label>
+            <input type="password" class="form-control" name="mail_smtp_password"
+                   placeholder="入力しない場合は変更されません">
+            <div class="form-text">
+              Gmailの場合: Googleアカウント → セキュリティ → 2段階認証をオン → アプリパスワードを生成
+            </div>
+          </div>
+
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary">保存する</button>
+            <a href="{{ url_for('admin.settings_mail_template') }}" class="btn btn-outline-secondary">
+              <i class="bi bi-envelope-paper me-1"></i>メール文章を編集
+            </a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- テスト送信 -->
+  <div class="col-md-5">
+    <div class="card mb-3">
+      <div class="card-header fw-bold bg-light">テスト送信</div>
+      <div class="card-body">
+        <p class="text-muted small">設定を保存したあと、テストメールを送って動作確認できます。</p>
+        <form method="POST" action="{{ url_for('admin.settings_mail_test') }}">
+          <div class="mb-2">
+            <input type="email" class="form-control form-control-sm" name="test_email"
+                   value="{{ settings.get('mail_smtp_user', '') }}"
+                   placeholder="送信先メールアドレス">
+          </div>
+          <button type="submit" class="btn btn-outline-primary btn-sm">
+            <i class="bi bi-send me-1"></i>テスト送信
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header fw-bold bg-light">Gmailアプリパスワードの取得手順</div>
+      <div class="card-body small text-muted">
+        <ol class="ps-3 mb-0">
+          <li>Googleアカウントにログイン</li>
+          <li>「セキュリティ」を開く</li>
+          <li>「2段階認証プロセス」をオンにする</li>
+          <li>「アプリパスワード」を選択</li>
+          <li>アプリ名を入力して「生成」</li>
+          <li>表示された16桁をパスワード欄に入力</li>
+        </ol>
+        <div class="mt-2 text-warning">
+          <i class="bi bi-exclamation-triangle me-1"></i>
+          通常のGmailパスワードは使えません。
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

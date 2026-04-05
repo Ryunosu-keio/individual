@@ -1,0 +1,272 @@
+"""
+routes/forms.py - 仮出欠・本出欠フォームのルーティング
+
+URL:
+  GET  /form/provisional        仮出欠フォーム表示
+  POST /form/provisional        仮出欠フォーム登録
+  GET  /form/final/<token>      本出欠フォーム表示
+  POST /form/final/<token>      本出欠フォーム登録
+  GET  /form/done               完了ページ
+
+名寄せロジック（仮出欠フォーム）:
+  1. 入力されたメールアドレスで既存レコードを検索
+  2. 見つかれば → そのレコードに仮出欠を紐付け
+  3. 見つからなければ → 入力された氏名で名簿レコードを検索（名寄せ）
+     a. 一致1件 → メールを更新して紐付け
+     b. 一致複数（同姓同名）→ クラス・出席番号で絞り込み
+     c. 一致なし → 新規登録
+"""
+import re
+import logging
+from datetime import datetime
+from flask import Blueprint, render_template, request, redirect, url_for, flash, abort
+from extensions import db
+from models import Participant, ProvisionalResponse, FinalResponse, Payment
+from services.token_service import get_participant_by_token
+
+logger = logging.getLogger(__name__)
+
+forms_bp = Blueprint("forms", __name__, url_prefix="/form")
+
+PLACEHOLDER_DOMAIN = "@placeholder.local"
+
+
+def _normalize_name(name: str) -> str:
+    """氏名を正規化（スペース除去・全角半角統一）して比較用に返す"""
+    return re.sub(r'[\s\u3000]+', '', name)
+
+
+def _find_roster_match(name: str, class_name: str, student_number: str):
+    """
+    名簿（プレースホルダーメール保持レコード）から氏名で一致を探す。
+
+    優先順位:
+      1. 氏名 + クラス + 出席番号 が完全一致
+      2. 氏名 + クラス が一致
+      3. 氏名のみ一致（スペース正規化後）
+
+    Returns:
+        Participant or None: 一意に特定できた場合のみ返す。
+                             複数候補が残る場合は None（新規登録に委ねる）。
+    """
+    # プレースホルダーメールを持つ（＝まだ本人未連絡）レコードを対象に絞る
+    candidates = Participant.query.filter(
+        Participant.email.like(f"%{PLACEHOLDER_DOMAIN}")
+    ).all()
+
+    norm_input = _normalize_name(name)
+
+    # 氏名が一致するものを抽出（スペース差異を無視）
+    name_matches = [
+        p for p in candidates
+        if _normalize_name(p.name) == norm_input
+    ]
+
+    if not name_matches:
+        return None
+
+    if len(name_matches) == 1:
+        return name_matches[0]
+
+    # 同姓同名が複数いる場合 → クラスで絞り込む
+    if class_name:
+        class_matches = [p for p in name_matches if p.class_name == class_name]
+        if len(class_matches) == 1:
+            return class_matches[0]
+
+        # クラスも一致が複数 → 出席番号で絞り込む
+        if class_matches and student_number:
+            num_matches = [p for p in class_matches if p.student_number == student_number]
+            if len(num_matches) == 1:
+                return num_matches[0]
+
+    # 絞り込めなかった → 新規登録に任せる
+    logger.warning(f"名寄せ失敗（同姓同名複数）: {name} / クラス={class_name}")
+    return None
+
+
+@forms_bp.route("/provisional", methods=["GET", "POST"])
+def provisional():
+    """仮出欠フォーム"""
+    if request.method == "GET":
+        return render_template("provisional_form.html")
+
+    # クラス選択→名前選択方式: participant_id が送られてくる場合はそれを優先
+    participant_id  = request.form.get("participant_id", "").strip()
+    name           = request.form.get("name", "").strip()
+    email          = request.form.get("email", "").strip().lower()
+    status         = request.form.get("status", "undecided")
+    class_name     = request.form.get("class_name", "").strip()
+    student_number = ""  # フォームからは収集しない
+
+    # バリデーション
+    errors = []
+    if not name and not participant_id:
+        errors.append("氏名を選択または入力してください。")
+    if not email or "@" not in email:
+        errors.append("正しいメールアドレスを入力してください。")
+    if status not in ("attending", "not_attending", "undecided"):
+        errors.append("参加意思を選択してください。")
+
+    if errors:
+        for e in errors:
+            flash(e, "danger")
+        return render_template("provisional_form.html",
+                               name=name, email=email, status=status,
+                               class_name=class_name)
+
+    matched_how = ""
+
+    # ── ステップ1: ドロップダウンで名簿IDが選択された場合（最優先）──
+    if participant_id:
+        participant = db.session.get(Participant, int(participant_id))
+        if participant:
+            participant.email = email
+            participant.updated_at = datetime.utcnow()
+            matched_how = "selected"
+            name = participant.name  # 正式名称を使う
+            logger.info(f"名簿選択: {participant.name} ({email})")
+        else:
+            participant_id = ""  # 無効なIDは無視してフォールスルー
+
+    if not participant_id:
+        # ── ステップ2: メールアドレスで既存レコードを検索 ──
+        participant = Participant.query.filter_by(email=email).first()
+
+        if participant and PLACEHOLDER_DOMAIN not in participant.email:
+            participant.name = name
+            participant.updated_at = datetime.utcnow()
+            matched_how = "email"
+            logger.info(f"既存参加者（メール一致）: {name} ({email})")
+
+        elif not participant:
+            # ── ステップ3: 氏名で名簿を検索（名寄せ）──
+            roster_match = _find_roster_match(name, class_name, student_number)
+            if roster_match:
+                roster_match.email = email
+                roster_match.name  = name
+                if class_name:
+                    roster_match.class_name = class_name
+                roster_match.updated_at = datetime.utcnow()
+                participant = roster_match
+                matched_how = "roster"
+                logger.info(f"名簿に名寄せ: {name} ({email}) → ID={roster_match.id}")
+            else:
+                # ── ステップ4: 完全新規 ──
+                participant = Participant(name=name, email=email, class_name=class_name)
+                db.session.add(participant)
+                db.session.flush()
+                matched_how = "new"
+                logger.info(f"新規参加者登録: {name} ({email})")
+
+    # 仮出欠回答を追加
+    response = ProvisionalResponse(
+        participant_id=participant.id,
+        status=status,
+        submitted_at=datetime.utcnow(),
+        ip_address=request.remote_addr or "",
+    )
+    db.session.add(response)
+    db.session.commit()
+
+    logger.info(f"仮出欠登録完了: {name} / {status} / 紐付け={matched_how}")
+    flash("仮出欠を受け付けました。ありがとうございます。", "success")
+    return redirect(url_for("forms.done", type="provisional"))
+
+
+@forms_bp.route("/final/<token>", methods=["GET", "POST"])
+def final(token):
+    """本出欠フォーム（トークン付きURL）"""
+    participant = get_participant_by_token(token)
+    if participant is None:
+        abort(404)
+
+    existing = participant.latest_final
+
+    if request.method == "GET":
+        return render_template("final_form.html",
+                               participant=participant,
+                               existing=existing,
+                               token=token)
+
+    status               = request.form.get("status", "").strip()
+    companions_str       = request.form.get("companions", "0").strip()
+    transfer_name        = request.form.get("transfer_name", "").strip()
+    payment_expected_str = request.form.get("payment_expected", "0").strip()
+    payment_method       = request.form.get("payment_method", "bank_transfer").strip()
+    remarks              = request.form.get("remarks", "").strip()
+
+    errors = []
+    if status not in ("attending", "not_attending"):
+        errors.append("参加・不参加を選択してください。")
+
+    try:
+        companions = int(companions_str) if companions_str else 0
+        if companions < 0:
+            raise ValueError
+    except ValueError:
+        companions = 0
+        errors.append("同伴者数は0以上の整数を入力してください。")
+
+    try:
+        payment_expected = int(payment_expected_str) if payment_expected_str else 0
+    except ValueError:
+        payment_expected = 0
+
+    if errors:
+        for e in errors:
+            flash(e, "danger")
+        return render_template("final_form.html",
+                               participant=participant,
+                               existing=existing,
+                               token=token)
+
+    response = FinalResponse(
+        participant_id=participant.id,
+        status=status,
+        companions=companions,
+        transfer_name=transfer_name,
+        payment_expected=payment_expected,
+        payment_method=payment_method,
+        remarks=remarks,
+        submitted_at=datetime.utcnow(),
+        ip_address=request.remote_addr or "",
+    )
+    db.session.add(response)
+
+    payment = participant.payment
+    if payment is None:
+        payment = Payment(participant_id=participant.id)
+        db.session.add(payment)
+
+    if status == "attending":
+        payment.expected_amount = payment_expected
+        payment.payment_method  = payment_method
+        payment.transfer_name   = transfer_name
+
+    participant.updated_at = datetime.utcnow()
+    db.session.commit()
+
+    logger.info(f"本出欠登録: {participant.name} ({participant.email}) → {status}")
+    flash("本出欠を受け付けました。ありがとうございます。", "success")
+    return redirect(url_for("forms.done", type="final"))
+
+
+@forms_bp.route("/api/names")
+def api_names():
+    """クラスに属する生徒名一覧をJSON返却（仮出欠フォームのドロップダウン用）"""
+    from flask import jsonify
+    class_name = request.args.get("class", "").strip()
+    if not class_name:
+        return jsonify([])
+    participants = Participant.query.filter_by(
+        class_name=class_name, role="生徒"
+    ).order_by(Participant.student_number).all()
+    return jsonify([{"id": p.id, "name": p.name, "number": p.student_number or ""} for p in participants])
+
+
+@forms_bp.route("/done")
+def done():
+    """フォーム送信完了ページ"""
+    form_type = request.args.get("type", "provisional")
+    return render_template("done.html", form_type=form_type)

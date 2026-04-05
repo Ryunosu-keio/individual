@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+{% block title %}CSV取込 | 同窓会管理{% endblock %}
+
+{% block content %}
+<h4 class="mb-3"><i class="bi bi-file-earmark-spreadsheet me-2"></i>銀行CSV取込・照合</h4>
+
+<div class="row g-3 mb-4">
+
+  <!-- CSV取込フォーム -->
+  <div class="col-md-6">
+    <div class="card h-100">
+      <div class="card-header fw-bold bg-light">CSVファイルを取込む</div>
+      <div class="card-body">
+        <form method="POST" action="{{ url_for('admin.csv_import') }}" enctype="multipart/form-data">
+          <div class="mb-3">
+            <label for="csv_file" class="form-label">銀行CSVファイル</label>
+            <input type="file" class="form-control" id="csv_file" name="csv_file" accept=".csv">
+            <div class="form-text">
+              UTF-8またはShift_JIS形式のCSVに対応。<br>
+              列名として「振込名義」「金額」「日付」が含まれている必要があります。
+            </div>
+          </div>
+          <button type="submit" class="btn btn-primary">取込む</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- 自動照合 -->
+  <div class="col-md-6">
+    <div class="card h-100">
+      <div class="card-header fw-bold bg-light">自動照合</div>
+      <div class="card-body">
+        <p class="text-muted small">
+          取込済みのCSVレコードと参加者の振込名義を自動で照合します。
+          類似度80%以上で照合候補として、100%（完全一致）で自動確定します。
+        </p>
+        <form method="POST" action="{{ url_for('admin.csv_match') }}"
+              onsubmit="return confirm('自動照合を実行しますか？')">
+          <button type="submit" class="btn btn-success">
+            <i class="bi bi-arrow-repeat me-1"></i>自動照合を実行
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 取込済みデータ一覧 -->
+<h5 class="mb-2">取込済みデータ</h5>
+<div class="table-responsive">
+  <table class="table table-hover table-sm align-middle">
+    <thead class="table-light">
+      <tr>
+        <th>ID</th>
+        <th>ファイル名</th>
+        <th>振込名義（生）</th>
+        <th>取引日</th>
+        <th>金額</th>
+        <th>照合ステータス</th>
+        <th>照合先参加者</th>
+        <th>操作</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for bi in bank_imports %}
+      <tr>
+        <td class="text-muted small">{{ bi.id }}</td>
+        <td class="small">{{ bi.filename }}</td>
+        <td>{{ bi.raw_name }}</td>
+        <td class="small">{{ bi.raw_date or '-' }}</td>
+        <td>{{ bi.raw_amount }} 円</td>
+        <td>
+          {% if bi.match_status == 'confirmed' %}
+            <span class="badge bg-success">確定済み</span>
+          {% elif bi.match_status == 'matched' %}
+            <span class="badge bg-warning text-dark">候補あり</span>
+          {% else %}
+            <span class="badge bg-light text-muted border">未照合</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if bi.matched_participant %}
+            <a href="{{ url_for('admin.participant_detail', participant_id=bi.matched_participant.id) }}">
+              {{ bi.matched_participant.name }}
+            </a>
+          {% else %}
+            <span class="text-muted small">-</span>
+          {% endif %}
+        </td>
+        <td>
+          <div class="d-flex gap-1 flex-wrap">
+            {% if bi.match_status != 'confirmed' %}
+            <!-- 手動照合確定 -->
+            <button type="button" class="btn btn-outline-success btn-sm"
+                    data-bs-toggle="modal"
+                    data-bs-target="#matchModal{{ bi.id }}">
+              手動確定
+            </button>
+            {% endif %}
+            {% if bi.match_status != 'unmatched' %}
+            <!-- 照合解除 -->
+            <form method="POST" action="{{ url_for('admin.unmatch_route', bank_import_id=bi.id) }}"
+                  onsubmit="return confirm('照合を解除しますか？')">
+              <button type="submit" class="btn btn-outline-danger btn-sm">解除</button>
+            </form>
+            {% endif %}
+          </div>
+        </td>
+      </tr>
+
+      <!-- 手動照合モーダル -->
+      <div class="modal fade" id="matchModal{{ bi.id }}" tabindex="-1">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title">手動照合確定</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('admin.confirm_match_route') }}">
+              <input type="hidden" name="bank_import_id" value="{{ bi.id }}">
+              <div class="modal-body">
+                <p>振込名義: <strong>{{ bi.raw_name }}</strong><br>
+                   金額: <strong>{{ bi.raw_amount }} 円</strong></p>
+                <div class="mb-3">
+                  <label class="form-label fw-bold">照合する参加者ID</label>
+                  <input type="number" class="form-control" name="participant_id"
+                         value="{{ bi.matched_participant_id or '' }}"
+                         placeholder="参加者のIDを入力">
+                  <div class="form-text">参加者詳細ページのIDを確認してください。</div>
+                </div>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
+                <button type="submit" class="btn btn-success">確定する</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+      {% else %}
+      <tr>
+        <td colspan="8" class="text-center text-muted py-4">取込済みデータがありません</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+<div class="text-muted small">{{ bank_imports | length }} 件</div>
+{% endblock %}

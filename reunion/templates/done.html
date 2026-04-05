@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>送信完了</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+  <div class="container py-5">
+    <div class="row justify-content-center">
+      <div class="col-md-6 text-center">
+        <div class="card shadow-sm p-5">
+          <div class="mb-3">
+            <span style="font-size: 4rem;">✅</span>
+          </div>
+          {% if form_type == 'final' %}
+            <h4 class="mb-3">本出欠の回答を受け付けました</h4>
+            <p class="text-muted">ご回答ありがとうございます。<br>ご不明な点は幹事までお問い合わせください。</p>
+          {% else %}
+            <h4 class="mb-3">仮出欠の回答を受け付けました</h4>
+            <p class="text-muted">ご回答ありがとうございます。<br>後日、詳細をメールでご案内いたします。</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

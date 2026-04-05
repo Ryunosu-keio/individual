@@ -1,0 +1,752 @@
+"""
+routes/admin.py - 管理画面のルーティング
+
+URL:
+  GET  /admin/                          管理画面トップ（ダッシュボード）
+  GET  /admin/participants              参加者一覧
+  GET  /admin/participant/<id>          参加者詳細
+  POST /admin/participant/<id>/memo     メモ更新
+  POST /admin/send-final-url/<id>       個別送信
+  POST /admin/send-final-url-bulk       一括送信
+  GET  /admin/payments                  入金管理一覧
+  POST /admin/payment/<id>/update       入金ステータス更新
+  GET  /admin/csv-import                CSV取込画面
+  POST /admin/csv-import                CSV取込実行
+  POST /admin/csv-match                 自動照合実行
+  POST /admin/confirm-match             手動照合確定
+  POST /admin/unmatch/<id>              照合解除
+  GET  /admin/roster                    名簿管理画面
+  POST /admin/roster/import             名簿CSV取込
+  POST /admin/roster/add                参加者1名手動追加
+  POST /admin/roster/delete/<id>        参加者削除
+  GET  /admin/roster/export             名簿CSVエクスポート
+"""
+import csv
+import io
+import logging
+from datetime import datetime
+from flask import (Blueprint, render_template, request, redirect,
+                   url_for, flash, current_app, jsonify, Response)
+from extensions import db
+from models import Participant, ProvisionalResponse, FinalResponse, Payment, BankImport, MailLog, AppSetting
+from services.token_service import ensure_token, generate_final_url
+from services.mail_service import send_final_url, send_reminder
+from services.csv_service import parse_bank_csv, save_bank_imports
+from services.matching_service import run_auto_matching, confirm_match, unmatch
+
+logger = logging.getLogger(__name__)
+
+admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
+
+
+# -----------------------------------------------
+# ダッシュボード
+# -----------------------------------------------
+@admin_bp.route("/")
+def index():
+    """管理画面トップ：各種集計を表示"""
+    total = Participant.query.count()
+    provisional_attending = 0
+    final_attending = 0
+    final_not_attending = 0
+    no_response = 0
+    paid_count = 0
+    unpaid_count = 0
+
+    participants = Participant.query.all()
+    for p in participants:
+        prov = p.latest_provisional
+        final = p.latest_final
+        if prov:
+            if prov.status == "attending":
+                provisional_attending += 1
+        else:
+            no_response += 1
+
+        if final:
+            if final.status == "attending":
+                final_attending += 1
+            else:
+                final_not_attending += 1
+
+        if p.payment:
+            if p.payment.payment_status == "paid":
+                paid_count += 1
+            else:
+                unpaid_count += 1
+
+    # メール未登録（プレースホルダー）の人数
+    no_email_count = Participant.query.filter(
+        Participant.email.like("%@placeholder.local")
+    ).count()
+
+    stats = {
+        "total": total,
+        "provisional_attending": provisional_attending,
+        "final_attending": final_attending,
+        "final_not_attending": final_not_attending,
+        "no_provisional_response": no_response,
+        "paid": paid_count,
+        "unpaid": unpaid_count,
+        "no_email": no_email_count,
+    }
+    return render_template("admin/index.html", stats=stats)
+
+
+# -----------------------------------------------
+# 参加者一覧・詳細
+# -----------------------------------------------
+@admin_bp.route("/participants")
+def participants():
+    """参加者一覧（検索・絞り込み対応）"""
+    # 検索・絞り込みパラメータ
+    q = request.args.get("q", "").strip()
+    status_filter = request.args.get("status", "all")
+
+    query = Participant.query
+
+    # 名前・メールで検索
+    if q:
+        query = query.filter(
+            db.or_(
+                Participant.name.ilike(f"%{q}%"),
+                Participant.email.ilike(f"%{q}%"),
+            )
+        )
+
+    all_participants = query.order_by(Participant.created_at.desc()).all()
+
+    # 仮出欠ステータスで絞り込み（Python側でフィルタ）
+    if status_filter != "all":
+        filtered = []
+        for p in all_participants:
+            prov = p.latest_provisional
+            if status_filter == "no_response" and prov is None:
+                filtered.append(p)
+            elif prov and prov.status == status_filter:
+                filtered.append(p)
+        all_participants = filtered
+
+    return render_template("admin/participants.html",
+                           participants=all_participants,
+                           q=q,
+                           status_filter=status_filter)
+
+
+@admin_bp.route("/participant/<int:participant_id>")
+def participant_detail(participant_id):
+    """参加者詳細"""
+    participant = db.session.get(Participant, participant_id)
+    if participant is None:
+        flash("参加者が見つかりません。", "danger")
+        return redirect(url_for("admin.participants"))
+
+    base_url = current_app.config.get("APP_BASE_URL", "http://localhost:5000")
+    final_url = None
+    if participant.token:
+        final_url = generate_final_url(participant, base_url)
+
+    mail_logs = MailLog.query.filter_by(participant_id=participant_id)\
+                             .order_by(MailLog.sent_at.desc()).all()
+
+    return render_template("admin/participant_detail.html",
+                           participant=participant,
+                           final_url=final_url,
+                           mail_logs=mail_logs)
+
+
+@admin_bp.route("/participant/<int:participant_id>/memo", methods=["POST"])
+def update_memo(participant_id):
+    """幹事メモを更新"""
+    participant = db.session.get(Participant, participant_id)
+    if participant is None:
+        flash("参加者が見つかりません。", "danger")
+        return redirect(url_for("admin.participants"))
+
+    participant.teacher_memo = request.form.get("teacher_memo", "").strip()
+    participant.updated_at = datetime.utcnow()
+    db.session.commit()
+    flash("メモを更新しました。", "success")
+    return redirect(url_for("admin.participant_detail", participant_id=participant_id))
+
+
+# -----------------------------------------------
+# メール送信
+# -----------------------------------------------
+@admin_bp.route("/send-final-url/<int:participant_id>", methods=["POST"])
+def send_final_url_single(participant_id):
+    """本出欠URLを個別送信"""
+    participant = db.session.get(Participant, participant_id)
+    if participant is None:
+        flash("参加者が見つかりません。", "danger")
+        return redirect(url_for("admin.participants"))
+
+    base_url = current_app.config.get("APP_BASE_URL", "http://localhost:5000")
+    final_url = generate_final_url(participant, base_url)
+
+    try:
+        # current_app.config_obj はapp.pyで設定する簡易オブジェクト
+        log = send_final_url(participant, final_url)
+        if log.status == "simulated":
+            flash(f"[開発モード] {participant.name} へのメール内容をコンソールに出力しました。", "info")
+        else:
+            flash(f"{participant.name} ({participant.email}) へ本出欠URLを送信しました。", "success")
+    except Exception as e:
+        flash(f"送信失敗: {e}", "danger")
+
+    return redirect(url_for("admin.participant_detail", participant_id=participant_id))
+
+
+@admin_bp.route("/send-final-url-bulk", methods=["POST"])
+def send_final_url_bulk():
+    """本出欠URLを一括送信（仮出欠が「参加」で、まだ本出欠未回答の参加者に送信）"""
+    base_url = current_app.config.get("APP_BASE_URL", "http://localhost:5000")
+
+    # 対象: 仮出欠で「参加」、かつ本出欠未回答
+    participants = Participant.query.all()
+    targets = []
+    for p in participants:
+        prov = p.latest_provisional
+        final = p.latest_final
+        if prov and prov.status == "attending" and final is None:
+            targets.append(p)
+
+    sent = 0
+    failed = 0
+    errors = []
+    for p in targets:
+        final_url = generate_final_url(p, base_url)
+        try:
+            send_final_url(p, final_url)
+            sent += 1
+        except Exception as e:
+            logger.error(f"一括送信失敗: {p.email} - {e}", exc_info=True)
+            errors.append(f"{p.name} ({p.email}): {e}")
+            failed += 1
+
+    if failed == 0:
+        flash(f"一括送信完了: {sent} 件送信しました。", "success")
+    else:
+        flash(f"一括送信完了: {sent} 件成功 / {failed} 件失敗", "warning")
+        for msg in errors:
+            flash(f"送信失敗 — {msg}", "danger")
+    return redirect(url_for("admin.participants"))
+
+
+@admin_bp.route("/send-reminder/<int:participant_id>", methods=["POST"])
+def send_reminder_single(participant_id):
+    """リマインドメールを個別送信"""
+    participant = db.session.get(Participant, participant_id)
+    if participant is None:
+        flash("参加者が見つかりません。", "danger")
+        return redirect(url_for("admin.participants"))
+
+    base_url = current_app.config.get("APP_BASE_URL", "http://localhost:5000")
+    final_url = generate_final_url(participant, base_url)
+
+    try:
+        log = send_reminder(participant, final_url)
+        if log.status == "simulated":
+            flash(f"[開発モード] {participant.name} へのリマインド内容をコンソールに出力しました。", "info")
+        else:
+            flash(f"{participant.name} へリマインドを送信しました。", "success")
+    except Exception as e:
+        flash(f"送信失敗: {e}", "danger")
+
+    return redirect(url_for("admin.participant_detail", participant_id=participant_id))
+
+
+# -----------------------------------------------
+# 入金管理
+# -----------------------------------------------
+@admin_bp.route("/payments")
+def payments():
+    """入金管理一覧"""
+    status_filter = request.args.get("status", "all")
+
+    query = Payment.query
+    if status_filter != "all":
+        query = query.filter_by(payment_status=status_filter)
+
+    all_payments = query.all()
+
+    # 集計
+    total_expected = sum(p.expected_amount or 0 for p in all_payments)
+    total_paid = sum(p.paid_amount or 0 for p in all_payments)
+
+    return render_template("admin/payments.html",
+                           payments=all_payments,
+                           status_filter=status_filter,
+                           total_expected=total_expected,
+                           total_paid=total_paid)
+
+
+@admin_bp.route("/payment/<int:payment_id>/update", methods=["POST"])
+def update_payment(payment_id):
+    """入金ステータスを手動更新"""
+    payment = db.session.get(Payment, payment_id)
+    if payment is None:
+        flash("入金レコードが見つかりません。", "danger")
+        return redirect(url_for("admin.payments"))
+
+    payment.payment_status = request.form.get("payment_status", payment.payment_status)
+    paid_amount_str = request.form.get("paid_amount", "").strip()
+    payment_date_str = request.form.get("payment_date", "").strip()
+    payment.payment_method = request.form.get("payment_method", payment.payment_method)
+    payment.transfer_name = request.form.get("transfer_name", payment.transfer_name)
+
+    if paid_amount_str:
+        try:
+            payment.paid_amount = int(paid_amount_str)
+        except ValueError:
+            pass
+
+    if payment_date_str:
+        try:
+            payment.payment_date = datetime.strptime(payment_date_str, "%Y-%m-%d").date()
+        except ValueError:
+            flash("日付の形式が正しくありません（例: 2025-01-01）", "warning")
+
+    payment.updated_at = datetime.utcnow()
+    db.session.commit()
+    flash("入金情報を更新しました。", "success")
+    return redirect(url_for("admin.payments"))
+
+
+# -----------------------------------------------
+# 銀行CSV取込・照合
+# -----------------------------------------------
+@admin_bp.route("/csv-import", methods=["GET", "POST"])
+def csv_import():
+    """銀行CSV取込画面"""
+    bank_imports = BankImport.query.order_by(BankImport.import_date.desc()).limit(200).all()
+
+    if request.method == "GET":
+        return render_template("admin/csv_import.html", bank_imports=bank_imports)
+
+    # POST: ファイルアップロード
+    if "csv_file" not in request.files:
+        flash("ファイルを選択してください。", "danger")
+        return render_template("admin/csv_import.html", bank_imports=bank_imports)
+
+    file = request.files["csv_file"]
+    if file.filename == "":
+        flash("ファイルを選択してください。", "danger")
+        return render_template("admin/csv_import.html", bank_imports=bank_imports)
+
+    try:
+        content = file.read()
+        records = parse_bank_csv(content, filename=file.filename)
+        saved = save_bank_imports(records)
+        flash(f"CSV取込完了: {len(records)} 件読込、{len(saved)} 件新規保存しました。", "success")
+    except ValueError as e:
+        flash(f"CSVの読み込みに失敗しました: {e}", "danger")
+    except Exception as e:
+        logger.error(f"CSV取込エラー: {e}")
+        flash(f"予期しないエラーが発生しました: {e}", "danger")
+
+    return redirect(url_for("admin.csv_import"))
+
+
+@admin_bp.route("/csv-match", methods=["POST"])
+def csv_match():
+    """自動照合を実行"""
+    try:
+        results = run_auto_matching()
+        flash(
+            f"自動照合完了: 自動確定 {results['auto_confirmed']} 件、"
+            f"候補あり {results['matched']} 件、"
+            f"未照合 {results['unmatched']} 件",
+            "success"
+        )
+    except Exception as e:
+        flash(f"照合エラー: {e}", "danger")
+    return redirect(url_for("admin.csv_import"))
+
+
+@admin_bp.route("/confirm-match", methods=["POST"])
+def confirm_match_route():
+    """手動照合確定"""
+    bank_import_id = request.form.get("bank_import_id", type=int)
+    participant_id = request.form.get("participant_id", type=int)
+
+    if not bank_import_id or not participant_id:
+        flash("パラメータが不正です。", "danger")
+        return redirect(url_for("admin.csv_import"))
+
+    try:
+        confirm_match(bank_import_id, participant_id)
+        flash("照合を確定しました。", "success")
+    except Exception as e:
+        flash(f"照合確定エラー: {e}", "danger")
+
+    return redirect(url_for("admin.csv_import"))
+
+
+@admin_bp.route("/unmatch/<int:bank_import_id>", methods=["POST"])
+def unmatch_route(bank_import_id):
+    """照合を解除"""
+    try:
+        unmatch(bank_import_id)
+        flash("照合を解除しました。", "success")
+    except Exception as e:
+        flash(f"解除エラー: {e}", "danger")
+    return redirect(url_for("admin.csv_import"))
+
+
+# -----------------------------------------------
+# メール設定
+# -----------------------------------------------
+@admin_bp.route("/settings/mail", methods=["GET", "POST"])
+def settings_mail():
+    """メール設定画面（送信アカウントの確認・変更）"""
+    KEYS = [
+        "mail_mode", "mail_smtp_host", "mail_smtp_port",
+        "mail_smtp_user", "mail_smtp_password",
+        "mail_from", "mail_from_name",
+    ]
+
+    if request.method == "POST":
+        for key in KEYS:
+            val = request.form.get(key, "").strip()
+            # パスワードが空欄のまま送信された場合は変更しない
+            if key == "mail_smtp_password" and not val:
+                continue
+            setting = AppSetting.query.filter_by(key=key).first()
+            if setting:
+                setting.value = val
+            else:
+                db.session.add(AppSetting(key=key, value=val))
+        db.session.commit()
+        flash("メール設定を保存しました。", "success")
+        return redirect(url_for("admin.settings_mail"))
+
+    settings = {s.key: s.value for s in AppSetting.query.filter(AppSetting.key.in_(KEYS)).all()}
+    return render_template("admin/settings_mail.html", settings=settings)
+
+
+@admin_bp.route("/settings/mail-template", methods=["GET", "POST"])
+def settings_mail_template():
+    """メール文章編集画面"""
+    KEYS = [
+        "mail_final_url_subject", "mail_final_url_body",
+        "mail_reminder_subject",  "mail_reminder_body",
+    ]
+    if request.method == "POST":
+        for key in KEYS:
+            val = request.form.get(key, "")
+            setting = AppSetting.query.filter_by(key=key).first()
+            if setting:
+                setting.value = val
+            else:
+                db.session.add(AppSetting(key=key, value=val))
+        db.session.commit()
+        flash("メール文章を保存しました。", "success")
+        return redirect(url_for("admin.settings_mail_template"))
+
+    settings = {s.key: s.value for s in AppSetting.query.filter(AppSetting.key.in_(KEYS)).all()}
+    return render_template("admin/settings_mail_template.html", settings=settings)
+
+
+@admin_bp.route("/settings/mail/test", methods=["POST"])
+def settings_mail_test():
+    """テストメール送信（設定が正しいか確認用）"""
+    to_email = request.form.get("test_email", "").strip()
+    if not to_email or "@" not in to_email:
+        flash("送信先メールアドレスを入力してください。", "danger")
+        return redirect(url_for("admin.settings_mail"))
+
+    from services.mail_service import _get_mail_config, _send_smtp_cfg, _send_console
+    mail_cfg = _get_mail_config()
+
+    subject = "【テスト】同窓会管理アプリ メール送信テスト"
+    body = f"このメールは送信テストです。\n送信元: {mail_cfg['from_addr']}\nモード: {mail_cfg['mode']}"
+
+    try:
+        if mail_cfg["mode"] == "smtp":
+            _send_smtp_cfg(to_email, subject, body, mail_cfg)
+            flash(f"テストメールを {to_email} に送信しました。", "success")
+        else:
+            _send_console(to_email, subject, body)
+            flash(f"[コンソールモード] テストメールの内容をターミナルに出力しました。", "info")
+    except Exception as e:
+        flash(f"送信失敗: {e}", "danger")
+
+    return redirect(url_for("admin.settings_mail"))
+
+
+@admin_bp.route("/settings/reunion", methods=["GET", "POST"])
+def settings_reunion():
+    """同窓会情報設定画面"""
+    KEYS = ["reunion_name", "reunion_date", "reunion_venue", "reunion_fee"]
+
+    if request.method == "POST":
+        for key in KEYS:
+            val = request.form.get(key, "").strip()
+            s = AppSetting.query.filter_by(key=key).first()
+            if s:
+                s.value = val
+                s.updated_at = datetime.utcnow()
+            else:
+                db.session.add(AppSetting(key=key, value=val))
+        db.session.commit()
+        flash("同窓会情報を保存しました。", "success")
+        return redirect(url_for("admin.settings_reunion"))
+
+    settings = {s.key: s.value for s in AppSetting.query.filter(AppSetting.key.in_(KEYS)).all()}
+    return render_template("admin/settings_reunion.html", settings=settings)
+
+
+# -----------------------------------------------
+# 参加者の本出欠URLを手動発行（トークン生成）
+# -----------------------------------------------
+@admin_bp.route("/generate-token/<int:participant_id>", methods=["POST"])
+def generate_token_route(participant_id):
+    """本出欠用トークンを生成して詳細ページに戻る"""
+    participant = db.session.get(Participant, participant_id)
+    if participant is None:
+        flash("参加者が見つかりません。", "danger")
+        return redirect(url_for("admin.participants"))
+    ensure_token(participant)
+    flash("本出欠URLを発行しました。", "success")
+    return redirect(url_for("admin.participant_detail", participant_id=participant_id))
+
+
+# -----------------------------------------------
+# 名簿管理
+# -----------------------------------------------
+@admin_bp.route("/roster")
+def roster():
+    """名簿管理画面"""
+    participants = Participant.query.order_by(Participant.name).all()
+    return render_template("admin/roster.html", participants=participants)
+
+
+@admin_bp.route("/roster/import", methods=["POST"])
+def roster_import():
+    """
+    名簿CSVを取込んで参加者を一括登録する。
+
+    CSVフォーマット（1行目はヘッダー行、列順序はヘッダー名で自動判別）:
+      氏名, メールアドレス, クラス, 出席番号, 幹事メモ
+    例（順番は問わない）:
+      氏名,メールアドレス,クラス,出席番号,幹事メモ
+      山田太郎,yamada@example.com,1-A,5,幹事
+      鈴木花子,suzuki@example.com,2-B,12
+
+    ヘッダーがない場合は 氏名・メール・クラス・出席番号・幹事メモ の固定順とみなす。
+    メールアドレスが既存の場合はデータを更新する（重複登録にならない）。
+    """
+    if "csv_file" not in request.files:
+        flash("ファイルを選択してください。", "danger")
+        return redirect(url_for("admin.roster"))
+
+    file = request.files["csv_file"]
+    if file.filename == "":
+        flash("ファイルを選択してください。", "danger")
+        return redirect(url_for("admin.roster"))
+
+    content = file.read()
+    text = None
+    for encoding in ["utf-8-sig", "shift_jis", "cp932", "utf-8"]:
+        try:
+            text = content.decode(encoding)
+            break
+        except UnicodeDecodeError:
+            continue
+
+    if text is None:
+        flash("CSVのエンコーディングを判別できませんでした。UTF-8かShift_JISで保存してください。", "danger")
+        return redirect(url_for("admin.roster"))
+
+    reader = csv.reader(io.StringIO(text))
+    rows = list(reader)
+
+    if not rows:
+        flash("CSVが空です。", "danger")
+        return redirect(url_for("admin.roster"))
+
+    # ヘッダー行の検出と列インデックスの解決
+    NAME_HEADERS    = {"氏名", "名前", "name"}
+    EMAIL_HEADERS   = {"メールアドレス", "メール", "email", "mail"}
+    CLASS_HEADERS   = {"クラス", "class", "組", "担当クラス"}
+    NUMBER_HEADERS  = {"出席番号", "番号", "number", "no"}
+    ROLE_HEADERS    = {"役割", "role", "種別", "区分"}
+    MEMO_HEADERS    = {"幹事メモ", "メモ", "memo", "備考"}
+
+    first = [h.strip().lower() for h in rows[0]]
+    has_header = any(h in NAME_HEADERS or h in EMAIL_HEADERS for h in first)
+
+    if has_header:
+        def find_idx(candidates):
+            for i, h in enumerate(first):
+                if h in {c.lower() for c in candidates}:
+                    return i
+            return None
+
+        idx_name   = find_idx(NAME_HEADERS)
+        idx_email  = find_idx(EMAIL_HEADERS)
+        idx_class  = find_idx(CLASS_HEADERS)
+        idx_number = find_idx(NUMBER_HEADERS)
+        idx_role   = find_idx(ROLE_HEADERS)
+        idx_memo   = find_idx(MEMO_HEADERS)
+        data_rows  = rows[1:]
+    else:
+        # ヘッダーなし → 固定順: 氏名, メール, クラス, 出席番号, 役割, 幹事メモ
+        idx_name, idx_email, idx_class, idx_number, idx_role, idx_memo = 0, 1, 2, 3, 4, 5
+        data_rows = rows
+
+    if idx_name is None:
+        flash("CSVに「氏名」列が見つかりません。", "danger")
+        return redirect(url_for("admin.roster"))
+
+    def get_col(row, idx):
+        if idx is not None and idx < len(row):
+            return row[idx].strip()
+        return ""
+
+    # 有効な役割値
+    VALID_ROLES = {"生徒", "教師", "学年主任"}
+
+    # CSVの行を先にパースしてから全削除→全追加
+    import re
+    new_participants = []
+    skipped = 0
+
+    for row in data_rows:
+        if not row or all(cell.strip() == "" for cell in row):
+            continue
+
+        name   = get_col(row, idx_name)
+        email  = get_col(row, idx_email).lower()
+        class_ = get_col(row, idx_class)
+        number = get_col(row, idx_number)
+        role   = get_col(row, idx_role) or "生徒"
+        memo   = get_col(row, idx_memo)
+
+        if not name:
+            skipped += 1
+            continue
+
+        if role not in VALID_ROLES:
+            role = "生徒"
+
+        if role == "学年主任":
+            class_ = ""
+        elif class_:
+            if not re.fullmatch(r'\d{2}', class_):
+                digits = re.sub(r'\D', '', class_)
+                class_ = digits[:2] if len(digits) >= 2 else digits
+
+        if not email or "@" not in email:
+            email = f"__no_email_{name}_{class_}_{role}@placeholder.local"
+
+        new_participants.append(dict(
+            name=name, email=email, class_name=class_,
+            student_number=number, role=role, teacher_memo=memo,
+        ))
+
+    # 全テーブルをリセットして再登録
+    MailLog.query.delete()
+    from models import ProvisionalResponse, FinalResponse, Payment, BankImport
+    FinalResponse.query.delete()
+    ProvisionalResponse.query.delete()
+    Payment.query.delete()
+    BankImport.query.delete()
+    Participant.query.delete()
+    db.session.flush()
+
+    for p in new_participants:
+        db.session.add(Participant(**p))
+
+    db.session.commit()
+    flash(f"名簿を全件上書きしました: {len(new_participants)} 名登録、{skipped} 行スキップ", "success")
+    return redirect(url_for("admin.roster"))
+
+
+@admin_bp.route("/roster/add", methods=["POST"])
+def roster_add():
+    """参加者を1名手動追加"""
+    name   = request.form.get("name", "").strip()
+    email  = request.form.get("email", "").strip().lower()
+    class_ = request.form.get("class_name", "").strip()
+    number = request.form.get("student_number", "").strip()
+    role   = request.form.get("role", "生徒").strip()
+    memo   = request.form.get("teacher_memo", "").strip()
+
+    if not name or not email or "@" not in email:
+        flash("氏名と正しいメールアドレスを入力してください。", "danger")
+        return redirect(url_for("admin.roster"))
+
+    if role == "学年主任":
+        class_ = ""
+
+    existing = Participant.query.filter_by(email=email).first()
+    if existing:
+        flash(f"メールアドレス {email} はすでに登録されています（{existing.name}）。", "warning")
+        return redirect(url_for("admin.roster"))
+
+    p = Participant(
+        name=name, email=email,
+        class_name=class_, student_number=number,
+        role=role, teacher_memo=memo,
+    )
+    db.session.add(p)
+    db.session.commit()
+    flash(f"{name} を追加しました。", "success")
+    return redirect(url_for("admin.roster"))
+
+
+@admin_bp.route("/roster/delete/<int:participant_id>", methods=["POST"])
+def roster_delete(participant_id):
+    """参加者を削除（関連データも削除）"""
+    participant = db.session.get(Participant, participant_id)
+    if participant is None:
+        flash("参加者が見つかりません。", "danger")
+        return redirect(url_for("admin.roster"))
+
+    name = participant.name
+    db.session.delete(participant)
+    db.session.commit()
+    flash(f"{name} を削除しました。", "success")
+    return redirect(url_for("admin.roster"))
+
+
+@admin_bp.route("/roster/export")
+def roster_export():
+    """
+    現在の参加者名簿をCSVでエクスポートする。
+    来年以降の同窓会で名簿として再利用できる形式で出力する。
+
+    出力列: 氏名, メールアドレス, 幹事メモ
+    """
+    participants = Participant.query.order_by(Participant.name).all()
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+
+    # ヘッダー行（次回取込時にそのまま使えるフォーマット）
+    writer.writerow(["氏名", "メールアドレス", "クラス", "出席番号", "役割", "幹事メモ"])
+
+    for p in participants:
+        # プレースホルダーメールは空欄で出力
+        email_out = "" if p.email and "@placeholder.local" in p.email else (p.email or "")
+        writer.writerow([
+            p.name,
+            email_out,
+            p.class_name or "",
+            p.student_number or "",
+            p.role or "生徒",
+            p.teacher_memo or "",
+        ])
+
+    csv_content = output.getvalue()
+
+    return Response(
+        # BOM付きUTF-8でExcelでも文字化けしない
+        "\ufeff" + csv_content,
+        mimetype="text/csv",
+        headers={
+            "Content-Disposition": "attachment; filename=roster_export.csv"
+        }
+    )

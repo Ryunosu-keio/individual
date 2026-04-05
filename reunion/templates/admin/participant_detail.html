@@ -1,0 +1,230 @@
+{% extends "base.html" %}
+{% block title %}{{ participant.name }} | 参加者詳細{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4 class="mb-0">
+    <a href="{{ url_for('admin.participants') }}" class="text-decoration-none text-muted me-2">
+      <i class="bi bi-chevron-left"></i>
+    </a>
+    {{ participant.name }} さんの詳細
+  </h4>
+</div>
+
+<div class="row g-3">
+
+  <!-- 基本情報 -->
+  <div class="col-md-6">
+    <div class="card h-100">
+      <div class="card-header fw-bold bg-light">基本情報</div>
+      <div class="card-body">
+        <dl class="row mb-0">
+          <dt class="col-4">氏名</dt><dd class="col-8">{{ participant.name }}</dd>
+          <dt class="col-4">メール</dt><dd class="col-8">{{ participant.email }}</dd>
+          <dt class="col-4">登録日時</dt>
+          <dd class="col-8 small text-muted">{{ participant.created_at.strftime('%Y/%m/%d %H:%M') }}</dd>
+          <dt class="col-4">更新日時</dt>
+          <dd class="col-8 small text-muted">{{ participant.updated_at.strftime('%Y/%m/%d %H:%M') }}</dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+
+  <!-- 仮出欠 -->
+  <div class="col-md-6">
+    <div class="card h-100">
+      <div class="card-header fw-bold bg-light">仮出欠</div>
+      <div class="card-body">
+        {% set prov = participant.latest_provisional %}
+        {% if prov %}
+          <p class="mb-1">
+            ステータス:
+            {% if prov.status == 'attending' %}
+              <span class="badge bg-success">参加</span>
+            {% elif prov.status == 'not_attending' %}
+              <span class="badge bg-secondary">不参加</span>
+            {% else %}
+              <span class="badge bg-warning text-dark">未定</span>
+            {% endif %}
+          </p>
+          <p class="small text-muted mb-0">
+            回答日時: {{ prov.submitted_at.strftime('%Y/%m/%d %H:%M') }}
+          </p>
+          {% if participant.provisional_responses | length > 1 %}
+            <p class="small text-muted mt-1">（{{ participant.provisional_responses | length }} 回回答）</p>
+          {% endif %}
+        {% else %}
+          <p class="text-muted">未回答</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- 本出欠 -->
+  <div class="col-md-6">
+    <div class="card h-100">
+      <div class="card-header fw-bold bg-light">本出欠</div>
+      <div class="card-body">
+        {% set final = participant.latest_final %}
+        {% if final %}
+          <dl class="row mb-0">
+            <dt class="col-5">ステータス</dt>
+            <dd class="col-7">
+              {% if final.status == 'attending' %}
+                <span class="badge bg-success">参加</span>
+              {% else %}
+                <span class="badge bg-secondary">不参加</span>
+              {% endif %}
+            </dd>
+            <dt class="col-5">同伴者数</dt><dd class="col-7">{{ final.companions }} 名</dd>
+            <dt class="col-5">振込名義</dt><dd class="col-7">{{ final.transfer_name or '-' }}</dd>
+            <dt class="col-5">支払予定</dt><dd class="col-7">{{ final.payment_expected | default(0) }} 円</dd>
+            <dt class="col-5">支払方法</dt><dd class="col-7">{{ final.payment_method }}</dd>
+            <dt class="col-5">備考</dt><dd class="col-7">{{ final.remarks or '-' }}</dd>
+            <dt class="col-5">回答日時</dt>
+            <dd class="col-7 small text-muted">{{ final.submitted_at.strftime('%Y/%m/%d %H:%M') }}</dd>
+          </dl>
+        {% else %}
+          <p class="text-muted">未回答</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- 入金状況 -->
+  <div class="col-md-6">
+    <div class="card h-100">
+      <div class="card-header fw-bold bg-light">入金状況</div>
+      <div class="card-body">
+        {% set payment = participant.payment %}
+        {% if payment %}
+          <dl class="row mb-2">
+            <dt class="col-5">ステータス</dt>
+            <dd class="col-7">
+              {% if payment.payment_status == 'paid' %}
+                <span class="badge bg-success">支払済み</span>
+              {% elif payment.payment_status == 'partial' %}
+                <span class="badge bg-warning text-dark">一部支払い</span>
+              {% else %}
+                <span class="badge bg-danger">未払い</span>
+              {% endif %}
+            </dd>
+            <dt class="col-5">予定金額</dt><dd class="col-7">{{ payment.expected_amount }} 円</dd>
+            <dt class="col-5">支払金額</dt><dd class="col-7">{{ payment.paid_amount }} 円</dd>
+            <dt class="col-5">支払日</dt><dd class="col-7">{{ payment.payment_date or '-' }}</dd>
+            <dt class="col-5">CSV照合</dt>
+            <dd class="col-7">
+              {% if payment.bank_csv_matched %}
+                <span class="badge bg-success">照合済み</span>
+                <span class="small text-muted">{{ payment.bank_csv_raw_name }}</span>
+              {% else %}
+                <span class="badge bg-light text-muted border">未照合</span>
+              {% endif %}
+            </dd>
+          </dl>
+        {% else %}
+          <p class="text-muted">入金レコードなし</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- 本出欠URL -->
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header fw-bold bg-light">本出欠URL</div>
+      <div class="card-body">
+        {% if participant.token %}
+          <div class="input-group mb-2">
+            <input type="text" class="form-control form-control-sm" id="finalUrl"
+                   value="{{ final_url }}" readonly>
+            <button class="btn btn-outline-secondary btn-sm" type="button"
+                    onclick="copyUrl()">コピー</button>
+          </div>
+          <div class="d-flex gap-2 flex-wrap">
+            <form method="POST" action="{{ url_for('admin.send_final_url_single', participant_id=participant.id) }}"
+                  onsubmit="return confirm('本出欠URLを送信しますか？')">
+              <button type="submit" class="btn btn-success btn-sm">
+                <i class="bi bi-envelope me-1"></i>本出欠URL送信
+              </button>
+            </form>
+            <form method="POST" action="{{ url_for('admin.send_reminder_single', participant_id=participant.id) }}"
+                  onsubmit="return confirm('リマインドを送信しますか？')">
+              <button type="submit" class="btn btn-warning btn-sm">
+                <i class="bi bi-bell me-1"></i>リマインド送信
+              </button>
+            </form>
+          </div>
+        {% else %}
+          <p class="text-muted mb-2">まだトークンが発行されていません。</p>
+          <form method="POST" action="{{ url_for('admin.generate_token_route', participant_id=participant.id) }}">
+            <button type="submit" class="btn btn-primary btn-sm">
+              <i class="bi bi-key me-1"></i>本出欠URLを発行する
+            </button>
+          </form>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- 幹事メモ -->
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header fw-bold bg-light">幹事メモ</div>
+      <div class="card-body">
+        <form method="POST" action="{{ url_for('admin.update_memo', participant_id=participant.id) }}">
+          <textarea class="form-control mb-2" name="teacher_memo" rows="3"
+                    placeholder="幹事用メモ（外部非公開）">{{ participant.teacher_memo or '' }}</textarea>
+          <button type="submit" class="btn btn-primary btn-sm">保存</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- メール送信ログ -->
+  {% if mail_logs %}
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header fw-bold bg-light">メール送信ログ</div>
+      <div class="card-body p-0">
+        <table class="table table-sm mb-0">
+          <thead class="table-light">
+            <tr><th>種別</th><th>送信日時</th><th>ステータス</th><th>エラー</th></tr>
+          </thead>
+          <tbody>
+            {% for log in mail_logs %}
+            <tr>
+              <td>{{ log.mail_type }}</td>
+              <td class="small">{{ log.sent_at.strftime('%Y/%m/%d %H:%M') }}</td>
+              <td>
+                {% if log.status == 'sent' %}
+                  <span class="badge bg-success">送信済み</span>
+                {% elif log.status == 'simulated' %}
+                  <span class="badge bg-info">コンソール出力</span>
+                {% else %}
+                  <span class="badge bg-danger">失敗</span>
+                {% endif %}
+              </td>
+              <td class="small text-danger">{{ log.error_message or '' }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function copyUrl() {
+  const input = document.getElementById('finalUrl');
+  navigator.clipboard.writeText(input.value).then(() => {
+    alert('URLをコピーしました');
+  });
+}
+</script>
+{% endblock %}
