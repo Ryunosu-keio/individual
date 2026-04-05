@@ -63,35 +63,13 @@
                 <div class="form-text">本人以外の同伴者がいる場合のみ入力してください。</div>
               </div>
 
-              <!-- 銀行振込情報 -->
-              <div id="bank-fields">
-                <div class="mb-3">
-                  <label for="transfer_name" class="form-label fw-bold">振込名義（カタカナ）</label>
-                  <input type="text" class="form-control" id="transfer_name" name="transfer_name"
-                         value="{{ existing.transfer_name if existing else '' }}"
-                         placeholder="ヤマダ タロウ">
-                  <div class="form-text">銀行振込の際の名義をご入力ください。</div>
-                </div>
-                <div class="mb-3">
-                  <label for="bank_name" class="form-label fw-bold">銀行名</label>
-                  <input type="text" class="form-control" id="bank_name" name="bank_name"
-                         value="{{ existing.bank_name if existing else '' }}"
-                         placeholder="〇〇銀行">
-                </div>
-                <div class="row g-2 mb-3">
-                  <div class="col-6">
-                    <label for="branch_name" class="form-label fw-bold">支店名</label>
-                    <input type="text" class="form-control" id="branch_name" name="branch_name"
-                           value="{{ existing.branch_name if existing else '' }}"
-                           placeholder="〇〇支店">
-                  </div>
-                  <div class="col-6">
-                    <label for="account_number" class="form-label fw-bold">口座番号</label>
-                    <input type="text" class="form-control" id="account_number" name="account_number"
-                           value="{{ existing.account_number if existing else '' }}"
-                           placeholder="1234567">
-                  </div>
-                </div>
+              <!-- 振込名義 -->
+              <div class="mb-3">
+                <label for="transfer_name" class="form-label fw-bold">振込名義（カタカナ）</label>
+                <input type="text" class="form-control" id="transfer_name" name="transfer_name"
+                       value="{{ existing.transfer_name if existing else '' }}"
+                       placeholder="ヤマダ タロウ">
+                <div class="form-text">銀行振込の際の名義をご入力ください。</div>
               </div>
 
               <!-- 支払予定金額 -->
