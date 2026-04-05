@@ -265,9 +265,17 @@ def api_names():
     class_name = request.args.get("class", "").strip()
     if not class_name:
         return jsonify([])
+    from extensions import db
+    num_order = db.func.cast(
+        db.func.nullif(
+            db.func.regexp_replace(Participant.student_number, r'\D', '', 'g'),
+            ''
+        ),
+        db.Integer
+    )
     participants = Participant.query.filter_by(
         class_name=class_name, role="生徒"
-    ).order_by(Participant.student_number).all()
+    ).order_by(num_order.asc()).all()
     return jsonify([{"id": p.id, "name": p.name, "number": p.student_number or ""} for p in participants])
 
 
