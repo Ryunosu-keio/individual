@@ -294,6 +294,8 @@ def send_final_url_single(participant_id):
     return redirect(url_for("admin.participant_detail", participant_id=participant_id))
 
 
+BULK_SEND_LIMIT = 100  # GAS無料プランの1日上限
+
 @admin_bp.route("/send-final-url-bulk", methods=["POST"])
 def send_final_url_bulk():
     """本出欠URLを一括送信（バックグラウンドスレッドで実行）"""
@@ -314,6 +316,12 @@ def send_final_url_bulk():
         flash("送信対象の参加者がいません。", "info")
         return redirect(url_for("admin.participants"))
 
+    total = len(targets)
+    remaining = 0
+    if total > BULK_SEND_LIMIT:
+        remaining = total - BULK_SEND_LIMIT
+        targets = targets[:BULK_SEND_LIMIT]
+
     # 対象IDとURLだけ先に確定（スレッド内でDBアクセスを最小化）
     app = current_app._get_current_object()
     jobs = [(p.id, generate_final_url(p, base_url)) for p in targets]
@@ -332,13 +340,16 @@ def send_final_url_bulk():
                 except Exception as e:
                     logger.error(f"一括送信失敗: {p.email} - {e}", exc_info=True)
                     failed += 1
-                time.sleep(0.3)  # Gmail レート制限対策
+                time.sleep(0.5)
             logger.info(f"一括送信完了: {sent} 件成功 / {failed} 件失敗")
 
     thread = threading.Thread(target=bulk_send, daemon=True)
     thread.start()
 
-    flash(f"{len(jobs)} 件の送信をバックグラウンドで開始しました。ログで結果を確認できます。", "info")
+    msg = f"{len(jobs)} 件の送信をバックグラウンドで開始しました。"
+    if remaining > 0:
+        msg += f" 残り {remaining} 件は明日以降に再度実行してください（1日上限{BULK_SEND_LIMIT}件）。"
+    flash(msg, "info")
     return redirect(url_for("admin.participants"))
 
 
@@ -384,6 +395,12 @@ def send_reminder_bulk():
         flash("リマインド送信対象の参加者がいません。", "info")
         return redirect(url_for("admin.participants"))
 
+    total = len(targets)
+    remaining = 0
+    if total > BULK_SEND_LIMIT:
+        remaining = total - BULK_SEND_LIMIT
+        targets = targets[:BULK_SEND_LIMIT]
+
     app = current_app._get_current_object()
     jobs = [(p.id, generate_final_url(p, base_url)) for p in targets]
 
@@ -401,13 +418,16 @@ def send_reminder_bulk():
                 except Exception as e:
                     logger.error(f"リマインド一括送信失敗: {p.email} - {e}", exc_info=True)
                     failed += 1
-                time.sleep(0.3)
+                time.sleep(0.5)
             logger.info(f"リマインド一括送信完了: {sent} 件成功 / {failed} 件失敗")
 
     thread = threading.Thread(target=bulk_send, daemon=True)
     thread.start()
 
-    flash(f"{len(jobs)} 件のリマインド送信をバックグラウンドで開始しました。", "info")
+    msg = f"{len(jobs)} 件のリマインド送信をバックグラウンドで開始しました。"
+    if remaining > 0:
+        msg += f" 残り {remaining} 件は明日以降に再度実行してください（1日上限{BULK_SEND_LIMIT}件）。"
+    flash(msg, "info")
     return redirect(url_for("admin.participants"))
 
 
