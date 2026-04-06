@@ -219,32 +219,13 @@ def final(token):
                                transfer_info=transfer_info,
                                default_transfer_name=default_transfer_name)
 
-    status               = request.form.get("status", "").strip()
-    companions_str       = request.form.get("companions", "0").strip()
-    transfer_name        = request.form.get("transfer_name", "").strip()
-    bank_name            = request.form.get("bank_name", "").strip()
-    branch_name          = request.form.get("branch_name", "").strip()
-    account_number       = request.form.get("account_number", "").strip()
-    payment_expected_str = request.form.get("payment_expected", "0").strip()
-    payment_method       = request.form.get("payment_method", "bank_transfer").strip()
-    remarks              = request.form.get("remarks", "").strip()
+    status        = request.form.get("status", "").strip()
+    transfer_name = request.form.get("transfer_name", "").strip()
+    remarks       = request.form.get("remarks", "").strip()
 
     errors = []
     if status not in ("attending", "not_attending"):
         errors.append("参加・不参加を選択してください。")
-
-    try:
-        companions = int(companions_str) if companions_str else 0
-        if companions < 0:
-            raise ValueError
-    except ValueError:
-        companions = 0
-        errors.append("同伴者数は0以上の整数を入力してください。")
-
-    try:
-        payment_expected = int(payment_expected_str) if payment_expected_str else 0
-    except ValueError:
-        payment_expected = 0
 
     if errors:
         for e in errors:
@@ -252,18 +233,25 @@ def final(token):
         return render_template("final_form.html",
                                participant=participant,
                                existing=existing,
-                               token=token)
+                               token=token,
+                               transfer_info=transfer_info,
+                               default_transfer_name=default_transfer_name)
+
+    # 会費を取得（AppSettingから）
+    fee_setting = AppSetting.query.filter_by(key="reunion_fee").first()
+    reunion_fee_str = fee_setting.value if fee_setting else "0"
+    try:
+        payment_expected = int(reunion_fee_str.replace(",", "").replace("円", "").strip())
+    except ValueError:
+        payment_expected = 0
 
     response = FinalResponse(
         participant_id=participant.id,
         status=status,
-        companions=companions,
+        companions=0,
         transfer_name=transfer_name,
-        bank_name=bank_name,
-        branch_name=branch_name,
-        account_number=account_number,
         payment_expected=payment_expected,
-        payment_method=payment_method,
+        payment_method="bank_transfer",
         remarks=remarks,
         submitted_at=datetime.utcnow(),
         ip_address=request.remote_addr or "",
@@ -277,7 +265,7 @@ def final(token):
 
     if status == "attending":
         payment.expected_amount = payment_expected
-        payment.payment_method  = payment_method
+        payment.payment_method  = "bank_transfer"
         payment.transfer_name   = transfer_name
 
     participant.updated_at = datetime.utcnow()

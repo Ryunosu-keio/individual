@@ -75,15 +75,7 @@
                 </div>
               </div>
 
-              <!-- 同伴者数 -->
-              <div class="mb-3">
-                <label for="companions" class="form-label fw-bold">同伴者数</label>
-                <input type="number" class="form-control" id="companions" name="companions"
-                       value="{{ existing.companions if existing else 0 }}" min="0" max="10">
-                <div class="form-text">本人以外の同伴者がいる場合のみ入力してください。</div>
-              </div>
-
-              <!-- ===== 振込案内セクション ===== -->
+              <!-- ===== 振込案内セクション（参加時のみ表示） ===== -->
               <div id="transferSection" class="transfer-section mb-4">
                 <h6 class="fw-bold mb-3"><i class="bi bi-bank me-1"></i>振込のご案内</h6>
 
@@ -99,20 +91,40 @@
 
                 {% if transfer_info.get('transfer_bank') %}
                 <div class="mb-2">
-                  <small class="text-muted">振込先</small>
+                  <small class="text-muted">銀行名</small>
                   <div class="copy-field">
-                    <span class="value">{{ transfer_info.get('transfer_bank', '') }} {{ transfer_info.get('transfer_branch', '') }}</span>
-                    <i class="bi bi-clipboard copy-btn" onclick="copyText(this, '{{ transfer_info.get('transfer_bank', '') }} {{ transfer_info.get('transfer_branch', '') }}')" title="コピー"></i>
+                    <span class="value">{{ transfer_info.get('transfer_bank', '') }}</span>
+                    <i class="bi bi-clipboard copy-btn" onclick="copyText(this, '{{ transfer_info.get('transfer_bank', '') }}')" title="コピー"></i>
+                  </div>
+                </div>
+                {% endif %}
+
+                {% if transfer_info.get('transfer_branch') %}
+                <div class="mb-2">
+                  <small class="text-muted">支店名</small>
+                  <div class="copy-field">
+                    <span class="value">{{ transfer_info.get('transfer_branch', '') }}</span>
+                    <i class="bi bi-clipboard copy-btn" onclick="copyText(this, '{{ transfer_info.get('transfer_branch', '') }}')" title="コピー"></i>
+                  </div>
+                </div>
+                {% endif %}
+
+                {% if transfer_info.get('transfer_account_type') %}
+                <div class="mb-2">
+                  <small class="text-muted">口座種別</small>
+                  <div class="copy-field">
+                    <span class="value">{{ transfer_info.get('transfer_account_type', '') }}</span>
+                    <i class="bi bi-clipboard copy-btn" onclick="copyText(this, '{{ transfer_info.get('transfer_account_type', '') }}')" title="コピー"></i>
                   </div>
                 </div>
                 {% endif %}
 
                 {% if transfer_info.get('transfer_account_number') %}
                 <div class="mb-2">
-                  <small class="text-muted">口座</small>
+                  <small class="text-muted">口座番号</small>
                   <div class="copy-field">
-                    <span class="value">{{ transfer_info.get('transfer_account_type', '') }} {{ transfer_info.get('transfer_account_number', '') }}</span>
-                    <i class="bi bi-clipboard copy-btn" onclick="copyText(this, '{{ transfer_info.get('transfer_account_number', '') }}')" title="口座番号をコピー"></i>
+                    <span class="value">{{ transfer_info.get('transfer_account_number', '') }}</span>
+                    <i class="bi bi-clipboard copy-btn" onclick="copyText(this, '{{ transfer_info.get('transfer_account_number', '') }}')" title="コピー"></i>
                   </div>
                 </div>
                 {% endif %}
@@ -184,32 +196,6 @@
                 </div>
               </div>
               <!-- ===== /振込案内セクション ===== -->
-
-              <!-- 支払予定金額 -->
-              <div class="mb-3">
-                <label for="payment_expected" class="form-label fw-bold">お支払い予定金額（円）</label>
-                <input type="number" class="form-control" id="payment_expected" name="payment_expected"
-                       value="{{ existing.payment_expected if existing else 0 }}" min="0">
-              </div>
-
-              <!-- 支払方法 -->
-              <div class="mb-3">
-                <label for="payment_method" class="form-label fw-bold">お支払い方法</label>
-                <select class="form-select" id="payment_method" name="payment_method">
-                  <option value="bank_transfer"
-                    {% if not existing or existing.payment_method == 'bank_transfer' %}selected{% endif %}>
-                    銀行振込
-                  </option>
-                  <option value="cash"
-                    {% if existing and existing.payment_method == 'cash' %}selected{% endif %}>
-                    当日現金
-                  </option>
-                  <option value="other"
-                    {% if existing and existing.payment_method == 'other' %}selected{% endif %}>
-                    その他
-                  </option>
-                </select>
-              </div>
 
               <!-- 備考 -->
               <div class="mb-4">
