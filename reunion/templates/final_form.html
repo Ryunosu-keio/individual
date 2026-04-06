@@ -79,16 +79,13 @@
               <div id="transferSection" class="transfer-section mb-4">
                 <h6 class="fw-bold mb-3"><i class="bi bi-bank me-1"></i>振込のご案内</h6>
 
-                <!-- 振込先情報（テキスト表示のみ） -->
-                <table class="table table-sm table-borderless mb-2" style="font-size:.9rem;">
-                  {% if transfer_info.get('reunion_fee') %}
-                  <tr><td class="text-muted" style="width:5em;">金額</td><td class="fw-bold">{{ transfer_info.get('reunion_fee', '') }}</td></tr>
-                  {% endif %}
+                <!-- 振込先情報（テキスト表示） -->
+                <table class="table table-sm table-borderless mb-3" style="font-size:.9rem;">
                   {% if transfer_info.get('transfer_bank') %}
-                  <tr><td class="text-muted">振込先</td><td>{{ transfer_info.get('transfer_bank', '') }} {{ transfer_info.get('transfer_branch', '') }}</td></tr>
+                  <tr><td class="text-muted" style="width:5em;">振込先</td><td>{{ transfer_info.get('transfer_bank', '') }} {{ transfer_info.get('transfer_branch', '') }}支店</td></tr>
                   {% endif %}
                   {% if transfer_info.get('transfer_account_number') %}
-                  <tr><td class="text-muted">口座</td><td>{{ transfer_info.get('transfer_account_type', '') }} {{ transfer_info.get('transfer_account_number', '') }}</td></tr>
+                  <tr><td class="text-muted">口座</td><td>{{ transfer_info.get('transfer_account_type', '普通') }}口座 {{ transfer_info.get('transfer_account_number', '') }}</td></tr>
                   {% endif %}
                   {% if transfer_info.get('transfer_account_name') %}
                   <tr><td class="text-muted">口座名義</td><td>{{ transfer_info.get('transfer_account_name', '') }}</td></tr>
@@ -98,7 +95,7 @@
                   {% endif %}
                 </table>
 
-                <!-- コピー: 口座番号 -->
+                <!-- コピー: 口座番号 → 金額 → 振込名義 -->
                 {% if transfer_info.get('transfer_account_number') %}
                 <div class="mb-2">
                   <div class="copy-field">
@@ -109,7 +106,17 @@
                 </div>
                 {% endif %}
 
-                <!-- コピー: 振込名義（自動生成） -->
+                {% if transfer_info.get('reunion_fee') %}
+                <div class="mb-2">
+                  <div class="copy-field">
+                    <small class="text-muted me-1">金額</small>
+                    <span class="value fw-bold">{{ transfer_info.get('reunion_fee', '').replace('円', '').strip() }}</span>
+                    <i class="bi bi-clipboard copy-btn" onclick="copyText(this, '{{ transfer_info.get('reunion_fee', '').replace('円', '').replace(',', '').strip() }}')" title="コピー"></i>
+                    <span class="text-muted">円</span>
+                  </div>
+                </div>
+                {% endif %}
+
                 <div class="mb-3">
                   <div class="copy-field" style="border-color:#93c5fd;background:#eff6ff;">
                     <small class="text-muted me-1">振込名義</small>

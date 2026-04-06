@@ -87,9 +87,12 @@
           <div class="row mb-3">
             <div class="col-md-4">
               <label class="form-label fw-bold">口座種別</label>
-              <input type="text" class="form-control" name="transfer_account_type"
-                     value="{{ settings.get('transfer_account_type', '') }}"
-                     placeholder="普通">
+              <select class="form-select" name="transfer_account_type">
+                {% set acct_type = settings.get('transfer_account_type', '普通') %}
+                <option value="普通" {% if acct_type == '普通' or not acct_type %}selected{% endif %}>普通</option>
+                <option value="当座" {% if acct_type == '当座' %}selected{% endif %}>当座</option>
+                <option value="貯蓄" {% if acct_type == '貯蓄' %}selected{% endif %}>貯蓄</option>
+              </select>
             </div>
             <div class="col-md-8">
               <label class="form-label fw-bold">口座番号</label>
