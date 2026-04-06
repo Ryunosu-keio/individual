@@ -79,77 +79,49 @@
               <div id="transferSection" class="transfer-section mb-4">
                 <h6 class="fw-bold mb-3"><i class="bi bi-bank me-1"></i>振込のご案内</h6>
 
-                {% if transfer_info.get('reunion_fee') %}
-                <div class="mb-2">
-                  <small class="text-muted">会費</small>
-                  <div class="copy-field">
-                    <span class="value">{{ transfer_info.get('reunion_fee', '') }}</span>
-                    <i class="bi bi-clipboard copy-btn" onclick="copyText(this, '{{ transfer_info.get('reunion_fee', '') }}')" title="コピー"></i>
-                  </div>
-                </div>
-                {% endif %}
+                <!-- 振込先情報（テキスト表示のみ） -->
+                <table class="table table-sm table-borderless mb-2" style="font-size:.9rem;">
+                  {% if transfer_info.get('reunion_fee') %}
+                  <tr><td class="text-muted" style="width:5em;">金額</td><td class="fw-bold">{{ transfer_info.get('reunion_fee', '') }}</td></tr>
+                  {% endif %}
+                  {% if transfer_info.get('transfer_bank') %}
+                  <tr><td class="text-muted">振込先</td><td>{{ transfer_info.get('transfer_bank', '') }} {{ transfer_info.get('transfer_branch', '') }}</td></tr>
+                  {% endif %}
+                  {% if transfer_info.get('transfer_account_number') %}
+                  <tr><td class="text-muted">口座</td><td>{{ transfer_info.get('transfer_account_type', '') }} {{ transfer_info.get('transfer_account_number', '') }}</td></tr>
+                  {% endif %}
+                  {% if transfer_info.get('transfer_account_name') %}
+                  <tr><td class="text-muted">口座名義</td><td>{{ transfer_info.get('transfer_account_name', '') }}</td></tr>
+                  {% endif %}
+                  {% if transfer_info.get('transfer_deadline') %}
+                  <tr><td class="text-muted">振込期限</td><td class="text-danger fw-bold">{{ transfer_info.get('transfer_deadline', '') }}</td></tr>
+                  {% endif %}
+                </table>
 
-                {% if transfer_info.get('transfer_bank') %}
-                <div class="mb-2">
-                  <small class="text-muted">銀行名</small>
-                  <div class="copy-field">
-                    <span class="value">{{ transfer_info.get('transfer_bank', '') }}</span>
-                    <i class="bi bi-clipboard copy-btn" onclick="copyText(this, '{{ transfer_info.get('transfer_bank', '') }}')" title="コピー"></i>
-                  </div>
-                </div>
-                {% endif %}
-
-                {% if transfer_info.get('transfer_branch') %}
-                <div class="mb-2">
-                  <small class="text-muted">支店名</small>
-                  <div class="copy-field">
-                    <span class="value">{{ transfer_info.get('transfer_branch', '') }}</span>
-                    <i class="bi bi-clipboard copy-btn" onclick="copyText(this, '{{ transfer_info.get('transfer_branch', '') }}')" title="コピー"></i>
-                  </div>
-                </div>
-                {% endif %}
-
-                {% if transfer_info.get('transfer_account_type') %}
-                <div class="mb-2">
-                  <small class="text-muted">口座種別</small>
-                  <div class="copy-field">
-                    <span class="value">{{ transfer_info.get('transfer_account_type', '') }}</span>
-                    <i class="bi bi-clipboard copy-btn" onclick="copyText(this, '{{ transfer_info.get('transfer_account_type', '') }}')" title="コピー"></i>
-                  </div>
-                </div>
-                {% endif %}
-
+                <!-- コピー: 口座番号 -->
                 {% if transfer_info.get('transfer_account_number') %}
                 <div class="mb-2">
-                  <small class="text-muted">口座番号</small>
                   <div class="copy-field">
-                    <span class="value">{{ transfer_info.get('transfer_account_number', '') }}</span>
+                    <small class="text-muted me-1">口座番号</small>
+                    <span class="value fw-bold">{{ transfer_info.get('transfer_account_number', '') }}</span>
                     <i class="bi bi-clipboard copy-btn" onclick="copyText(this, '{{ transfer_info.get('transfer_account_number', '') }}')" title="コピー"></i>
                   </div>
                 </div>
                 {% endif %}
 
-                {% if transfer_info.get('transfer_account_name') %}
-                <div class="mb-2">
-                  <small class="text-muted">口座名義</small>
-                  <div class="copy-field">
-                    <span class="value">{{ transfer_info.get('transfer_account_name', '') }}</span>
-                    <i class="bi bi-clipboard copy-btn" onclick="copyText(this, '{{ transfer_info.get('transfer_account_name', '') }}')" title="コピー"></i>
-                  </div>
-                </div>
-                {% endif %}
-
-                {% if transfer_info.get('transfer_deadline') %}
+                <!-- コピー: 振込名義（自動生成） -->
                 <div class="mb-3">
-                  <small class="text-muted">振込期限</small>
-                  <div class="copy-field" style="border-color:#fbbf24;background:#fffbeb;">
-                    <span class="value text-danger fw-bold">{{ transfer_info.get('transfer_deadline', '') }}</span>
+                  <div class="copy-field" style="border-color:#93c5fd;background:#eff6ff;">
+                    <small class="text-muted me-1">振込名義</small>
+                    <span class="value fw-bold" id="myTransferName">{{ default_transfer_name }}</span>
+                    <i class="bi bi-clipboard copy-btn" onclick="copyText(this, document.getElementById('myTransferName').textContent)" title="コピー"></i>
                   </div>
+                  <div class="form-text">学籍番号＋カナ氏名の形式です。この名義でお振込ください。</div>
                 </div>
-                {% endif %}
+                <input type="hidden" name="transfer_name" id="transfer_name" value="{{ default_transfer_name }}">
 
                 <!-- 銀行アプリリンク -->
-                <div class="mb-3">
+                <div class="mb-2">
                   <small class="text-muted d-block mb-2">銀行アプリを開く</small>
                   <div class="bank-grid">
                     <a class="bank-btn" href="https://direct.smbc.co.jp/aib/aibgsjsw5001.jsp" target="_blank" rel="noopener">
@@ -171,18 +143,8 @@
                       <i class="bi bi-phone"></i>楽天
                     </a>
                   </div>
+                  <div class="form-text mt-1">その他の銀行はご自身のアプリを開いてお振込ください。</div>
                 </div>
-
-                <!-- 振込名義（自動生成・コピー） -->
-                <div class="mb-3">
-                  <small class="text-muted">あなたの振込名義（下記をコピーしてお振込ください）</small>
-                  <div class="copy-field" style="border-color:#93c5fd;background:#eff6ff;">
-                    <span class="value fw-bold" id="myTransferName">{{ default_transfer_name }}</span>
-                    <i class="bi bi-clipboard copy-btn" onclick="copyText(this, document.getElementById('myTransferName').textContent)" title="コピー"></i>
-                  </div>
-                  <div class="form-text">学籍番号＋カナ氏名の形式です。振込時にこの名義をご使用ください。</div>
-                </div>
-                <input type="hidden" name="transfer_name" id="transfer_name" value="{{ default_transfer_name }}">
 
                 <!-- 振込完了チェック -->
                 <div class="mt-3 p-2 bg-white border rounded">
