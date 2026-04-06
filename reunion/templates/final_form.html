@@ -148,19 +148,8 @@
                 </div>
                 {% endif %}
 
-                <!-- 振込名義（自動生成・コピー） -->
-                <div class="mb-3">
-                  <small class="text-muted">あなたの振込名義（下記をコピーしてお振込ください）</small>
-                  <div class="copy-field" style="border-color:#93c5fd;background:#eff6ff;">
-                    <span class="value fw-bold" id="myTransferName">{{ default_transfer_name }}</span>
-                    <i class="bi bi-clipboard copy-btn" onclick="copyText(this, document.getElementById('myTransferName').textContent)" title="コピー"></i>
-                  </div>
-                  <div class="form-text">学籍番号＋カナ氏名の形式です。振込時にこの名義をご使用ください。</div>
-                </div>
-                <input type="hidden" name="transfer_name" id="transfer_name" value="{{ default_transfer_name }}">
-
                 <!-- 銀行アプリリンク -->
-                <div class="mb-2">
+                <div class="mb-3">
                   <small class="text-muted d-block mb-2">銀行アプリを開く</small>
                   <div class="bank-grid">
                     <a class="bank-btn" href="https://direct.smbc.co.jp/aib/aibgsjsw5001.jsp" target="_blank" rel="noopener">
@@ -183,6 +172,17 @@
                     </a>
                   </div>
                 </div>
+
+                <!-- 振込名義（自動生成・コピー） -->
+                <div class="mb-3">
+                  <small class="text-muted">あなたの振込名義（下記をコピーしてお振込ください）</small>
+                  <div class="copy-field" style="border-color:#93c5fd;background:#eff6ff;">
+                    <span class="value fw-bold" id="myTransferName">{{ default_transfer_name }}</span>
+                    <i class="bi bi-clipboard copy-btn" onclick="copyText(this, document.getElementById('myTransferName').textContent)" title="コピー"></i>
+                  </div>
+                  <div class="form-text">学籍番号＋カナ氏名の形式です。振込時にこの名義をご使用ください。</div>
+                </div>
+                <input type="hidden" name="transfer_name" id="transfer_name" value="{{ default_transfer_name }}">
 
                 <!-- 振込完了チェック -->
                 <div class="mt-3 p-2 bg-white border rounded">
