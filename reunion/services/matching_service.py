@@ -128,7 +128,7 @@ def _update_payment_from_import(participant: Participant, bank_import: BankImpor
     payment.bank_csv_date = bank_import.raw_date
     payment.bank_csv_raw_name = bank_import.raw_name
     payment.bank_import_id = bank_import.id
-    if payment.expected_amount > 0 and bank_import.raw_amount >= payment.expected_amount:
+    if (payment.expected_amount or 0) > 0 and bank_import.raw_amount >= (payment.expected_amount or 0):
         payment.payment_status = "paid"
         payment.paid_amount = bank_import.raw_amount
         payment.payment_date = bank_import.raw_date
