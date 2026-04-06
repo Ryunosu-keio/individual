@@ -19,6 +19,39 @@ from models import MailLog, AppSetting
 logger = logging.getLogger(__name__)
 
 
+# デフォルトテンプレート（DB未設定時に使用される）
+MAIL_DEFAULTS = {
+    "mail_final_url_subject": "【{reunion_name}】本出欠のご確認をお願いします",
+    "mail_final_url_body": "{name} 様\n\n本出欠フォーム:\n{final_url}",
+    "mail_reminder_subject": "【{reunion_name}】リマインド",
+    "mail_reminder_body": "{name} 様\n\n本出欠フォーム:\n{final_url}",
+    "mail_provisional_confirm_subject": "【{reunion_name}】仮出欠を受け付けました",
+    "mail_provisional_confirm_body": (
+        "{name} 様\n\n"
+        "仮出欠の回答を受け付けました。\n\n"
+        "回答内容: {status}\n\n"
+        "内容を変更する場合は、下記URLから再度ご回答ください。\n"
+        "{provisional_url}\n\n"
+        "※同じメールアドレスで再送信すると回答が更新されます。"
+    ),
+    "mail_final_confirm_subject": "【{reunion_name}】本出欠を受け付けました",
+    "mail_final_confirm_body": (
+        "{name} 様\n\n"
+        "本出欠の回答を受け付けました。\n\n"
+        "回答内容: {status}\n\n"
+        "■ 振込のご案内\n"
+        "会費: {reunion_fee}\n"
+        "振込先: {transfer_bank} {transfer_branch}\n"
+        "口座: {transfer_account_type} {transfer_account_number}\n"
+        "口座名義: {transfer_account_name}\n"
+        "振込期限: {transfer_deadline}\n\n"
+        "※振込名義は本出欠フォームでご入力いただいた名義と一致するようお願いいたします。\n\n"
+        "内容を変更する場合は、下記URLから再度ご回答ください。\n"
+        "{final_url}"
+    ),
+}
+
+
 def _render_template(template: str, **kwargs) -> str:
     """テンプレート文字列の {変数} を置換する"""
     for key, val in kwargs.items():
@@ -64,11 +97,11 @@ def _build_final_url_mail_body(participant_name: str, final_url: str, config=Non
         reunion_fee=reunion["reunion_fee"],
     )
     subject = _render_template(
-        _get_template('mail_final_url_subject', '【{reunion_name}】本出欠のご確認をお願いします'),
+        _get_template('mail_final_url_subject', MAIL_DEFAULTS['mail_final_url_subject']),
         **vars
     )
     body = _render_template(
-        _get_template('mail_final_url_body', '{name} 様\n\n本出欠フォーム:\n{final_url}'),
+        _get_template('mail_final_url_body', MAIL_DEFAULTS['mail_final_url_body']),
         **vars
     )
     return subject, body
@@ -86,11 +119,11 @@ def _build_reminder_mail_body(participant_name: str, final_url: str, config=None
         reunion_fee=reunion["reunion_fee"],
     )
     subject = _render_template(
-        _get_template('mail_reminder_subject', '【{reunion_name}】リマインド'),
+        _get_template('mail_reminder_subject', MAIL_DEFAULTS['mail_reminder_subject']),
         **vars
     )
     body = _render_template(
-        _get_template('mail_reminder_body', '{name} 様\n\n本出欠フォーム:\n{final_url}'),
+        _get_template('mail_reminder_body', MAIL_DEFAULTS['mail_reminder_body']),
         **vars
     )
     return subject, body
@@ -228,12 +261,12 @@ def _build_provisional_confirm_body(participant_name: str, status_label: str, pr
     )
     subject = _render_template(
         _get_template('mail_provisional_confirm_subject',
-                      '【{reunion_name}】仮出欠を受け付けました'),
+                      MAIL_DEFAULTS['mail_provisional_confirm_subject']),
         **vars
     )
     body = _render_template(
         _get_template('mail_provisional_confirm_body',
-                      '{name} 様\n\n仮出欠の回答を受け付けました。\n\n回答内容: {status}\n\n内容を変更する場合は、下記URLから再度ご回答ください。\n{provisional_url}\n\n※同じメールアドレスで再送信すると回答が更新されます。'),
+                      MAIL_DEFAULTS['mail_provisional_confirm_body']),
         **vars
     )
     return subject, body
@@ -257,27 +290,14 @@ def _build_final_confirm_body(participant_name: str, status_label: str, final_ur
         transfer_account_name=reunion["transfer_account_name"],
         transfer_deadline=reunion["transfer_deadline"],
     )
-    default_body = (
-        '{name} 様\n\n'
-        '本出欠の回答を受け付けました。\n\n'
-        '回答内容: {status}\n\n'
-        '■ 振込のご案内\n'
-        '会費: {reunion_fee}\n'
-        '振込先: {transfer_bank} {transfer_branch}\n'
-        '口座: {transfer_account_type} {transfer_account_number}\n'
-        '口座名義: {transfer_account_name}\n'
-        '振込期限: {transfer_deadline}\n\n'
-        '※振込名義は本出欠フォームでご入力いただいた名義と一致するようお願いいたします。\n\n'
-        '内容を変更する場合は、下記URLから再度ご回答ください。\n'
-        '{final_url}'
-    )
     subject = _render_template(
         _get_template('mail_final_confirm_subject',
-                      '【{reunion_name}】本出欠を受け付けました'),
+                      MAIL_DEFAULTS['mail_final_confirm_subject']),
         **vars
     )
     body = _render_template(
-        _get_template('mail_final_confirm_body', default_body),
+        _get_template('mail_final_confirm_body',
+                      MAIL_DEFAULTS['mail_final_confirm_body']),
         **vars
     )
     return subject, body

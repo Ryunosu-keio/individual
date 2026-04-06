@@ -30,7 +30,7 @@ from flask import (Blueprint, render_template, request, redirect,
 from extensions import db
 from models import Participant, ProvisionalResponse, FinalResponse, Payment, BankImport, MailLog, AppSetting
 from services.token_service import ensure_token, generate_final_url
-from services.mail_service import send_final_url, send_reminder
+from services.mail_service import send_final_url, send_reminder, MAIL_DEFAULTS
 from services.csv_service import parse_bank_csv, save_bank_imports
 from services.matching_service import run_auto_matching, confirm_match, unmatch
 
@@ -563,6 +563,10 @@ def settings_mail_template():
         return redirect(url_for("admin.settings_mail_template"))
 
     settings = {s.key: s.value for s in AppSetting.query.filter(AppSetting.key.in_(KEYS)).all()}
+    # DB未設定のキーにはデフォルト値を入れる
+    for key in KEYS:
+        if key not in settings or not settings[key]:
+            settings[key] = MAIL_DEFAULTS.get(key, "")
     return render_template("admin/settings_mail_template.html", settings=settings)
 
 
