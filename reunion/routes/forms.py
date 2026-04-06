@@ -123,10 +123,17 @@ def provisional():
     if participant_id:
         participant = db.session.get(Participant, int(participant_id))
         if participant:
+            # 同じメールを持つ別の参加者が既にいるか確認
+            existing_by_email = Participant.query.filter_by(email=email).first()
+            if existing_by_email and existing_by_email.id != participant.id:
+                flash("このメールアドレスは既に別の方が登録済みです。ご自身のメールアドレスを入力してください。", "danger")
+                return render_template("provisional_form.html",
+                                       name=name, email=email, status=status,
+                                       class_name=class_name)
             participant.email = email
             participant.updated_at = datetime.utcnow()
             matched_how = "selected"
-            name = participant.name  # 正式名称を使う
+            name = participant.name
             logger.info(f"名簿選択: {participant.name} ({email})")
         else:
             participant_id = ""  # 無効なIDは無視してフォールスルー
