@@ -19,10 +19,11 @@ URL:
 import re
 import logging
 from datetime import datetime
-from flask import Blueprint, render_template, request, redirect, url_for, flash, abort
+from flask import Blueprint, render_template, request, redirect, url_for, flash, abort, current_app
 from extensions import db
 from models import Participant, ProvisionalResponse, FinalResponse, Payment
-from services.token_service import get_participant_by_token
+from services.token_service import get_participant_by_token, ensure_token, generate_final_url
+from services.mail_service import send_provisional_confirmation, send_final_confirmation
 
 logger = logging.getLogger(__name__)
 
@@ -170,6 +171,16 @@ def provisional():
     db.session.commit()
 
     logger.info(f"仮出欠登録完了: {name} / {status} / 紐付け={matched_how}")
+
+    # 送信完了メールを送信（失敗してもフォーム送信はブロックしない）
+    try:
+        status_label = ProvisionalResponse.STATUS_LABELS.get(status, status)
+        base_url = current_app.config.get("APP_BASE_URL", request.host_url.rstrip("/"))
+        provisional_url = f"{base_url}/form/provisional"
+        send_provisional_confirmation(participant, status_label, provisional_url)
+    except Exception as e:
+        logger.error(f"仮出欠確認メール送信エラー: {e}", exc_info=True)
+
     flash("仮出欠を受け付けました。ありがとうございます。", "success")
     return redirect(url_for("forms.done", type="provisional"))
 
@@ -254,6 +265,16 @@ def final(token):
     db.session.commit()
 
     logger.info(f"本出欠登録: {participant.name} ({participant.email}) → {status}")
+
+    # 送信完了メールを送信（失敗してもフォーム送信はブロックしない）
+    try:
+        status_label = FinalResponse.STATUS_LABELS.get(status, status)
+        base_url = current_app.config.get("APP_BASE_URL", request.host_url.rstrip("/"))
+        final_url = f"{base_url}/form/final/{token}"
+        send_final_confirmation(participant, status_label, final_url)
+    except Exception as e:
+        logger.error(f"本出欠確認メール送信エラー: {e}", exc_info=True)
+
     flash("本出欠を受け付けました。ありがとうございます。", "success")
     return redirect(url_for("forms.done", type="final"))
 

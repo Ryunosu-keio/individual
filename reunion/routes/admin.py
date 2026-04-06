@@ -547,6 +547,8 @@ def settings_mail_template():
     KEYS = [
         "mail_final_url_subject", "mail_final_url_body",
         "mail_reminder_subject",  "mail_reminder_body",
+        "mail_provisional_confirm_subject", "mail_provisional_confirm_body",
+        "mail_final_confirm_subject",       "mail_final_confirm_body",
     ]
     if request.method == "POST":
         for key in KEYS:
@@ -594,7 +596,11 @@ def settings_mail_test():
 @admin_bp.route("/settings/reunion", methods=["GET", "POST"])
 def settings_reunion():
     """同窓会情報設定画面"""
-    KEYS = ["reunion_name", "reunion_date", "reunion_venue", "reunion_fee"]
+    KEYS = [
+        "reunion_name", "reunion_date", "reunion_venue", "reunion_fee",
+        "transfer_bank", "transfer_branch", "transfer_account_type",
+        "transfer_account_number", "transfer_account_name", "transfer_deadline",
+    ]
 
     if request.method == "POST":
         for key in KEYS:

@@ -43,6 +43,12 @@ def _get_reunion_info() -> dict:
         "reunion_date":  get("reunion_date",  cfg.get("REUNION_DATE", "")),
         "reunion_venue": get("reunion_venue", cfg.get("REUNION_VENUE", "")),
         "reunion_fee":   get("reunion_fee",   cfg.get("REUNION_FEE", "")),
+        "transfer_bank":           get("transfer_bank", ""),
+        "transfer_branch":         get("transfer_branch", ""),
+        "transfer_account_type":   get("transfer_account_type", ""),
+        "transfer_account_number": get("transfer_account_number", ""),
+        "transfer_account_name":   get("transfer_account_name", ""),
+        "transfer_deadline":       get("transfer_deadline", ""),
     }
 
 
@@ -204,6 +210,129 @@ def send_final_url(participant, final_url: str) -> MailLog:
         db.session.commit()
         logger.error(f"本出欠URL送信失敗: {participant.email} - {e}", exc_info=True)
         raise
+
+    return log
+
+
+def _build_provisional_confirm_body(participant_name: str, status_label: str, provisional_url: str) -> tuple:
+    """仮出欠送信完了メールの件名・本文を生成する"""
+    reunion = _get_reunion_info()
+    vars = dict(
+        name=participant_name,
+        status=status_label,
+        provisional_url=provisional_url,
+        reunion_name=reunion["reunion_name"],
+        reunion_date=reunion["reunion_date"],
+        reunion_venue=reunion["reunion_venue"],
+        reunion_fee=reunion["reunion_fee"],
+    )
+    subject = _render_template(
+        _get_template('mail_provisional_confirm_subject',
+                      '【{reunion_name}】仮出欠を受け付けました'),
+        **vars
+    )
+    body = _render_template(
+        _get_template('mail_provisional_confirm_body',
+                      '{name} 様\n\n仮出欠の回答を受け付けました。\n\n回答内容: {status}\n\n内容を変更する場合は、下記URLから再度ご回答ください。\n{provisional_url}\n\n※同じメールアドレスで再送信すると回答が更新されます。'),
+        **vars
+    )
+    return subject, body
+
+
+def _build_final_confirm_body(participant_name: str, status_label: str, final_url: str) -> tuple:
+    """本出欠送信完了メールの件名・本文を生成する"""
+    reunion = _get_reunion_info()
+    vars = dict(
+        name=participant_name,
+        status=status_label,
+        final_url=final_url,
+        reunion_name=reunion["reunion_name"],
+        reunion_date=reunion["reunion_date"],
+        reunion_venue=reunion["reunion_venue"],
+        reunion_fee=reunion["reunion_fee"],
+        transfer_bank=reunion["transfer_bank"],
+        transfer_branch=reunion["transfer_branch"],
+        transfer_account_type=reunion["transfer_account_type"],
+        transfer_account_number=reunion["transfer_account_number"],
+        transfer_account_name=reunion["transfer_account_name"],
+        transfer_deadline=reunion["transfer_deadline"],
+    )
+    default_body = (
+        '{name} 様\n\n'
+        '本出欠の回答を受け付けました。\n\n'
+        '回答内容: {status}\n\n'
+        '■ 振込のご案内\n'
+        '会費: {reunion_fee}\n'
+        '振込先: {transfer_bank} {transfer_branch}\n'
+        '口座: {transfer_account_type} {transfer_account_number}\n'
+        '口座名義: {transfer_account_name}\n'
+        '振込期限: {transfer_deadline}\n\n'
+        '※振込名義は本出欠フォームでご入力いただいた名義と一致するようお願いいたします。\n\n'
+        '内容を変更する場合は、下記URLから再度ご回答ください。\n'
+        '{final_url}'
+    )
+    subject = _render_template(
+        _get_template('mail_final_confirm_subject',
+                      '【{reunion_name}】本出欠を受け付けました'),
+        **vars
+    )
+    body = _render_template(
+        _get_template('mail_final_confirm_body', default_body),
+        **vars
+    )
+    return subject, body
+
+
+def send_provisional_confirmation(participant, status_label: str, provisional_url: str) -> MailLog:
+    """仮出欠フォーム送信完了メールを送信する。"""
+    mail_cfg = _get_mail_config()
+    subject, body = _build_provisional_confirm_body(participant.name, status_label, provisional_url)
+
+    log = MailLog(
+        participant_id=participant.id,
+        mail_type="provisional_confirm",
+        sent_at=datetime.utcnow(),
+    )
+
+    try:
+        log.status = _dispatch_send(participant.email, subject, body, mail_cfg)
+        if log.status == "sent":
+            logger.info(f"仮出欠確認メール送信成功: {participant.email}")
+        db.session.add(log)
+        db.session.commit()
+    except Exception as e:
+        log.status = "failed"
+        log.error_message = str(e)
+        db.session.add(log)
+        db.session.commit()
+        logger.error(f"仮出欠確認メール送信失敗: {participant.email} - {e}", exc_info=True)
+
+    return log
+
+
+def send_final_confirmation(participant, status_label: str, final_url: str) -> MailLog:
+    """本出欠フォーム送信完了メールを送信する。"""
+    mail_cfg = _get_mail_config()
+    subject, body = _build_final_confirm_body(participant.name, status_label, final_url)
+
+    log = MailLog(
+        participant_id=participant.id,
+        mail_type="final_confirm",
+        sent_at=datetime.utcnow(),
+    )
+
+    try:
+        log.status = _dispatch_send(participant.email, subject, body, mail_cfg)
+        if log.status == "sent":
+            logger.info(f"本出欠確認メール送信成功: {participant.email}")
+        db.session.add(log)
+        db.session.commit()
+    except Exception as e:
+        log.status = "failed"
+        log.error_message = str(e)
+        db.session.add(log)
+        db.session.commit()
+        logger.error(f"本出欠確認メール送信失敗: {participant.email} - {e}", exc_info=True)
 
     return log
 

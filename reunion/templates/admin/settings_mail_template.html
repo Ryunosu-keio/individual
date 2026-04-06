@@ -6,11 +6,19 @@
 <p class="text-muted small mb-4">
   使える変数:
   <code>{name}</code> 氏名
+  <code>{status}</code> 回答内容（参加/不参加/未定）
+  <code>{provisional_url}</code> 仮出欠フォームURL
   <code>{final_url}</code> 本出欠URL
   <code>{reunion_name}</code> 同窓会名
   <code>{reunion_date}</code> 日程
   <code>{reunion_venue}</code> 会場
-  <code>{reunion_fee}</code> 会費
+  <code>{reunion_fee}</code> 会費<br>
+  <code>{transfer_bank}</code> 振込先銀行
+  <code>{transfer_branch}</code> 支店
+  <code>{transfer_account_type}</code> 口座種別
+  <code>{transfer_account_number}</code> 口座番号
+  <code>{transfer_account_name}</code> 口座名義
+  <code>{transfer_deadline}</code> 振込期限
 </p>
 
 <form method="POST" action="{{ url_for('admin.settings_mail_template') }}">
@@ -32,6 +40,50 @@
             <label class="form-label fw-bold">本文</label>
             <textarea class="form-control font-monospace" name="mail_final_url_body"
                       rows="14">{{ settings.get('mail_final_url_body', '') }}</textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 仮出欠送信完了 -->
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header fw-bold bg-light">
+          <i class="bi bi-check-circle me-1"></i>仮出欠 送信完了メール
+        </div>
+        <div class="card-body">
+          <div class="mb-3">
+            <label class="form-label fw-bold">件名</label>
+            <input type="text" class="form-control" name="mail_provisional_confirm_subject"
+                   value="{{ settings.get('mail_provisional_confirm_subject', '') }}">
+          </div>
+          <div class="mb-0">
+            <label class="form-label fw-bold">本文</label>
+            <textarea class="form-control font-monospace" name="mail_provisional_confirm_body"
+                      rows="12">{{ settings.get('mail_provisional_confirm_body', '') }}</textarea>
+            <div class="form-text">追加変数: <code>{status}</code> 回答内容、<code>{provisional_url}</code> 変更用URL</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 本出欠送信完了 -->
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header fw-bold bg-light">
+          <i class="bi bi-check-circle me-1"></i>本出欠 送信完了メール
+        </div>
+        <div class="card-body">
+          <div class="mb-3">
+            <label class="form-label fw-bold">件名</label>
+            <input type="text" class="form-control" name="mail_final_confirm_subject"
+                   value="{{ settings.get('mail_final_confirm_subject', '') }}">
+          </div>
+          <div class="mb-0">
+            <label class="form-label fw-bold">本文</label>
+            <textarea class="form-control font-monospace" name="mail_final_confirm_body"
+                      rows="12">{{ settings.get('mail_final_confirm_body', '') }}</textarea>
+            <div class="form-text">追加変数: <code>{status}</code> 回答内容、<code>{final_url}</code> 変更用URL</div>
           </div>
         </div>
       </div>
