@@ -372,6 +372,52 @@ def send_reminder_single(participant_id):
     return redirect(url_for("admin.participant_detail", participant_id=participant_id))
 
 
+@admin_bp.route("/send-reminder-bulk", methods=["POST"])
+def send_reminder_bulk():
+    """リマインドメールを一括送信（本出欠URL送信済み＆本出欠未回答の参加者）"""
+    import threading
+    import time
+
+    base_url = current_app.config.get("APP_BASE_URL", "http://localhost:5000")
+
+    # 対象: トークンあり（=本出欠URL送信済み）かつ本出欠未回答かつメール登録済み
+    participants = Participant.query.filter(
+        Participant.token.isnot(None),
+        ~Participant.email.like(f"%@placeholder.local"),
+    ).all()
+    targets = [p for p in participants if p.latest_final is None]
+
+    if not targets:
+        flash("リマインド送信対象の参加者がいません。", "info")
+        return redirect(url_for("admin.participants"))
+
+    app = current_app._get_current_object()
+    jobs = [(p.id, generate_final_url(p, base_url)) for p in targets]
+
+    def bulk_send():
+        with app.app_context():
+            sent = 0
+            failed = 0
+            for pid, final_url in jobs:
+                p = db.session.get(Participant, pid)
+                if p is None:
+                    continue
+                try:
+                    send_reminder(p, final_url)
+                    sent += 1
+                except Exception as e:
+                    logger.error(f"リマインド一括送信失敗: {p.email} - {e}", exc_info=True)
+                    failed += 1
+                time.sleep(0.3)
+            logger.info(f"リマインド一括送信完了: {sent} 件成功 / {failed} 件失敗")
+
+    thread = threading.Thread(target=bulk_send, daemon=True)
+    thread.start()
+
+    flash(f"{len(jobs)} 件のリマインド送信をバックグラウンドで開始しました。", "info")
+    return redirect(url_for("admin.participants"))
+
+
 # -----------------------------------------------
 # 入金管理
 # -----------------------------------------------

@@ -19,10 +19,16 @@
          class="btn btn-outline-secondary btn-sm" title="検索クリア"><i class="bi bi-x-lg"></i></a>
       {% endif %}
     </form>
-    <form method="POST" action="{{ url_for('admin.send_final_url_bulk') }}"
+    <form method="POST" action="{{ url_for('admin.send_final_url_bulk') }}" class="d-inline"
           onsubmit="return confirm('仮参加かつ本出欠未回答の方に一括送信します。よろしいですか？')">
       <button type="submit" class="btn btn-success btn-sm">
         <i class="bi bi-envelope-fill me-1"></i>本出欠URL一括送信
+      </button>
+    </form>
+    <form method="POST" action="{{ url_for('admin.send_reminder_bulk') }}" class="d-inline"
+          onsubmit="return confirm('本出欠URL送信済み＆未回答の方にリマインドを一括送信します。よろしいですか？')">
+      <button type="submit" class="btn btn-warning btn-sm">
+        <i class="bi bi-bell-fill me-1"></i>リマインド一括送信
       </button>
     </form>
   </div>
