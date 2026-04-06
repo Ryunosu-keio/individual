@@ -96,6 +96,7 @@ def run_auto_matching(threshold: float = 0.8) -> dict:
             if best_score == 1.0:
                 bank_import.match_status = "confirmed"
                 _update_payment_from_import(best_participant, bank_import)
+                db.session.flush()
                 results["auto_confirmed"] += 1
             else:
                 bank_import.match_status = "matched"

@@ -556,6 +556,41 @@ def unmatch_route(bank_import_id):
     return redirect(url_for("admin.csv_import"))
 
 
+@admin_bp.route("/csv-delete/<int:bank_import_id>", methods=["POST"])
+def csv_delete(bank_import_id):
+    """取込済みCSVレコードを1件削除"""
+    try:
+        bank_import = db.session.get(BankImport, bank_import_id)
+        if not bank_import:
+            flash("データが見つかりません。", "danger")
+            return redirect(url_for("admin.csv_import"))
+        # 照合済みの場合は先に照合解除
+        if bank_import.match_status != "unmatched":
+            unmatch(bank_import_id)
+        db.session.delete(bank_import)
+        db.session.commit()
+        flash("取込データを削除しました。", "success")
+    except Exception as e:
+        flash(f"削除エラー: {e}", "danger")
+    return redirect(url_for("admin.csv_import"))
+
+
+@admin_bp.route("/csv-delete-all", methods=["POST"])
+def csv_delete_all():
+    """取込済みCSVレコードをすべて削除"""
+    try:
+        all_imports = BankImport.query.all()
+        for bi in all_imports:
+            if bi.match_status != "unmatched":
+                unmatch(bi.id)
+            db.session.delete(bi)
+        db.session.commit()
+        flash(f"{len(all_imports)} 件の取込データをすべて削除しました。", "success")
+    except Exception as e:
+        flash(f"一括削除エラー: {e}", "danger")
+    return redirect(url_for("admin.csv_import"))
+
+
 # -----------------------------------------------
 # メール設定
 # -----------------------------------------------
