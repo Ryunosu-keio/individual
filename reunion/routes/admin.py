@@ -122,24 +122,31 @@ def participants():
     if class_filter != "all":
         query = query.filter(Participant.class_name == class_filter)
 
-    all_participants = query.all()
-
-    # Python側で並べ替え（DB依存のregexp_replaceを回避）
-    def _num(p):
-        return int(p.student_number) if p.student_number and p.student_number.isdigit() else 9999
-
-    def _role_order(p):
-        return {"生徒": 0, "教師": 1, "学年主任": 2}.get(p.role, 3)
-
-    sort_key_map = {
-        "class":   lambda p: (p.class_name or "", _role_order(p), _num(p)),
-        "name":    lambda p: (p.name or "",),
-        "number":  lambda p: (p.class_name or "", _num(p)),
-        "role":    lambda p: (_role_order(p), p.class_name or "", _num(p)),
-        "created": lambda p: (p.created_at,),
+    # 並べ替え
+    role_order = sa_case(
+        (Participant.role == "生徒", 0),
+        (Participant.role == "教師", 1),
+        (Participant.role == "学年主任", 2),
+        else_=3,
+    )
+    num_order = db.func.cast(
+        db.func.nullif(
+            db.func.regexp_replace(Participant.student_number, r'\D', '', 'g'), ''
+        ), db.Integer
+    )
+    sort_map = {
+        "class":  [Participant.class_name, role_order, num_order],
+        "name":   [Participant.name],
+        "number": [Participant.class_name, num_order],
+        "role":   [role_order, Participant.class_name, num_order],
+        "created":[Participant.created_at],
     }
-    key_func = sort_key_map.get(sort, sort_key_map["class"])
-    all_participants.sort(key=key_func, reverse=(order == "desc"))
+    cols = sort_map.get(sort, sort_map["class"])
+    if order == "desc":
+        cols = [c.desc() for c in cols]
+    query = query.order_by(*cols)
+
+    all_participants = query.all()
 
     # 仮出欠ステータスで絞り込み（Python側）
     if status_filter != "all":
@@ -294,8 +301,6 @@ def send_final_url_single(participant_id):
     return redirect(url_for("admin.participant_detail", participant_id=participant_id))
 
 
-BULK_SEND_LIMIT = 100  # GAS無料プランの1日上限
-
 @admin_bp.route("/send-final-url-bulk", methods=["POST"])
 def send_final_url_bulk():
     """本出欠URLを一括送信（バックグラウンドスレッドで実行）"""
@@ -316,12 +321,6 @@ def send_final_url_bulk():
         flash("送信対象の参加者がいません。", "info")
         return redirect(url_for("admin.participants"))
 
-    total = len(targets)
-    remaining = 0
-    if total > BULK_SEND_LIMIT:
-        remaining = total - BULK_SEND_LIMIT
-        targets = targets[:BULK_SEND_LIMIT]
-
     # 対象IDとURLだけ先に確定（スレッド内でDBアクセスを最小化）
     app = current_app._get_current_object()
     jobs = [(p.id, generate_final_url(p, base_url)) for p in targets]
@@ -340,16 +339,13 @@ def send_final_url_bulk():
                 except Exception as e:
                     logger.error(f"一括送信失敗: {p.email} - {e}", exc_info=True)
                     failed += 1
-                time.sleep(0.5)
+                time.sleep(0.3)
             logger.info(f"一括送信完了: {sent} 件成功 / {failed} 件失敗")
 
     thread = threading.Thread(target=bulk_send, daemon=True)
     thread.start()
 
-    msg = f"{len(jobs)} 件の送信をバックグラウンドで開始しました。"
-    if remaining > 0:
-        msg += f" 残り {remaining} 件は明日以降に再度実行してください（1日上限{BULK_SEND_LIMIT}件）。"
-    flash(msg, "info")
+    flash(f"{len(jobs)} 件の送信をバックグラウンドで開始しました。ログで結果を確認できます。", "info")
     return redirect(url_for("admin.participants"))
 
 
@@ -395,12 +391,6 @@ def send_reminder_bulk():
         flash("リマインド送信対象の参加者がいません。", "info")
         return redirect(url_for("admin.participants"))
 
-    total = len(targets)
-    remaining = 0
-    if total > BULK_SEND_LIMIT:
-        remaining = total - BULK_SEND_LIMIT
-        targets = targets[:BULK_SEND_LIMIT]
-
     app = current_app._get_current_object()
     jobs = [(p.id, generate_final_url(p, base_url)) for p in targets]
 
@@ -418,16 +408,13 @@ def send_reminder_bulk():
                 except Exception as e:
                     logger.error(f"リマインド一括送信失敗: {p.email} - {e}", exc_info=True)
                     failed += 1
-                time.sleep(0.5)
+                time.sleep(0.3)
             logger.info(f"リマインド一括送信完了: {sent} 件成功 / {failed} 件失敗")
 
     thread = threading.Thread(target=bulk_send, daemon=True)
     thread.start()
 
-    msg = f"{len(jobs)} 件のリマインド送信をバックグラウンドで開始しました。"
-    if remaining > 0:
-        msg += f" 残り {remaining} 件は明日以降に再度実行してください（1日上限{BULK_SEND_LIMIT}件）。"
-    flash(msg, "info")
+    flash(f"{len(jobs)} 件のリマインド送信をバックグラウンドで開始しました。", "info")
     return redirect(url_for("admin.participants"))
 
 
@@ -746,15 +733,19 @@ def roster():
         (Participant.role == "学年主任", 2),
         else_=3,
     )
-    participants = Participant.query.all()
-
-    def _num(p):
-        return int(p.student_number) if p.student_number and p.student_number.isdigit() else 9999
-
-    def _role_ord(p):
-        return {"生徒": 0, "教師": 1, "学年主任": 2}.get(p.role, 3)
-
-    participants.sort(key=lambda p: (p.class_name or "", _role_ord(p), _num(p)))
+    from sqlalchemy import func
+    num_order = db.func.cast(
+        db.func.nullif(
+            db.func.regexp_replace(Participant.student_number, r'\D', '', 'g'),
+            ''
+        ),
+        db.Integer
+    )
+    participants = Participant.query.order_by(
+        Participant.class_name.asc(),
+        role_order,
+        num_order.asc(),
+    ).all()
     return render_template("admin/roster.html", participants=participants)
 
 
