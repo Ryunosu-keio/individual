@@ -13,18 +13,23 @@ from extensions import db
 
 
 def _migrate(db):
-    """既存テーブルへのカラム追加マイグレーション"""
+    """既存テーブルへのカラム追加マイグレーション（MySQL/SQLite/PostgreSQL互換）"""
     migrations = [
-        "ALTER TABLE participants ADD COLUMN IF NOT EXISTS name_kana VARCHAR(100) DEFAULT ''",
-        "ALTER TABLE final_responses ADD COLUMN IF NOT EXISTS bank_name VARCHAR(100) DEFAULT ''",
-        "ALTER TABLE final_responses ADD COLUMN IF NOT EXISTS branch_name VARCHAR(100) DEFAULT ''",
-        "ALTER TABLE final_responses ADD COLUMN IF NOT EXISTS account_number VARCHAR(50) DEFAULT ''",
+        ("participants", "name_kana", "VARCHAR(100) DEFAULT ''"),
+        ("final_responses", "bank_name", "VARCHAR(100) DEFAULT ''"),
+        ("final_responses", "branch_name", "VARCHAR(100) DEFAULT ''"),
+        ("final_responses", "account_number", "VARCHAR(50) DEFAULT ''"),
     ]
     with db.engine.connect() as conn:
-        for sql in migrations:
+        for table, column, col_def in migrations:
             try:
-                conn.execute(db.text(sql))
-                conn.commit()
+                # カラムの存在をチェックしてから追加（DB非依存）
+                from sqlalchemy import inspect
+                inspector = inspect(db.engine)
+                existing_cols = [c["name"] for c in inspector.get_columns(table)]
+                if column not in existing_cols:
+                    conn.execute(db.text(f"ALTER TABLE {table} ADD COLUMN {column} {col_def}"))
+                    conn.commit()
             except Exception:
                 conn.rollback()
 

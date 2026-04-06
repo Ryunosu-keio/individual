@@ -26,7 +26,11 @@ class Config:
     # RenderのPostgreSQL URLは "postgres://" で始まるが SQLAlchemy は "postgresql://" が必要
     if _db_url.startswith("postgres://"):
         _db_url = _db_url.replace("postgres://", "postgresql://", 1)
+    # PythonAnywhere MySQL: mysql://user:pass@host/dbname
     SQLALCHEMY_DATABASE_URI = _db_url
+    # MySQL charset設定
+    if "mysql" in _db_url:
+        SQLALCHEMY_ENGINE_OPTIONS_EXTRA = {"connect_args": {"charset": "utf8mb4"}}
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ENGINE_OPTIONS = {
         "pool_pre_ping": True,      # 使用前に接続が生きているか確認
