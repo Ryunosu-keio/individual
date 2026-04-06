@@ -50,10 +50,21 @@ def _similarity_score(a: str, b: str) -> float:
     return common / longer if longer > 0 else 0.0
 
 
+def _expected_transfer_name(participant) -> str:
+    """参加者の名簿情報から期待される振込名義を生成する"""
+    student_id = ""
+    if participant.class_name and participant.student_number:
+        student_id = f"{participant.class_name}{participant.student_number.zfill(2)}"
+    name_kana = participant.name_kana or ""
+    if student_id and name_kana:
+        return f"{student_id} {name_kana}"
+    return name_kana or participant.name or ""
+
+
 def run_auto_matching(threshold: float = 0.8) -> dict:
     """未照合のCSVレコードに対して自動照合を実行する"""
     unmatched_imports = BankImport.query.filter_by(match_status="unmatched").all()
-    participants_with_final = Participant.query.all()
+    all_participants = Participant.query.all()
 
     results = {"auto_confirmed": 0, "matched": 0, "unmatched": 0}
 
@@ -61,14 +72,24 @@ def run_auto_matching(threshold: float = 0.8) -> dict:
         best_score = 0.0
         best_participant = None
 
-        for participant in participants_with_final:
+        for participant in all_participants:
+            # 照合候補名を集める（本出欠の振込名義 + 名簿から生成した名義）
+            candidate_names = []
             final = participant.latest_final
-            if not final or not final.transfer_name:
-                continue
-            score = _similarity_score(bank_import.raw_name, final.transfer_name)
-            if score > best_score:
-                best_score = score
-                best_participant = participant
+            if final and final.transfer_name:
+                candidate_names.append(final.transfer_name)
+            expected = _expected_transfer_name(participant)
+            if expected:
+                candidate_names.append(expected)
+            # カナ氏名単体でも照合
+            if participant.name_kana:
+                candidate_names.append(participant.name_kana)
+
+            for name in candidate_names:
+                score = _similarity_score(bank_import.raw_name, name)
+                if score > best_score:
+                    best_score = score
+                    best_participant = participant
 
         if best_participant and best_score >= threshold:
             bank_import.matched_participant_id = best_participant.id
