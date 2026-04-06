@@ -1,18 +1,35 @@
 """
 services/matching_service.py - 銀行CSV照合サービス
 """
+import re
+import unicodedata
 import logging
 from models import BankImport, Participant, Payment
 from extensions import db
 
 logger = logging.getLogger(__name__)
 
+# 銀行CSVの振込名義から除去するプレフィックス
+_BANK_PREFIXES = re.compile(
+    r'^(振込\s*|パソコン振込\s*|ＡＴＭ振込\s*|ATM振込\s*|給料振込\s*|'
+    r'テレ振込\s*|モバイル振込\s*|ネット振込\s*|口座振込\s*)',
+)
+
+
+def _hankaku_to_zenkaku_kana(text: str) -> str:
+    """半角カナを全角カナに変換する"""
+    return unicodedata.normalize("NFKC", text)
+
 
 def _normalize_name(name: str) -> str:
     if not name:
         return ""
-    normalized = name.upper().strip()
-    for char in [" ", "　", "-", "ー", ".", "．"]:
+    # 半角カナ→全角カナ（NFKC正規化）
+    normalized = _hankaku_to_zenkaku_kana(name)
+    # 銀行CSVのプレフィックス除去
+    normalized = _BANK_PREFIXES.sub("", normalized)
+    normalized = normalized.upper().strip()
+    for char in [" ", "　", "-", "ー", ".", "．", ")", "）", "(", "（"]:
         normalized = normalized.replace(char, "")
     return normalized
 
