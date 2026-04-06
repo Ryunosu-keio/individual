@@ -22,6 +22,7 @@ from datetime import datetime
 from flask import Blueprint, render_template, request, redirect, url_for, flash, abort, current_app
 from extensions import db
 from models import Participant, ProvisionalResponse, FinalResponse, Payment
+from models import AppSetting
 from services.token_service import get_participant_by_token, ensure_token, generate_final_url
 from services.mail_service import send_provisional_confirmation, send_final_confirmation
 
@@ -194,11 +195,29 @@ def final(token):
 
     existing = participant.latest_final
 
+    # 振込先情報をDBから取得
+    transfer_keys = [
+        "transfer_bank", "transfer_branch", "transfer_account_type",
+        "transfer_account_number", "transfer_account_name", "transfer_deadline",
+        "reunion_fee",
+    ]
+    transfer_info = {}
+    for s in AppSetting.query.filter(AppSetting.key.in_(transfer_keys)).all():
+        transfer_info[s.key] = s.value
+
+    # 振込名義を自動生成: 学籍番号(クラス+出席番号) + カナ氏名
+    student_id = ""
+    if participant.class_name and participant.student_number:
+        student_id = f"{participant.class_name}{participant.student_number.zfill(2)}"
+    default_transfer_name = f"{student_id} {participant.name_kana}" if student_id and participant.name_kana else participant.name_kana or ""
+
     if request.method == "GET":
         return render_template("final_form.html",
                                participant=participant,
                                existing=existing,
-                               token=token)
+                               token=token,
+                               transfer_info=transfer_info,
+                               default_transfer_name=default_transfer_name)
 
     status               = request.form.get("status", "").strip()
     companions_str       = request.form.get("companions", "0").strip()
