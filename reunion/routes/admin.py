@@ -837,7 +837,7 @@ def settings_mail_test():
         flash("送信先メールアドレスを入力してください。", "danger")
         return redirect(url_for("admin.settings_mail"))
 
-    from services.mail_service import _get_mail_config, _send_smtp_cfg, _send_console
+    from services.mail_service import _get_mail_config, _send_smtp_cfg, _send_gas, _send_console
     mail_cfg = _get_mail_config()
 
     subject = "【テスト】同窓会管理アプリ メール送信テスト"
@@ -846,7 +846,10 @@ def settings_mail_test():
     try:
         if mail_cfg["mode"] == "smtp":
             _send_smtp_cfg(to_email, subject, body, mail_cfg)
-            flash(f"テストメールを {to_email} に送信しました。", "success")
+            flash(f"テストメールを {to_email} にSMTPで送信しました。", "success")
+        elif mail_cfg["mode"] == "gas":
+            _send_gas(to_email, subject, body, mail_cfg["from_name"])
+            flash(f"テストメールを {to_email} にGAS経由で送信しました。", "success")
         else:
             _send_console(to_email, subject, body)
             flash(f"[コンソールモード] テストメールの内容をターミナルに出力しました。", "info")
