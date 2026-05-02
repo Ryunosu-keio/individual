@@ -46,6 +46,19 @@
 
           <hr class="my-3">
 
+          <!-- 1日の送信上限 -->
+          <div class="mb-3">
+            <label class="form-label fw-bold">1日の送信上限</label>
+            <input type="number" class="form-control" name="mail_daily_limit"
+                   value="{{ settings.get('mail_daily_limit', '100') }}"
+                   placeholder="100" min="1">
+            <div class="form-text">
+              一括送信時、この件数を超えないよう自動で分割します。翌日に続きを送信できます。
+            </div>
+          </div>
+
+          <hr class="my-3">
+
           <!-- 送信元 -->
           <div class="mb-3">
             <label class="form-label fw-bold">送信元メールアドレス</label>
@@ -108,8 +121,31 @@
     </div>
   </div>
 
-  <!-- テスト送信 -->
+  <!-- 右サイドバー -->
   <div class="col-md-5">
+    <!-- 案内PDF管理 -->
+    <div class="card mb-3">
+      <div class="card-header fw-bold bg-light">
+        <i class="bi bi-file-earmark-pdf me-1"></i>案内PDF管理
+      </div>
+      <div class="card-body">
+        <p class="text-muted small">最終リマインドメールに添付する案内PDFを設定します。</p>
+        <form method="POST" action="{{ url_for('admin.settings_pdf_upload') }}" enctype="multipart/form-data">
+          <div class="mb-2">
+            <input type="file" class="form-control form-control-sm" name="pdf_file" accept=".pdf">
+          </div>
+          <button type="submit" class="btn btn-outline-primary btn-sm">
+            <i class="bi bi-upload me-1"></i>PDFをアップロード
+          </button>
+        </form>
+        <div class="mt-2 small text-muted">
+          <i class="bi bi-info-circle me-1"></i>
+          アップロードしたPDFは最終リマインドメールに自動で添付されます。
+        </div>
+      </div>
+    </div>
+
+    <!-- テスト送信 -->
     <div class="card mb-3">
       <div class="card-header fw-bold bg-light">テスト送信</div>
       <div class="card-body">

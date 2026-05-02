@@ -6,12 +6,15 @@ MAIL_MODE=smtp    の場合: SMTPで実際に送信する
 MAIL_MODE=gas     の場合: GAS Webhookで送信する
 """
 import json
+import os
 import smtplib
 import logging
 import urllib.request
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from datetime import datetime
+from email.mime.base import MIMEBase
+from email import encoders
+from datetime import datetime, date
 from flask import current_app
 from extensions import db
 from models import MailLog, AppSetting
@@ -92,6 +95,24 @@ MAIL_DEFAULTS = {
         "※同じメールアドレスで再送信すると回答が更新されます。\n\n"
         "後日、本出欠フォームのURLを別途お送りいたします。\n"
         "引き続きよろしくお願いいたします。\n\n"
+        "──────────────────\n"
+        "{reunion_name} 幹事"
+    ),
+    "mail_final_reminder_subject": "【{reunion_name}】開催のご案内（最終リマインド）",
+    "mail_final_reminder_body": (
+        "{name} 様\n\n"
+        "いつもお世話になっております。\n"
+        "{reunion_name}の幹事です。\n\n"
+        "本出欠にてご参加のご回答をいただき、ありがとうございます。\n"
+        "開催が近づいてまいりましたので、最終のご案内をお送りいたします。\n\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        "■ 同窓会の詳細\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        "日時: {reunion_date}\n"
+        "会場: {reunion_venue}\n"
+        "会費: {reunion_fee}\n\n"
+        "※詳細は添付のご案内PDFをご確認ください。\n\n"
+        "当日お会いできることを楽しみにしております。\n\n"
         "──────────────────\n"
         "{reunion_name} 幹事"
     ),
@@ -232,15 +253,24 @@ def _send_gas(to_email: str, subject: str, body: str, from_name: str) -> None:
             raise RuntimeError(f"GAS送信エラー: {result.get('error')}")
 
 
-def _send_smtp_cfg(to_email: str, subject: str, body: str, cfg: dict) -> None:
+def _send_smtp_cfg(to_email: str, subject: str, body: str, cfg: dict, attachment_path: str = None) -> None:
     """SMTPでメールを送信する"""
-    msg = MIMEMultipart("alternative")
+    msg = MIMEMultipart("mixed")
     msg["Subject"] = subject
     msg["From"] = f"{cfg['from_name']} <{cfg['from_addr']}>"
     msg["To"] = to_email
 
     part = MIMEText(body, "plain", "utf-8")
     msg.attach(part)
+
+    if attachment_path and os.path.isfile(attachment_path):
+        with open(attachment_path, "rb") as f:
+            attach = MIMEBase("application", "octet-stream")
+            attach.set_payload(f.read())
+        encoders.encode_base64(attach)
+        filename = os.path.basename(attachment_path)
+        attach.add_header("Content-Disposition", "attachment", filename=filename)
+        msg.attach(attach)
 
     with smtplib.SMTP(cfg["smtp_host"], cfg["smtp_port"]) as server:
         server.ehlo()
@@ -279,16 +309,18 @@ def _get_mail_config():
     }
 
 
-def _dispatch_send(to_email: str, subject: str, body: str, mail_cfg: dict) -> str:
+def _dispatch_send(to_email: str, subject: str, body: str, mail_cfg: dict, attachment_path: str = None) -> str:
     """モードに応じてメール送信し、ステータス文字列を返す"""
     mode = mail_cfg["mode"]
     if mode == "gas":
         _send_gas(to_email, subject, body, mail_cfg["from_name"])
         return "sent"
     elif mode == "smtp":
-        _send_smtp_cfg(to_email, subject, body, mail_cfg)
+        _send_smtp_cfg(to_email, subject, body, mail_cfg, attachment_path=attachment_path)
         return "sent"
     else:
+        if attachment_path:
+            logger.info(f"[添付ファイル] {attachment_path}")
         _send_console(to_email, subject, body)
         return "simulated"
 
@@ -457,3 +489,80 @@ def send_reminder(participant, final_url: str) -> MailLog:
         raise
 
     return log
+
+
+def _build_final_reminder_body(participant_name: str) -> tuple:
+    """最終リマインドメールの件名・本文を生成する"""
+    reunion = _get_reunion_info()
+    vars = dict(
+        name=participant_name,
+        reunion_name=reunion["reunion_name"],
+        reunion_date=reunion["reunion_date"],
+        reunion_venue=reunion["reunion_venue"],
+        reunion_fee=reunion["reunion_fee"],
+    )
+    subject = _render_template(
+        _get_template('mail_final_reminder_subject',
+                      MAIL_DEFAULTS['mail_final_reminder_subject']),
+        **vars
+    )
+    body = _render_template(
+        _get_template('mail_final_reminder_body',
+                      MAIL_DEFAULTS['mail_final_reminder_body']),
+        **vars
+    )
+    return subject, body
+
+
+def send_final_reminder(participant, attachment_path: str = None) -> MailLog:
+    """本出欠参加者に最終リマインドメール（PDF添付）を送信する。"""
+    mail_cfg = _get_mail_config()
+    subject, body = _build_final_reminder_body(participant.name)
+
+    log = MailLog(
+        participant_id=participant.id,
+        mail_type="final_reminder",
+        sent_at=datetime.utcnow(),
+    )
+
+    try:
+        log.status = _dispatch_send(participant.email, subject, body, mail_cfg,
+                                    attachment_path=attachment_path)
+        if log.status == "sent":
+            logger.info(f"最終リマインド送信成功: {participant.email}")
+        db.session.add(log)
+        db.session.commit()
+    except Exception as e:
+        log.status = "failed"
+        log.error_message = str(e)
+        db.session.add(log)
+        db.session.commit()
+        logger.error(f"最終リマインド送信失敗: {participant.email} - {e}", exc_info=True)
+        raise
+
+    return log
+
+
+def get_daily_send_limit() -> int:
+    """1日のメール送信制限数を取得する"""
+    s = AppSetting.query.filter_by(key="mail_daily_limit").first()
+    if s and s.value:
+        try:
+            return int(s.value)
+        except ValueError:
+            pass
+    return 100  # デフォルト100件/日
+
+
+def get_today_sent_count() -> int:
+    """今日送信済みのメール件数を取得する"""
+    today_start = datetime.combine(date.today(), datetime.min.time())
+    return MailLog.query.filter(
+        MailLog.sent_at >= today_start,
+        MailLog.status.in_(["sent", "simulated"]),
+    ).count()
+
+
+def get_remaining_today() -> int:
+    """今日の残り送信可能件数を取得する"""
+    return max(0, get_daily_send_limit() - get_today_sent_count())

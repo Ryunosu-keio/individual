@@ -5,38 +5,57 @@
 <h4 class="mb-4"><i class="bi bi-speedometer2 me-2"></i>ダッシュボード</h4>
 
 <!-- 仮出欠集計 -->
+<h6 class="text-muted mb-2">仮出欠</h6>
 <div class="row g-3 mb-4">
   <div class="col-6 col-md-3">
-    <div class="card text-center border-0 shadow-sm h-100">
-      <div class="card-body">
-        <div class="display-6 fw-bold text-primary">{{ stats.total }}</div>
-        <div class="text-muted small">登録者数</div>
+    <a href="{{ url_for('admin.participants') }}" class="text-decoration-none">
+      <div class="card text-center border-0 shadow-sm h-100 card-hover">
+        <div class="card-body">
+          <div class="display-6 fw-bold text-primary">{{ stats.total }}</div>
+          <div class="text-muted small">登録者数</div>
+        </div>
       </div>
-    </div>
+    </a>
   </div>
   <div class="col-6 col-md-3">
-    <div class="card text-center border-0 shadow-sm h-100">
-      <div class="card-body">
-        <div class="display-6 fw-bold text-success">{{ stats.provisional_attending }}</div>
-        <div class="text-muted small">仮参加</div>
+    <a href="{{ url_for('admin.participants', status='attending') }}" class="text-decoration-none">
+      <div class="card text-center border-0 shadow-sm h-100 card-hover">
+        <div class="card-body">
+          <div class="display-6 fw-bold text-success">{{ stats.provisional_attending }}</div>
+          <div class="text-muted small">仮参加</div>
+        </div>
       </div>
-    </div>
+    </a>
   </div>
   <div class="col-6 col-md-3">
-    <div class="card text-center border-0 shadow-sm h-100">
-      <div class="card-body">
-        <div class="display-6 fw-bold text-info">{{ stats.final_attending }}</div>
-        <div class="text-muted small">本参加</div>
+    <a href="{{ url_for('admin.participants', status='not_attending') }}" class="text-decoration-none">
+      <div class="card text-center border-0 shadow-sm h-100 card-hover">
+        <div class="card-body">
+          <div class="display-6 fw-bold text-secondary">{{ stats.provisional_not_attending }}</div>
+          <div class="text-muted small">仮不参加</div>
+        </div>
       </div>
-    </div>
+    </a>
   </div>
   <div class="col-6 col-md-3">
-    <div class="card text-center border-0 shadow-sm h-100">
-      <div class="card-body">
-        <div class="display-6 fw-bold text-warning">{{ stats.no_provisional_response }}</div>
-        <div class="text-muted small">仮出欠未回答</div>
+    <a href="{{ url_for('admin.participants', status='undecided') }}" class="text-decoration-none">
+      <div class="card text-center border-0 shadow-sm h-100 card-hover">
+        <div class="card-body">
+          <div class="display-6 fw-bold text-info">{{ stats.provisional_undecided }}</div>
+          <div class="text-muted small">仮未定</div>
+        </div>
       </div>
-    </div>
+    </a>
+  </div>
+  <div class="col-6 col-md-3">
+    <a href="{{ url_for('admin.participants', status='no_response') }}" class="text-decoration-none">
+      <div class="card text-center border-0 shadow-sm h-100 card-hover">
+        <div class="card-body">
+          <div class="display-6 fw-bold text-warning">{{ stats.no_provisional_response }}</div>
+          <div class="text-muted small">仮出欠未回答</div>
+        </div>
+      </div>
+    </a>
   </div>
   <div class="col-6 col-md-3">
     <div class="card text-center border-0 shadow-sm h-100">
@@ -48,21 +67,98 @@
   </div>
 </div>
 
+<!-- 本出欠集計 -->
+<h6 class="text-muted mb-2">本出欠</h6>
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <a href="{{ url_for('admin.participants', final_status='attending') }}" class="text-decoration-none">
+      <div class="card text-center border-0 shadow-sm h-100 card-hover">
+        <div class="card-body">
+          <div class="display-6 fw-bold text-success">{{ stats.final_attending }}</div>
+          <div class="text-muted small">本参加</div>
+        </div>
+      </div>
+    </a>
+  </div>
+  <div class="col-6 col-md-3">
+    <a href="{{ url_for('admin.participants', final_status='not_attending') }}" class="text-decoration-none">
+      <div class="card text-center border-0 shadow-sm h-100 card-hover">
+        <div class="card-body">
+          <div class="display-6 fw-bold text-secondary">{{ stats.final_not_attending }}</div>
+          <div class="text-muted small">本不参加</div>
+        </div>
+      </div>
+    </a>
+  </div>
+  <div class="col-6 col-md-3">
+    <a href="{{ url_for('admin.participants', final_status='no_response') }}" class="text-decoration-none">
+      <div class="card text-center border-0 shadow-sm h-100 card-hover">
+        <div class="card-body">
+          <div class="display-6 fw-bold text-warning">{{ stats.final_no_response }}</div>
+          <div class="text-muted small">本出欠未回答</div>
+        </div>
+      </div>
+    </a>
+  </div>
+</div>
+
 <!-- 入金集計 -->
+<h6 class="text-muted mb-2">入金</h6>
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <a href="{{ url_for('admin.payments', status='paid') }}" class="text-decoration-none">
+      <div class="card text-center border-0 shadow-sm h-100 card-hover">
+        <div class="card-body">
+          <div class="display-6 fw-bold text-success">{{ stats.paid }}</div>
+          <div class="text-muted small">入金済み</div>
+        </div>
+      </div>
+    </a>
+  </div>
+  <div class="col-6 col-md-3">
+    <a href="{{ url_for('admin.payments', status='unpaid') }}" class="text-decoration-none">
+      <div class="card text-center border-0 shadow-sm h-100 card-hover">
+        <div class="card-body">
+          <div class="display-6 fw-bold text-danger">{{ stats.unpaid }}</div>
+          <div class="text-muted small">未入金</div>
+        </div>
+      </div>
+    </a>
+  </div>
+</div>
+
+<!-- 送信状況 -->
+<h6 class="text-muted mb-2">メール送信状況</h6>
 <div class="row g-3 mb-4">
   <div class="col-6 col-md-3">
     <div class="card text-center border-0 shadow-sm h-100">
       <div class="card-body">
-        <div class="display-6 fw-bold text-success">{{ stats.paid }}</div>
-        <div class="text-muted small">入金済み</div>
+        <div class="display-6 fw-bold text-info">{{ stats.final_url_sent }}</div>
+        <div class="text-muted small">本出欠URL送信済み</div>
       </div>
     </div>
   </div>
   <div class="col-6 col-md-3">
     <div class="card text-center border-0 shadow-sm h-100">
       <div class="card-body">
-        <div class="display-6 fw-bold text-danger">{{ stats.unpaid }}</div>
-        <div class="text-muted small">未入金</div>
+        <div class="display-6 fw-bold text-warning">{{ stats.final_url_unsent }}</div>
+        <div class="text-muted small">本出欠URL未送信</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card text-center border-0 shadow-sm h-100">
+      <div class="card-body">
+        <div class="display-6 fw-bold text-dark">{{ stats.today_sent }} / {{ stats.daily_limit }}</div>
+        <div class="text-muted small">本日送信済み / 1日上限</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card text-center border-0 shadow-sm h-100">
+      <div class="card-body">
+        <div class="display-6 fw-bold text-primary">{{ stats.remaining_today }}</div>
+        <div class="text-muted small">本日残り送信可能</div>
       </div>
     </div>
   </div>
@@ -76,9 +172,21 @@
       <i class="bi bi-person-lines-fill me-1"></i>参加者一覧
     </a>
     <form method="POST" action="{{ url_for('admin.send_final_url_bulk') }}"
-          onsubmit="return confirm('仮参加かつ本出欠未回答の方に一括送信します。よろしいですか？')">
+          onsubmit="return confirm('本出欠URL未送信の全員に一括送信します（本日上限: {{ stats.daily_limit }}件）。\n未送信: {{ stats.final_url_unsent }}件\n本日残り: {{ stats.remaining_today }}件\n\nよろしいですか？')">
       <button type="submit" class="btn btn-outline-success">
         <i class="bi bi-envelope-fill me-1"></i>本出欠URL一括送信
+        {% if stats.final_url_unsent > 0 %}
+          <span class="badge bg-warning text-dark ms-1">{{ stats.final_url_unsent }}件</span>
+        {% endif %}
+      </button>
+    </form>
+    <form method="POST" action="{{ url_for('admin.send_final_reminder_bulk') }}"
+          onsubmit="return confirm('本出欠参加者に最終リマインドメール（PDF添付）を送信します。よろしいですか？')">
+      <button type="submit" class="btn btn-outline-danger">
+        <i class="bi bi-file-earmark-pdf me-1"></i>最終リマインド一括送信
+        {% if stats.final_attending > 0 %}
+          <span class="badge bg-success ms-1">{{ stats.final_attending }}件</span>
+        {% endif %}
       </button>
     </form>
     <a href="{{ url_for('admin.payments') }}" class="btn btn-outline-info">
@@ -95,4 +203,9 @@
     </a>
   </div>
 </div>
+
+<style>
+  .card-hover { transition: transform 0.15s, box-shadow 0.15s; cursor: pointer; }
+  .card-hover:hover { transform: translateY(-2px); box-shadow: 0 .5rem 1rem rgba(0,0,0,.12) !important; }
+</style>
 {% endblock %}

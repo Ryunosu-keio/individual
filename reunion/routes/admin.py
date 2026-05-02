@@ -30,7 +30,9 @@ from flask import (Blueprint, render_template, request, redirect,
 from extensions import db
 from models import Participant, ProvisionalResponse, FinalResponse, Payment, BankImport, MailLog, AppSetting
 from services.token_service import ensure_token, generate_final_url
-from services.mail_service import send_final_url, send_reminder, MAIL_DEFAULTS
+from services.mail_service import (send_final_url, send_reminder, send_final_reminder,
+                                    MAIL_DEFAULTS, get_daily_send_limit,
+                                    get_today_sent_count, get_remaining_today)
 from services.csv_service import parse_bank_csv, save_bank_imports
 from services.matching_service import run_auto_matching, confirm_match, unmatch
 
@@ -47,11 +49,16 @@ def index():
     """管理画面トップ：各種集計を表示"""
     total = Participant.query.count()
     provisional_attending = 0
+    provisional_not_attending = 0
+    provisional_undecided = 0
     final_attending = 0
     final_not_attending = 0
+    final_no_response = 0
     no_response = 0
     paid_count = 0
     unpaid_count = 0
+    final_url_sent = 0
+    final_url_unsent = 0
 
     participants = Participant.query.all()
     for p in participants:
@@ -60,6 +67,10 @@ def index():
         if prov:
             if prov.status == "attending":
                 provisional_attending += 1
+            elif prov.status == "not_attending":
+                provisional_not_attending += 1
+            elif prov.status == "undecided":
+                provisional_undecided += 1
         else:
             no_response += 1
 
@@ -68,6 +79,17 @@ def index():
                 final_attending += 1
             else:
                 final_not_attending += 1
+        else:
+            final_no_response += 1
+
+        has_final_url_mail = any(
+            ml.mail_type == "final_url" and ml.status in ("sent", "simulated")
+            for ml in p.mail_logs
+        )
+        if has_final_url_mail:
+            final_url_sent += 1
+        else:
+            final_url_unsent += 1
 
         if p.payment:
             if p.payment.payment_status == "paid":
@@ -75,20 +97,33 @@ def index():
             else:
                 unpaid_count += 1
 
-    # メール未登録（プレースホルダー）の人数
     no_email_count = Participant.query.filter(
         Participant.email.like("%@placeholder.local")
     ).count()
 
+    daily_limit = get_daily_send_limit()
+    today_sent = get_today_sent_count()
+    remaining_today = max(0, daily_limit - today_sent)
+    send_stage = (final_url_sent // daily_limit) + 1 if daily_limit > 0 else 1
+
     stats = {
         "total": total,
         "provisional_attending": provisional_attending,
+        "provisional_not_attending": provisional_not_attending,
+        "provisional_undecided": provisional_undecided,
         "final_attending": final_attending,
         "final_not_attending": final_not_attending,
+        "final_no_response": final_no_response,
         "no_provisional_response": no_response,
         "paid": paid_count,
         "unpaid": unpaid_count,
         "no_email": no_email_count,
+        "final_url_sent": final_url_sent,
+        "final_url_unsent": final_url_unsent,
+        "daily_limit": daily_limit,
+        "today_sent": today_sent,
+        "remaining_today": remaining_today,
+        "send_stage": send_stage,
     }
     return render_template("admin/index.html", stats=stats)
 
@@ -101,12 +136,13 @@ def participants():
     """参加者一覧（検索・絞り込み・並べ替え対応）"""
     from sqlalchemy import case as sa_case
 
-    q             = request.args.get("q", "").strip()
-    status_filter = request.args.get("status", "all")
-    role_filter   = request.args.get("role", "all")
-    class_filter  = request.args.get("class_name", "all")
-    sort          = request.args.get("sort", "class")
-    order         = request.args.get("order", "asc")
+    q              = request.args.get("q", "").strip()
+    status_filter  = request.args.get("status", "all")
+    final_filter   = request.args.get("final_status", "all")
+    role_filter    = request.args.get("role", "all")
+    class_filter   = request.args.get("class_name", "all")
+    sort           = request.args.get("sort", "class")
+    order          = request.args.get("order", "asc")
 
     query = Participant.query
 
@@ -152,6 +188,17 @@ def participants():
                 filtered.append(p)
         all_participants = filtered
 
+    # 本出欠ステータスで絞り込み（Python側）
+    if final_filter != "all":
+        filtered = []
+        for p in all_participants:
+            final = p.latest_final
+            if final_filter == "no_response" and final is None:
+                filtered.append(p)
+            elif final and final.status == final_filter:
+                filtered.append(p)
+        all_participants = filtered
+
     # クラス一覧（絞り込み用）
     classes = [r[0] for r in db.session.query(Participant.class_name)
                .filter(Participant.class_name != "")
@@ -160,6 +207,7 @@ def participants():
     def sort_url(col):
         new_order = "desc" if (sort == col and order == "asc") else "asc"
         return url_for("admin.participants", q=q, status=status_filter,
+                       final_status=final_filter,
                        role=role_filter, class_name=class_filter,
                        sort=col, order=new_order)
 
@@ -172,6 +220,7 @@ def participants():
                            participants=all_participants,
                            q=q,
                            status_filter=status_filter,
+                           final_filter=final_filter,
                            role_filter=role_filter,
                            class_filter=class_filter,
                            sort=sort, order=order,
@@ -294,37 +343,43 @@ def send_final_url_single(participant_id):
     return redirect(url_for("admin.participant_detail", participant_id=participant_id))
 
 
-BULK_SEND_LIMIT = 100  # GAS無料プランの1日上限
-
 @admin_bp.route("/send-final-url-bulk", methods=["POST"])
 def send_final_url_bulk():
-    """本出欠URLを一括送信（バックグラウンドスレッドで実行）"""
+    """本出欠URLを一括送信（仮出欠ステータス関係なく全員対象・段階送信）"""
     import threading
     import time
 
     base_url = current_app.config.get("APP_BASE_URL", "http://localhost:5000")
 
-    participants = Participant.query.all()
+    # 対象: メール登録済み＆本出欠URL未送信の全員（仮出欠ステータス不問）
+    participants = Participant.query.filter(
+        ~Participant.email.like("%@placeholder.local"),
+    ).all()
+
     targets = []
     for p in participants:
-        prov = p.latest_provisional
-        final = p.latest_final
-        if prov and prov.status == "attending" and final is None:
+        has_final_url_mail = any(
+            ml.mail_type == "final_url" and ml.status in ("sent", "simulated")
+            for ml in p.mail_logs
+        )
+        if not has_final_url_mail:
             targets.append(p)
 
     if not targets:
-        flash("送信対象の参加者がいません。", "info")
+        flash("送信対象の参加者がいません（全員送信済みです）。", "info")
         return redirect(url_for("admin.participants"))
 
-    total = len(targets)
-    remaining = 0
-    if total > BULK_SEND_LIMIT:
-        remaining = total - BULK_SEND_LIMIT
-        targets = targets[:BULK_SEND_LIMIT]
+    remaining = get_remaining_today()
+    if remaining <= 0:
+        flash("本日の送信上限に達しています。明日以降に再度送信してください。", "warning")
+        return redirect(url_for("admin.participants"))
 
-    # 対象IDとURLだけ先に確定（スレッド内でDBアクセスを最小化）
+    batch = targets[:remaining]
+    daily_limit = get_daily_send_limit()
+    stage = (get_today_sent_count() // daily_limit) + 1 if daily_limit > 0 else 1
+
     app = current_app._get_current_object()
-    jobs = [(p.id, generate_final_url(p, base_url)) for p in targets]
+    jobs = [(p.id, generate_final_url(p, base_url)) for p in batch]
 
     def bulk_send():
         with app.app_context():
@@ -341,14 +396,15 @@ def send_final_url_bulk():
                     logger.error(f"一括送信失敗: {p.email} - {e}", exc_info=True)
                     failed += 1
                 time.sleep(0.5)
-            logger.info(f"一括送信完了: {sent} 件成功 / {failed} 件失敗")
+            logger.info(f"第{stage}段階送信完了: {sent} 件成功 / {failed} 件失敗")
 
     thread = threading.Thread(target=bulk_send, daemon=True)
     thread.start()
 
-    msg = f"{len(jobs)} 件の送信をバックグラウンドで開始しました。"
-    if remaining > 0:
-        msg += f" 残り {remaining} 件は明日以降に再度実行してください（1日上限{BULK_SEND_LIMIT}件）。"
+    remaining_after = len(targets) - len(batch)
+    msg = f"第{stage}段階: {len(batch)} 件の送信を開始しました。"
+    if remaining_after > 0:
+        msg += f"（残り {remaining_after} 件は次回送信してください）"
     flash(msg, "info")
     return redirect(url_for("admin.participants"))
 
@@ -384,10 +440,9 @@ def send_reminder_bulk():
 
     base_url = current_app.config.get("APP_BASE_URL", "http://localhost:5000")
 
-    # 対象: トークンあり（=本出欠URL送信済み）かつ本出欠未回答かつメール登録済み
     participants = Participant.query.filter(
         Participant.token.isnot(None),
-        ~Participant.email.like(f"%@placeholder.local"),
+        ~Participant.email.like("%@placeholder.local"),
     ).all()
     targets = [p for p in participants if p.latest_final is None]
 
@@ -395,14 +450,14 @@ def send_reminder_bulk():
         flash("リマインド送信対象の参加者がいません。", "info")
         return redirect(url_for("admin.participants"))
 
-    total = len(targets)
-    remaining = 0
-    if total > BULK_SEND_LIMIT:
-        remaining = total - BULK_SEND_LIMIT
-        targets = targets[:BULK_SEND_LIMIT]
+    remaining = get_remaining_today()
+    if remaining <= 0:
+        flash("本日の送信上限に達しています。明日以降に再度送信してください。", "warning")
+        return redirect(url_for("admin.participants"))
 
+    batch = targets[:remaining]
     app = current_app._get_current_object()
-    jobs = [(p.id, generate_final_url(p, base_url)) for p in targets]
+    jobs = [(p.id, generate_final_url(p, base_url)) for p in batch]
 
     def bulk_send():
         with app.app_context():
@@ -424,9 +479,88 @@ def send_reminder_bulk():
     thread = threading.Thread(target=bulk_send, daemon=True)
     thread.start()
 
-    msg = f"{len(jobs)} 件のリマインド送信をバックグラウンドで開始しました。"
-    if remaining > 0:
-        msg += f" 残り {remaining} 件は明日以降に再度実行してください（1日上限{BULK_SEND_LIMIT}件）。"
+    remaining_after = len(targets) - len(batch)
+    msg = f"{len(batch)} 件のリマインド送信を開始しました。"
+    if remaining_after > 0:
+        msg += f"（残り {remaining_after} 件は次回送信してください）"
+    flash(msg, "info")
+    return redirect(url_for("admin.participants"))
+
+
+@admin_bp.route("/send-final-reminder-bulk", methods=["POST"])
+def send_final_reminder_bulk():
+    """最終リマインドメールを一括送信（本出欠参加者にPDF添付）"""
+    import threading
+    import time
+
+    participants = Participant.query.filter(
+        ~Participant.email.like("%@placeholder.local"),
+    ).all()
+
+    targets = []
+    for p in participants:
+        final = p.latest_final
+        if final and final.status == "attending":
+            has_final_reminder = any(
+                ml.mail_type == "final_reminder" and ml.status in ("sent", "simulated")
+                for ml in p.mail_logs
+            )
+            if not has_final_reminder:
+                targets.append(p)
+
+    if not targets:
+        flash("最終リマインド送信対象の参加者がいません。", "info")
+        return redirect(url_for("admin.participants"))
+
+    remaining = get_remaining_today()
+    if remaining <= 0:
+        flash("本日の送信上限に達しています。明日以降に再度送信してください。", "warning")
+        return redirect(url_for("admin.participants"))
+
+    batch = targets[:remaining]
+
+    # PDF添付ファイルのパス
+    pdf_setting = AppSetting.query.filter_by(key="reunion_guide_pdf").first()
+    pdf_path = None
+    if pdf_setting and pdf_setting.value:
+        pdf_path = pdf_setting.value
+    else:
+        import os
+        default_pdf = os.path.join(current_app.root_path, "static", "uploads", "reunion_guide.pdf")
+        if os.path.isfile(default_pdf):
+            pdf_path = default_pdf
+
+    app = current_app._get_current_object()
+    jobs = [p.id for p in batch]
+
+    def bulk_send():
+        with app.app_context():
+            sent = 0
+            failed = 0
+            for pid in jobs:
+                p = db.session.get(Participant, pid)
+                if p is None:
+                    continue
+                try:
+                    send_final_reminder(p, attachment_path=pdf_path)
+                    sent += 1
+                except Exception as e:
+                    logger.error(f"最終リマインド一括送信失敗: {p.email} - {e}", exc_info=True)
+                    failed += 1
+                time.sleep(0.5)
+            logger.info(f"最終リマインド一括送信完了: {sent} 件成功 / {failed} 件失敗")
+
+    thread = threading.Thread(target=bulk_send, daemon=True)
+    thread.start()
+
+    remaining_after = len(targets) - len(batch)
+    msg = f"{len(batch)} 件の最終リマインド送信を開始しました。"
+    if pdf_path:
+        msg += "（PDF添付あり）"
+    else:
+        msg += "（PDF未設定のため添付なし）"
+    if remaining_after > 0:
+        msg += f"（残り {remaining_after} 件は次回送信してください）"
     flash(msg, "info")
     return redirect(url_for("admin.participants"))
 
@@ -613,13 +747,12 @@ def settings_mail():
     KEYS = [
         "mail_mode", "mail_smtp_host", "mail_smtp_port",
         "mail_smtp_user", "mail_smtp_password",
-        "mail_from", "mail_from_name",
+        "mail_from", "mail_from_name", "mail_daily_limit",
     ]
 
     if request.method == "POST":
         for key in KEYS:
             val = request.form.get(key, "").strip()
-            # パスワードが空欄のまま送信された場合は変更しない
             if key == "mail_smtp_password" and not val:
                 continue
             setting = AppSetting.query.filter_by(key=key).first()
@@ -632,7 +765,38 @@ def settings_mail():
         return redirect(url_for("admin.settings_mail"))
 
     settings = {s.key: s.value for s in AppSetting.query.filter(AppSetting.key.in_(KEYS)).all()}
+    if "mail_daily_limit" not in settings:
+        settings["mail_daily_limit"] = "100"
     return render_template("admin/settings_mail.html", settings=settings)
+
+
+@admin_bp.route("/settings/pdf-upload", methods=["POST"])
+def settings_pdf_upload():
+    """案内PDFをアップロードする"""
+    import os
+    if "pdf_file" not in request.files:
+        flash("ファイルを選択してください。", "danger")
+        return redirect(url_for("admin.settings_mail"))
+
+    file = request.files["pdf_file"]
+    if file.filename == "" or not file.filename.lower().endswith(".pdf"):
+        flash("PDFファイルを選択してください。", "danger")
+        return redirect(url_for("admin.settings_mail"))
+
+    upload_dir = os.path.join(current_app.root_path, "static", "uploads")
+    os.makedirs(upload_dir, exist_ok=True)
+    save_path = os.path.join(upload_dir, "reunion_guide.pdf")
+    file.save(save_path)
+
+    setting = AppSetting.query.filter_by(key="reunion_guide_pdf").first()
+    if setting:
+        setting.value = save_path
+    else:
+        db.session.add(AppSetting(key="reunion_guide_pdf", value=save_path))
+    db.session.commit()
+
+    flash("案内PDFをアップロードしました。", "success")
+    return redirect(url_for("admin.settings_mail"))
 
 
 @admin_bp.route("/settings/mail-template", methods=["GET", "POST"])
@@ -641,6 +805,7 @@ def settings_mail_template():
     KEYS = [
         "mail_final_url_subject", "mail_final_url_body",
         "mail_reminder_subject",  "mail_reminder_body",
+        "mail_final_reminder_subject", "mail_final_reminder_body",
         "mail_provisional_confirm_subject", "mail_provisional_confirm_body",
         "mail_final_confirm_subject",       "mail_final_confirm_body",
     ]
