@@ -1,174 +1,185 @@
 {% extends "base.html" %}
 {% block title %}ダッシュボード | 同窓会管理{% endblock %}
 
+{% block extra_head %}
+<style>
+  .chart-card { transition: transform 0.15s, box-shadow 0.15s; }
+  .chart-card:hover { transform: translateY(-2px); box-shadow: 0 .5rem 1rem rgba(0,0,0,.12) !important; }
+  .chart-wrap { position: relative; max-width: 220px; margin: 0 auto; }
+  .chart-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; pointer-events: none; }
+  .chart-center .num { font-size: 2rem; font-weight: 700; line-height: 1; }
+  .chart-center .label { font-size: 0.75rem; color: #6c757d; }
+  .chart-legend { list-style: none; padding: 0; margin: 0.75rem 0 0; }
+  .chart-legend li { display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; padding: 4px 8px; border-radius: 6px; cursor: pointer; transition: background 0.15s; }
+  .chart-legend li:hover { background: #f0f0f0; }
+  .chart-legend .dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+  .chart-legend .val { font-weight: 600; margin-left: auto; }
+  .mail-stat-row { display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem 0; }
+  .mail-stat-row .mail-label { font-size: 0.85rem; color: #6c757d; min-width: 120px; }
+  .mail-stat-row .mail-val { font-size: 1.1rem; font-weight: 600; }
+  .card-hover { transition: transform 0.15s, box-shadow 0.15s; cursor: pointer; }
+  .card-hover:hover { transform: translateY(-2px); box-shadow: 0 .5rem 1rem rgba(0,0,0,.12) !important; }
+</style>
+{% endblock %}
+
 {% block content %}
 <h4 class="mb-4"><i class="bi bi-speedometer2 me-2"></i>ダッシュボード</h4>
 
-<!-- 仮出欠集計 -->
-<h6 class="text-muted mb-2">仮出欠</h6>
-<div class="row g-3 mb-4">
-  <div class="col-6 col-md-3">
-    <a href="{{ url_for('admin.participants') }}" class="text-decoration-none">
-      <div class="card text-center border-0 shadow-sm h-100 card-hover">
-        <div class="card-body">
-          <div class="display-6 fw-bold text-primary">{{ stats.total }}</div>
-          <div class="text-muted small">登録者数</div>
+<div class="row g-4 mb-4">
+  <!-- 仮出欠 -->
+  <div class="col-12 col-md-4">
+    <div class="card border-0 shadow-sm h-100 chart-card">
+      <div class="card-body text-center">
+        <h6 class="text-muted mb-3">仮出欠</h6>
+        <div class="chart-wrap">
+          <canvas id="chartProvisional"></canvas>
+          <div class="chart-center">
+            <div class="num">{{ stats.total }}</div>
+            <div class="label">登録者数</div>
+          </div>
         </div>
-      </div>
-    </a>
-  </div>
-  <div class="col-6 col-md-3">
-    <a href="{{ url_for('admin.participants', status='attending') }}" class="text-decoration-none">
-      <div class="card text-center border-0 shadow-sm h-100 card-hover">
-        <div class="card-body">
-          <div class="display-6 fw-bold text-success">{{ stats.provisional_attending }}</div>
-          <div class="text-muted small">仮参加</div>
-        </div>
-      </div>
-    </a>
-  </div>
-  <div class="col-6 col-md-3">
-    <a href="{{ url_for('admin.participants', status='not_attending') }}" class="text-decoration-none">
-      <div class="card text-center border-0 shadow-sm h-100 card-hover">
-        <div class="card-body">
-          <div class="display-6 fw-bold text-secondary">{{ stats.provisional_not_attending }}</div>
-          <div class="text-muted small">仮不参加</div>
-        </div>
-      </div>
-    </a>
-  </div>
-  <div class="col-6 col-md-3">
-    <a href="{{ url_for('admin.participants', status='undecided') }}" class="text-decoration-none">
-      <div class="card text-center border-0 shadow-sm h-100 card-hover">
-        <div class="card-body">
-          <div class="display-6 fw-bold text-info">{{ stats.provisional_undecided }}</div>
-          <div class="text-muted small">仮未定</div>
-        </div>
-      </div>
-    </a>
-  </div>
-  <div class="col-6 col-md-3">
-    <a href="{{ url_for('admin.participants', status='no_response') }}" class="text-decoration-none">
-      <div class="card text-center border-0 shadow-sm h-100 card-hover">
-        <div class="card-body">
-          <div class="display-6 fw-bold text-warning">{{ stats.no_provisional_response }}</div>
-          <div class="text-muted small">仮出欠未回答</div>
-        </div>
-      </div>
-    </a>
-  </div>
-  <div class="col-6 col-md-3">
-    <div class="card text-center border-0 shadow-sm h-100">
-      <div class="card-body">
-        <div class="display-6 fw-bold text-secondary">{{ stats.no_email }}</div>
-        <div class="text-muted small">メール未登録</div>
+        <ul class="chart-legend" id="legendProvisional"></ul>
       </div>
     </div>
   </div>
-</div>
 
-<!-- 本出欠集計 -->
-<h6 class="text-muted mb-2">本出欠</h6>
-<div class="row g-3 mb-4">
-  <div class="col-6 col-md-3">
-    <a href="{{ url_for('admin.participants', final_status='attending') }}" class="text-decoration-none">
-      <div class="card text-center border-0 shadow-sm h-100 card-hover">
-        <div class="card-body">
-          <div class="display-6 fw-bold text-success">{{ stats.final_attending }}</div>
-          <div class="text-muted small">本参加</div>
+  <!-- 本出欠 -->
+  <div class="col-12 col-md-4">
+    <div class="card border-0 shadow-sm h-100 chart-card">
+      <div class="card-body text-center">
+        <h6 class="text-muted mb-3">本出欠</h6>
+        <div class="chart-wrap">
+          <canvas id="chartFinal"></canvas>
+          <div class="chart-center">
+            <div class="num">{{ stats.total }}</div>
+            <div class="label">登録者数</div>
+          </div>
         </div>
+        <ul class="chart-legend" id="legendFinal"></ul>
       </div>
-    </a>
+    </div>
   </div>
-  <div class="col-6 col-md-3">
-    <a href="{{ url_for('admin.participants', final_status='not_attending') }}" class="text-decoration-none">
-      <div class="card text-center border-0 shadow-sm h-100 card-hover">
-        <div class="card-body">
-          <div class="display-6 fw-bold text-secondary">{{ stats.final_not_attending }}</div>
-          <div class="text-muted small">本不参加</div>
-        </div>
-      </div>
-    </a>
-  </div>
-  <div class="col-6 col-md-3">
-    <a href="{{ url_for('admin.participants', final_status='no_response') }}" class="text-decoration-none">
-      <div class="card text-center border-0 shadow-sm h-100 card-hover">
-        <div class="card-body">
-          <div class="display-6 fw-bold text-warning">{{ stats.final_no_response }}</div>
-          <div class="text-muted small">本出欠未回答</div>
-        </div>
-      </div>
-    </a>
-  </div>
-</div>
 
-<!-- 入金集計 -->
-<h6 class="text-muted mb-2">入金</h6>
-<div class="row g-3 mb-4">
-  <div class="col-6 col-md-3">
-    <a href="{{ url_for('admin.payments', status='paid') }}" class="text-decoration-none">
-      <div class="card text-center border-0 shadow-sm h-100 card-hover">
-        <div class="card-body">
-          <div class="display-6 fw-bold text-success">{{ stats.paid }}</div>
-          <div class="text-muted small">入金済み</div>
+  <!-- 入金 -->
+  <div class="col-12 col-md-4">
+    <div class="card border-0 shadow-sm h-100 chart-card">
+      <div class="card-body text-center">
+        <h6 class="text-muted mb-3">入金</h6>
+        <div class="chart-wrap">
+          <canvas id="chartPayment"></canvas>
+          <div class="chart-center">
+            <div class="num">{{ stats.paid + stats.unpaid }}</div>
+            <div class="label">対象者数</div>
+          </div>
         </div>
+        <ul class="chart-legend" id="legendPayment"></ul>
       </div>
-    </a>
-  </div>
-  <div class="col-6 col-md-3">
-    <a href="{{ url_for('admin.payments', status='unpaid') }}" class="text-decoration-none">
-      <div class="card text-center border-0 shadow-sm h-100 card-hover">
-        <div class="card-body">
-          <div class="display-6 fw-bold text-danger">{{ stats.unpaid }}</div>
-          <div class="text-muted small">未入金</div>
-        </div>
-      </div>
-    </a>
+    </div>
   </div>
 </div>
 
 <!-- メール送信状況 -->
-<h6 class="text-muted mb-2">メール送信状況</h6>
-<div class="row g-3 mb-4">
-  <div class="col-6 col-md-3">
-    <div class="card text-center border-0 shadow-sm h-100">
+<div class="row g-4 mb-4">
+  <div class="col-12">
+    <div class="card border-0 shadow-sm">
       <div class="card-body">
-        <div class="display-6 fw-bold text-info">{{ stats.final_url_sent }}</div>
-        <div class="text-muted small">本出欠URL送信済み</div>
-      </div>
-    </div>
-  </div>
-  <div class="col-6 col-md-3">
-    <div class="card text-center border-0 shadow-sm h-100">
-      <div class="card-body">
-        <div class="display-6 fw-bold text-warning">{{ stats.final_url_unsent }}</div>
-        <div class="text-muted small">本出欠URL未送信</div>
-      </div>
-    </div>
-  </div>
-  <div class="col-6 col-md-3">
-    <div class="card text-center border-0 shadow-sm h-100">
-      <div class="card-body">
-        <div class="display-6 fw-bold text-dark">{{ stats.today_sent }} / {{ stats.daily_limit }}</div>
-        <div class="text-muted small">本日送信済み / 1日上限</div>
-      </div>
-    </div>
-  </div>
-  <div class="col-6 col-md-3">
-    <div class="card text-center border-0 shadow-sm h-100">
-      <div class="card-body">
-        <div class="display-6 fw-bold text-primary">{{ stats.remaining_today }}</div>
-        <div class="text-muted small">本日残り送信可能</div>
+        <h6 class="text-muted mb-3">メール送信状況</h6>
+        <div class="row align-items-center">
+          <div class="col-md-6 mb-3 mb-md-0">
+            <div class="mb-2" style="font-size:0.85rem; color:#6c757d;">本出欠URL送信進捗</div>
+            <div class="progress" style="height: 28px;">
+              {% set mail_total = stats.final_url_sent + stats.final_url_unsent %}
+              {% set mail_pct = (stats.final_url_sent / mail_total * 100) if mail_total > 0 else 0 %}
+              <div class="progress-bar bg-info" role="progressbar"
+                   style="width: {{ mail_pct|round(1) }}%">
+                {{ stats.final_url_sent }} / {{ mail_total }}
+              </div>
+            </div>
+            <div class="d-flex justify-content-between mt-1" style="font-size:0.8rem; color:#6c757d;">
+              <span><i class="bi bi-check-circle-fill text-info me-1"></i>送信済み {{ stats.final_url_sent }}</span>
+              <span><i class="bi bi-clock-fill text-warning me-1"></i>未送信 {{ stats.final_url_unsent }}</span>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="row text-center">
+              <div class="col-4">
+                <div style="font-size:1.5rem; font-weight:700;" class="text-dark">{{ stats.today_sent }}</div>
+                <div style="font-size:0.75rem; color:#6c757d;">本日送信済み</div>
+              </div>
+              <div class="col-4">
+                <div style="font-size:1.5rem; font-weight:700;" class="text-primary">{{ stats.remaining_today }}</div>
+                <div style="font-size:0.75rem; color:#6c757d;">残り送信可能</div>
+              </div>
+              <div class="col-4">
+                <div style="font-size:1.5rem; font-weight:700;" class="text-secondary">{{ stats.daily_limit }}</div>
+                <div style="font-size:0.75rem; color:#6c757d;">1日上限</div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- クイックアクション（4カード） -->
+<!-- 自動送信 -->
+<div class="row g-4 mb-4">
+  <div class="col-12">
+    <div class="card border-0 shadow-sm" id="autoSendCard">
+      <div class="card-body">
+        <div class="d-flex align-items-center justify-content-between mb-3">
+          <h6 class="text-muted mb-0"><i class="bi bi-send-check me-2"></i>ワンクリック送信</h6>
+          <span id="autoPhaseLabel" class="badge bg-secondary">読み込み中...</span>
+        </div>
+        <div id="autoSendLoading" class="text-center py-3">
+          <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+        </div>
+        <div id="autoSendContent" class="d-none">
+          <div id="autoSendDone" class="text-center py-3 d-none">
+            <i class="bi bi-check-circle-fill text-success display-5"></i>
+            <div class="mt-2 fw-bold">全フェーズの送信が完了しています</div>
+          </div>
+          <div id="autoSendReady" class="d-none">
+            <div class="row align-items-center">
+              <div class="col-md-7">
+                <div class="d-flex gap-4 mb-2">
+                  <div>
+                    <span class="text-muted small">対象者数</span>
+                    <div class="fw-bold fs-5" id="autoTotalTargets">0</div>
+                  </div>
+                  <div>
+                    <span class="text-muted small">今回送信</span>
+                    <div class="fw-bold fs-5 text-primary" id="autoBatchSize">0</div>
+                  </div>
+                  <div>
+                    <span class="text-muted small">本日残り</span>
+                    <div class="fw-bold fs-5" id="autoRemaining">0</div>
+                  </div>
+                </div>
+                <div class="text-muted small" id="autoTargetNames"></div>
+              </div>
+              <div class="col-md-5 text-end">
+                <form method="POST" action="{{ url_for('admin.auto_send') }}" id="autoSendForm">
+                  <button type="submit" class="btn btn-success btn-lg px-4" id="autoSendButton">
+                    <i class="bi bi-send-fill me-2"></i><span id="autoSendButtonText">送信する</span>
+                  </button>
+                </form>
+              </div>
+            </div>
+          </div>
+          <div id="autoSendLimitReached" class="text-center py-3 d-none">
+            <i class="bi bi-exclamation-triangle-fill text-warning display-5"></i>
+            <div class="mt-2 fw-bold">本日の送信上限に達しています</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- クイックアクション -->
 <h6 class="text-muted mb-2">クイックアクション</h6>
 <div class="row g-3 mb-4">
-
-  <!-- 参加者一覧 -->
   <div class="col-6 col-md-3">
     <a href="{{ url_for('admin.participants') }}" class="text-decoration-none">
       <div class="card border-0 shadow-sm h-100 card-hover text-center">
@@ -180,8 +191,6 @@
       </div>
     </a>
   </div>
-
-  <!-- メール送信 -->
   <div class="col-6 col-md-3">
     <a href="{{ url_for('admin.mail_hub') }}" class="text-decoration-none">
       <div class="card border-0 shadow-sm h-100 card-hover text-center">
@@ -193,8 +202,6 @@
       </div>
     </a>
   </div>
-
-  <!-- 入金一覧 -->
   <div class="col-6 col-md-3">
     <a href="{{ url_for('admin.payments') }}" class="text-decoration-none">
       <div class="card border-0 shadow-sm h-100 card-hover text-center">
@@ -206,8 +213,6 @@
       </div>
     </a>
   </div>
-
-  <!-- 仮出欠フォーム -->
   <div class="col-6 col-md-3">
     <a href="{{ url_for('forms.provisional') }}" class="text-decoration-none" target="_blank">
       <div class="card border-0 shadow-sm h-100 card-hover text-center">
@@ -219,11 +224,150 @@
       </div>
     </a>
   </div>
-
 </div>
+{% endblock %}
 
-<style>
-  .card-hover { transition: transform 0.15s, box-shadow 0.15s; cursor: pointer; }
-  .card-hover:hover { transform: translateY(-2px); box-shadow: 0 .5rem 1rem rgba(0,0,0,.12) !important; }
-</style>
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script>
+(function() {
+  var URLS = {
+    participants: "{{ url_for('admin.participants') }}",
+    payments: "{{ url_for('admin.payments') }}"
+  };
+
+  function createDoughnut(canvasId, legendId, segments) {
+    var canvas = document.getElementById(canvasId);
+    var labels = segments.map(function(s){ return s.label; });
+    var data = segments.map(function(s){ return s.value; });
+    var colors = segments.map(function(s){ return s.color; });
+    var urls = segments.map(function(s){ return s.url; });
+
+    var chart = new Chart(canvas, {
+      type: 'doughnut',
+      data: {
+        labels: labels,
+        datasets: [{
+          data: data,
+          backgroundColor: colors,
+          borderWidth: 2,
+          borderColor: '#fff',
+          hoverBorderWidth: 3,
+          hoverOffset: 6
+        }]
+      },
+      options: {
+        cutout: '65%',
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: function(ctx) {
+                var total = ctx.dataset.data.reduce(function(a,b){ return a+b; }, 0);
+                var pct = total > 0 ? (ctx.raw / total * 100).toFixed(1) : 0;
+                return ctx.label + ': ' + ctx.raw + ' (' + pct + '%)';
+              }
+            }
+          }
+        },
+        onClick: function(evt, elems) {
+          if (elems.length > 0) {
+            var idx = elems[0].index;
+            if (urls[idx]) window.location.href = urls[idx];
+          }
+        },
+        onHover: function(evt, elems) {
+          canvas.style.cursor = elems.length > 0 && urls[elems[0].index] ? 'pointer' : 'default';
+        }
+      }
+    });
+
+    var legend = document.getElementById(legendId);
+    segments.forEach(function(s, i) {
+      var li = document.createElement('li');
+      li.innerHTML = '<span class="dot" style="background:' + s.color + '"></span>' +
+                     '<span>' + s.label + '</span>' +
+                     '<span class="val">' + s.value + '</span>';
+      if (s.url) {
+        li.onclick = function(){ window.location.href = s.url; };
+      }
+      legend.appendChild(li);
+    });
+
+    return chart;
+  }
+
+  // 仮出欠
+  createDoughnut('chartProvisional', 'legendProvisional', [
+    { label: '仮参加',       value: {{ stats.provisional_attending }},     color: '#198754', url: URLS.participants + '?status=attending' },
+    { label: '仮不参加',     value: {{ stats.provisional_not_attending }}, color: '#adb5bd', url: URLS.participants + '?status=not_attending' },
+    { label: '仮未定',       value: {{ stats.provisional_undecided }},     color: '#0dcaf0', url: URLS.participants + '?status=undecided' },
+    { label: '未回答',       value: {{ stats.no_provisional_response }},   color: '#ffc107', url: URLS.participants + '?status=no_response' },
+    { label: 'メール未登録', value: {{ stats.no_email }},                  color: '#e9ecef', url: '' }
+  ]);
+
+  // 本出欠
+  createDoughnut('chartFinal', 'legendFinal', [
+    { label: '本参加',   value: {{ stats.final_attending }},     color: '#198754', url: URLS.participants + '?final_status=attending' },
+    { label: '本不参加', value: {{ stats.final_not_attending }}, color: '#adb5bd', url: URLS.participants + '?final_status=not_attending' },
+    { label: '未回答',   value: {{ stats.final_no_response }},   color: '#ffc107', url: URLS.participants + '?final_status=no_response' }
+  ]);
+
+  // 入金
+  createDoughnut('chartPayment', 'legendPayment', [
+    { label: '入金済み', value: {{ stats.paid }},   color: '#198754', url: URLS.payments + '?status=paid' },
+    { label: '未入金',   value: {{ stats.unpaid }}, color: '#dc3545', url: URLS.payments + '?status=unpaid' }
+  ]);
+})();
+
+  // 自動送信プレビュー読み込み
+  fetch("{{ url_for('admin.api_auto_send_preview') }}")
+    .then(function(res){ return res.json(); })
+    .then(function(d){
+      document.getElementById('autoSendLoading').classList.add('d-none');
+      document.getElementById('autoSendContent').classList.remove('d-none');
+
+      if (!d.phase) {
+        document.getElementById('autoPhaseLabel').textContent = '完了';
+        document.getElementById('autoPhaseLabel').className = 'badge bg-success';
+        document.getElementById('autoSendDone').classList.remove('d-none');
+        return;
+      }
+
+      document.getElementById('autoPhaseLabel').textContent = d.phase_label;
+      document.getElementById('autoPhaseLabel').className = 'badge bg-primary';
+
+      if (d.remaining_today <= 0) {
+        document.getElementById('autoSendLimitReached').classList.remove('d-none');
+        return;
+      }
+
+      document.getElementById('autoSendReady').classList.remove('d-none');
+      document.getElementById('autoTotalTargets').textContent = d.total_targets;
+      document.getElementById('autoBatchSize').textContent = d.batch_size;
+      document.getElementById('autoRemaining').textContent = d.remaining_today;
+
+      var names = d.targets.slice(0, 5).map(function(t){ return t.name; });
+      if (d.batch_size > 5) names.push('ほか' + (d.batch_size - 5) + '名');
+      document.getElementById('autoTargetNames').textContent = names.join('、');
+
+      document.getElementById('autoSendButtonText').textContent =
+        d.phase_label + '（' + d.batch_size + '件）';
+
+      document.getElementById('autoSendForm').onsubmit = function(e) {
+        return confirm(
+          '【' + d.phase_label + '】を実行します。\n\n' +
+          '送信対象: ' + d.total_targets + '件\n' +
+          '今回送信: ' + d.batch_size + '件\n\n' +
+          'よろしいですか？'
+        );
+      };
+    })
+    .catch(function(){
+      document.getElementById('autoSendLoading').innerHTML =
+        '<span class="text-danger">読み込みに失敗しました</span>';
+    });
+</script>
 {% endblock %}
