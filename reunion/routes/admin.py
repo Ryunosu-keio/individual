@@ -765,8 +765,20 @@ def settings_mail():
         return redirect(url_for("admin.settings_mail"))
 
     settings = {s.key: s.value for s in AppSetting.query.filter(AppSetting.key.in_(KEYS)).all()}
-    if "mail_daily_limit" not in settings:
-        settings["mail_daily_limit"] = "100"
+    cfg = current_app.config
+    defaults = {
+        "mail_mode":          cfg.get("MAIL_MODE", "console"),
+        "mail_smtp_host":     cfg.get("MAIL_SMTP_HOST", "smtp.gmail.com"),
+        "mail_smtp_port":     str(cfg.get("MAIL_SMTP_PORT", 587)),
+        "mail_smtp_user":     cfg.get("MAIL_SMTP_USER", ""),
+        "mail_smtp_password": "",
+        "mail_from":          cfg.get("MAIL_FROM", ""),
+        "mail_from_name":     cfg.get("MAIL_FROM_NAME", "同窓会幹事"),
+        "mail_daily_limit":   "100",
+    }
+    for key in KEYS:
+        if key not in settings or not settings[key]:
+            settings[key] = defaults.get(key, "")
     return render_template("admin/settings_mail.html", settings=settings)
 
 
@@ -882,6 +894,16 @@ def settings_reunion():
         return redirect(url_for("admin.settings_reunion"))
 
     settings = {s.key: s.value for s in AppSetting.query.filter(AppSetting.key.in_(KEYS)).all()}
+    cfg = current_app.config
+    defaults = {
+        "reunion_name":  cfg.get("REUNION_NAME", "同窓会"),
+        "reunion_date":  cfg.get("REUNION_DATE", ""),
+        "reunion_venue": cfg.get("REUNION_VENUE", ""),
+        "reunion_fee":   cfg.get("REUNION_FEE", ""),
+    }
+    for key in KEYS:
+        if key not in settings or not settings[key]:
+            settings[key] = defaults.get(key, "")
     return render_template("admin/settings_reunion.html", settings=settings)
 
 
