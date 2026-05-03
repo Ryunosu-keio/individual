@@ -317,7 +317,109 @@ def update_memo(participant_id):
 
 
 # -----------------------------------------------
-# メール送信
+# メール送信ハブ
+# -----------------------------------------------
+@admin_bp.route("/mail-hub")
+def mail_hub():
+    """メール送信ハブ画面"""
+    return render_template("admin/mail_hub.html")
+
+
+@admin_bp.route("/api/mail-preview/<mail_type>")
+def api_mail_preview(mail_type):
+    """メール種別ごとのプレビュー・対象者リストをJSON返却"""
+    from services.mail_service import MAIL_DEFAULTS, _get_template, _get_reunion_info
+
+    reunion = _get_reunion_info()
+    base_url = current_app.config.get("APP_BASE_URL", "http://localhost:5000")
+
+    VALID_TYPES = {
+        "final_url": {
+            "label": "本出欠URL送信",
+            "subject_key": "mail_final_url_subject",
+            "body_key": "mail_final_url_body",
+        },
+        "reminder": {
+            "label": "リマインド送信",
+            "subject_key": "mail_reminder_subject",
+            "body_key": "mail_reminder_body",
+        },
+        "final_reminder": {
+            "label": "最終リマインド送信",
+            "subject_key": "mail_final_reminder_subject",
+            "body_key": "mail_final_reminder_body",
+        },
+    }
+
+    if mail_type not in VALID_TYPES:
+        return jsonify({"error": "不正なメール種別です"}), 400
+
+    info = VALID_TYPES[mail_type]
+    subject_tmpl = _get_template(info["subject_key"], MAIL_DEFAULTS[info["subject_key"]])
+    body_tmpl = _get_template(info["body_key"], MAIL_DEFAULTS[info["body_key"]])
+
+    preview_vars = {
+        "name": "（参加者名）",
+        "reunion_name": reunion["reunion_name"],
+        "reunion_date": reunion["reunion_date"],
+        "reunion_venue": reunion["reunion_venue"],
+        "reunion_fee": reunion["reunion_fee"],
+        "final_url": f"{base_url}/form/final/（トークン）",
+        "provisional_url": f"{base_url}/form/provisional",
+        "status": "参加",
+    }
+    for k, v in preview_vars.items():
+        subject_tmpl = subject_tmpl.replace("{" + k + "}", str(v))
+        body_tmpl = body_tmpl.replace("{" + k + "}", str(v))
+
+    participants = Participant.query.filter(
+        ~Participant.email.like("%@placeholder.local"),
+    ).all()
+
+    targets = []
+    if mail_type == "final_url":
+        for p in participants:
+            prov = p.latest_provisional
+            if prov and prov.status == "attending":
+                has_sent = any(
+                    ml.mail_type == "final_url" and ml.status in ("sent", "simulated")
+                    for ml in p.mail_logs
+                )
+                if not has_sent:
+                    targets.append(p)
+    elif mail_type == "reminder":
+        for p in participants:
+            has_sent = any(
+                ml.mail_type == "final_url" and ml.status in ("sent", "simulated")
+                for ml in p.mail_logs
+            )
+            if has_sent and p.latest_final is None:
+                targets.append(p)
+    elif mail_type == "final_reminder":
+        for p in participants:
+            final = p.latest_final
+            if final and final.status == "attending":
+                targets.append(p)
+
+    remaining = get_remaining_today()
+
+    return jsonify({
+        "label": info["label"],
+        "subject": subject_tmpl,
+        "body": body_tmpl,
+        "targets": [
+            {"id": p.id, "name": p.name, "email": p.email}
+            for p in targets
+        ],
+        "target_count": len(targets),
+        "remaining_today": remaining,
+        "daily_limit": get_daily_send_limit(),
+        "today_sent": get_today_sent_count(),
+    })
+
+
+# -----------------------------------------------
+# メール送信（個別・一括）
 # -----------------------------------------------
 @admin_bp.route("/send-final-url/<int:participant_id>", methods=["POST"])
 def send_final_url_single(participant_id):
