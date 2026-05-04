@@ -301,11 +301,10 @@
 
   // 仮出欠
   createDoughnut('chartProvisional', 'legendProvisional', [
-    { label: '仮参加',       value: {{ stats.provisional_attending }},     color: '#198754', url: URLS.participants + '?status=attending' },
-    { label: '仮不参加',     value: {{ stats.provisional_not_attending }}, color: '#adb5bd', url: URLS.participants + '?status=not_attending' },
-    { label: '仮未定',       value: {{ stats.provisional_undecided }},     color: '#0dcaf0', url: URLS.participants + '?status=undecided' },
-    { label: '未回答',       value: {{ stats.no_provisional_response }},   color: '#ffc107', url: URLS.participants + '?status=no_response' },
-    { label: 'メール未登録', value: {{ stats.no_email }},                  color: '#e9ecef', url: '' }
+    { label: '仮参加',   value: {{ stats.provisional_attending }},     color: '#198754', url: URLS.participants + '?status=attending' },
+    { label: '仮不参加', value: {{ stats.provisional_not_attending }}, color: '#adb5bd', url: URLS.participants + '?status=not_attending' },
+    { label: '仮未定',   value: {{ stats.provisional_undecided }},     color: '#0dcaf0', url: URLS.participants + '?status=undecided' },
+    { label: '未回答',   value: {{ stats.no_provisional_response }},   color: '#ffc107', url: URLS.participants + '?status=no_response' }
   ]);
 
   // 本出欠

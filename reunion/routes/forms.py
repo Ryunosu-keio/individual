@@ -93,13 +93,14 @@ def provisional():
     if request.method == "GET":
         return render_template("provisional_form.html")
 
-    # クラス選択→名前選択方式: participant_id が送られてくる場合はそれを優先
+    # クラス選択→名前選択方式: participant_id が送ら��てくる場合はそれを優先
     participant_id  = request.form.get("participant_id", "").strip()
     name           = request.form.get("name", "").strip()
+    name_kana      = request.form.get("name_kana", "").strip()
     email          = request.form.get("email", "").strip().lower()
     status         = request.form.get("status", "undecided")
     class_name     = request.form.get("class_name", "").strip()
-    student_number = ""  # フォームからは収集しない
+    student_number = ""  # フォーム��らは収集しない
 
     # バリデーション
     errors = []
@@ -114,7 +115,8 @@ def provisional():
         for e in errors:
             flash(e, "danger")
         return render_template("provisional_form.html",
-                               name=name, email=email, status=status,
+                               name=name, name_kana=name_kana,
+                               email=email, status=status,
                                class_name=class_name)
 
     matched_how = ""
@@ -128,9 +130,14 @@ def provisional():
             if existing_by_email and existing_by_email.id != participant.id:
                 flash("このメールアドレスは既に別の方が登録済みです。ご自身のメールアドレスを入力してください。", "danger")
                 return render_template("provisional_form.html",
-                                       name=name, email=email, status=status,
+                                       name=name, name_kana=name_kana,
+                                       email=email, status=status,
                                        class_name=class_name)
             participant.email = email
+            if name:
+                participant.name = name
+            if name_kana:
+                participant.name_kana = name_kana
             participant.updated_at = datetime.utcnow()
             matched_how = "selected"
             name = participant.name
@@ -144,6 +151,8 @@ def provisional():
 
         if participant and PLACEHOLDER_DOMAIN not in participant.email:
             participant.name = name
+            if name_kana:
+                participant.name_kana = name_kana
             participant.updated_at = datetime.utcnow()
             matched_how = "email"
             logger.info(f"既存参加者（メール一致）: {name} ({email})")
@@ -154,6 +163,8 @@ def provisional():
             if roster_match:
                 roster_match.email = email
                 roster_match.name  = name
+                if name_kana:
+                    roster_match.name_kana = name_kana
                 if class_name:
                     roster_match.class_name = class_name
                 roster_match.updated_at = datetime.utcnow()
@@ -162,7 +173,8 @@ def provisional():
                 logger.info(f"名簿に名寄せ: {name} ({email}) → ID={roster_match.id}")
             else:
                 # ── ステップ4: 完全新規 ──
-                participant = Participant(name=name, email=email, class_name=class_name)
+                participant = Participant(name=name, email=email, class_name=class_name,
+                                          name_kana=name_kana)
                 db.session.add(participant)
                 db.session.flush()
                 matched_how = "new"
@@ -304,7 +316,7 @@ def api_names():
         class_name=class_name, role="生徒"
     ).all()
     participants.sort(key=lambda p: (int(p.student_number) if p.student_number and p.student_number.isdigit() else 9999))
-    return jsonify([{"id": p.id, "name": p.name, "number": p.student_number or ""} for p in participants])
+    return jsonify([{"id": p.id, "name": p.name, "name_kana": p.name_kana or "", "number": p.student_number or ""} for p in participants])
 
 
 @forms_bp.route("/done")

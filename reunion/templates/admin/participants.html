@@ -2,8 +2,30 @@
 {% block title %}参加者一覧 | 同窓会管理{% endblock %}
 
 {% block content %}
+<h4 class="mb-3"><i class="bi bi-person-lines-fill me-2"></i>参加者一覧</h4>
+
+<!-- タブ切り替え -->
+<ul class="nav nav-tabs mb-4" id="participantTabs" role="tablist">
+  <li class="nav-item" role="presentation">
+    <button class="nav-link active" id="list-tab" data-bs-toggle="tab"
+            data-bs-target="#listPane" type="button" role="tab">
+      <i class="bi bi-list-ul me-1"></i>一覧（{{ participants | length }}名）
+    </button>
+  </li>
+  <li class="nav-item" role="presentation">
+    <button class="nav-link" id="csv-tab" data-bs-toggle="tab"
+            data-bs-target="#csvPane" type="button" role="tab">
+      <i class="bi bi-file-earmark-arrow-up me-1"></i>CSV取込・追加
+    </button>
+  </li>
+</ul>
+
+<div class="tab-content" id="participantTabContent">
+
+  <!-- ========== 参加者一覧タブ ========== -->
+  <div class="tab-pane fade show active" id="listPane" role="tabpanel">
+
 <div class="d-flex justify-content-between align-items-center mb-3">
-  <h4 class="mb-0"><i class="bi bi-person-lines-fill me-2"></i>参加者一覧</h4>
   <div class="d-flex gap-2 align-items-center">
     <form class="d-flex gap-1" method="GET">
       <input type="hidden" name="sort" value="{{ sort }}">
@@ -20,6 +42,11 @@
          class="btn btn-outline-secondary btn-sm" title="検索クリア"><i class="bi bi-x-lg"></i></a>
       {% endif %}
     </form>
+  </div>
+  <div class="d-flex gap-2 align-items-center">
+    <a href="{{ url_for('admin.roster_export') }}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-download me-1"></i>CSVエクスポート
+    </a>
     <form method="POST" action="{{ url_for('admin.send_final_url_bulk') }}" class="d-inline"
           onsubmit="return confirm('本出欠URL未送信の全員に一括送信します。よろしいですか？')">
       <button type="submit" class="btn btn-success btn-sm">
@@ -221,4 +248,116 @@
     <a href="{{ url_for('admin.participants') }}" class="ms-2">フィルタをリセット</a>
   {% endif %}
 </div>
+
+  </div>
+
+  <!-- ========== CSV取込・追加タブ ========== -->
+  <div class="tab-pane fade" id="csvPane" role="tabpanel">
+
+    <div class="row g-3 mb-4">
+      <!-- CSV取込 -->
+      <div class="col-md-6">
+        <div class="card h-100">
+          <div class="card-header fw-bold bg-light">
+            <i class="bi bi-file-earmark-arrow-up me-1"></i>名簿CSVを取込む
+          </div>
+          <div class="card-body">
+            <div class="alert alert-warning small py-2 mb-3">
+              <i class="bi bi-exclamation-triangle me-1"></i>
+              CSVを取込むと既存の名簿データ（回答・入金含む）が<strong>すべて上書き</strong>されます。
+            </div>
+            <p class="text-muted small mb-2">
+              ヘッダー行の列名で自動判別します。列の順番は問いません。
+            </p>
+            <p class="text-muted small mb-3">
+              <strong>CSV形式の例:</strong><br>
+              <code>氏名,氏名（カナ）,メールアドレス,クラス,出席番号,役割,幹事メモ</code><br>
+              <code>山田太郎,ヤマダタロウ,yamada@example.com,31,5,生徒,幹事</code><br>
+              <code>鈴木花子,スズキハナコ,suzuki@example.com,32,12,生徒,</code>
+            </p>
+            <form method="POST" action="{{ url_for('admin.roster_import') }}" enctype="multipart/form-data"
+                  onsubmit="return confirm('既存の名簿データがすべて上書きされます。よろしいですか？')">
+              <div class="mb-2">
+                <input type="file" class="form-control form-control-sm" name="csv_file" accept=".csv">
+              </div>
+              <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary btn-sm">取込む</button>
+                <a href="{{ url_for('admin.roster_export') }}" class="btn btn-outline-secondary btn-sm">
+                  <i class="bi bi-download me-1"></i>現在の名簿をエクスポート
+                </a>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- 1名手動追加 -->
+      <div class="col-md-6">
+        <div class="card h-100">
+          <div class="card-header fw-bold bg-light">
+            <i class="bi bi-person-plus me-1"></i>1名手動追加
+          </div>
+          <div class="card-body">
+            <form method="POST" action="{{ url_for('admin.roster_add') }}">
+              <div class="mb-2">
+                <label class="form-label form-label-sm fw-bold">氏名 <span class="text-danger">*</span></label>
+                <input type="text" class="form-control form-control-sm" name="name"
+                       placeholder="山田太郎" required>
+              </div>
+              <div class="mb-2">
+                <label class="form-label form-label-sm fw-bold">氏名（カナ）</label>
+                <input type="text" class="form-control form-control-sm" name="name_kana"
+                       placeholder="ヤマダタロウ">
+              </div>
+              <div class="mb-2">
+                <label class="form-label form-label-sm fw-bold">メールアドレス <span class="text-danger">*</span></label>
+                <input type="email" class="form-control form-control-sm" name="email"
+                       placeholder="yamada@example.com" required>
+              </div>
+              <div class="mb-2">
+                <label class="form-label form-label-sm fw-bold">役割</label>
+                <select class="form-select form-select-sm" name="role">
+                  <option value="生徒">生徒</option>
+                  <option value="教師">教師（担任・副担任）</option>
+                  <option value="学年主任">学年主任</option>
+                </select>
+              </div>
+              <div class="row g-2 mb-2">
+                <div class="col">
+                  <label class="form-label form-label-sm fw-bold">クラス <span class="text-muted small">（2桁: 31=3年1組）</span></label>
+                  <input type="text" class="form-control form-control-sm" name="class_name"
+                         placeholder="31">
+                </div>
+                <div class="col">
+                  <label class="form-label form-label-sm fw-bold">出席番号</label>
+                  <input type="text" class="form-control form-control-sm" name="student_number"
+                         placeholder="5">
+                </div>
+              </div>
+              <div class="mb-3">
+                <label class="form-label form-label-sm fw-bold">幹事メモ（任意）</label>
+                <input type="text" class="form-control form-control-sm" name="teacher_memo"
+                       placeholder="備考など">
+              </div>
+              <button type="submit" class="btn btn-success btn-sm">追加する</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+  var hash = window.location.hash;
+  if (hash === '#csv') {
+    var csvTab = document.getElementById('csv-tab');
+    if (csvTab) new bootstrap.Tab(csvTab).show();
+  }
+})();
+</script>
 {% endblock %}

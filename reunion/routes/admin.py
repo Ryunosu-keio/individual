@@ -824,7 +824,7 @@ def send_final_reminder_bulk():
 # -----------------------------------------------
 @admin_bp.route("/payments")
 def payments():
-    """入金管理一覧"""
+    """入金管理一覧（入金一覧＋CSV照合を統合）"""
     status_filter = request.args.get("status", "all")
 
     query = Payment.query
@@ -837,11 +837,15 @@ def payments():
     total_expected = sum(p.expected_amount or 0 for p in all_payments)
     total_paid = sum(p.paid_amount or 0 for p in all_payments)
 
+    # CSV照合タブ用のデータ
+    bank_imports = BankImport.query.order_by(BankImport.import_date.desc()).limit(200).all()
+
     return render_template("admin/payments.html",
                            payments=all_payments,
                            status_filter=status_filter,
                            total_expected=total_expected,
-                           total_paid=total_paid)
+                           total_paid=total_paid,
+                           bank_imports=bank_imports)
 
 
 @admin_bp.route("/payment/<int:payment_id>/update", methods=["POST"])
@@ -881,22 +885,16 @@ def update_payment(payment_id):
 # -----------------------------------------------
 @admin_bp.route("/csv-import", methods=["GET", "POST"])
 def csv_import():
-    """銀行CSV取込画面"""
-    bank_imports = BankImport.query.order_by(BankImport.import_date.desc()).limit(200).all()
-
+    """銀行CSV取込（統合ページへリダイレクト）"""
     if request.method == "GET":
-        return render_template("admin/csv_import.html", bank_imports=bank_imports)
+        return redirect(url_for("admin.payments") + "#csv")
 
     # POST: ファイルアップロード
-    if "csv_file" not in request.files:
+    if "csv_file" not in request.files or request.files["csv_file"].filename == "":
         flash("ファイルを選択してください。", "danger")
-        return render_template("admin/csv_import.html", bank_imports=bank_imports)
+        return redirect(url_for("admin.payments") + "#csv")
 
     file = request.files["csv_file"]
-    if file.filename == "":
-        flash("ファイルを選択してください。", "danger")
-        return render_template("admin/csv_import.html", bank_imports=bank_imports)
-
     try:
         content = file.read()
         records = parse_bank_csv(content, filename=file.filename)
@@ -908,7 +906,7 @@ def csv_import():
         logger.error(f"CSV取込エラー: {e}")
         flash(f"予期しないエラーが発生しました: {e}", "danger")
 
-    return redirect(url_for("admin.csv_import"))
+    return redirect(url_for("admin.payments") + "#csv")
 
 
 @admin_bp.route("/csv-match", methods=["POST"])
@@ -924,7 +922,7 @@ def csv_match():
         )
     except Exception as e:
         flash(f"照合エラー: {e}", "danger")
-    return redirect(url_for("admin.csv_import"))
+    return redirect(url_for("admin.payments") + "#csv")
 
 
 @admin_bp.route("/confirm-match", methods=["POST"])
@@ -935,7 +933,7 @@ def confirm_match_route():
 
     if not bank_import_id or not participant_id:
         flash("パラメータが不正です。", "danger")
-        return redirect(url_for("admin.csv_import"))
+        return redirect(url_for("admin.payments") + "#csv")
 
     try:
         confirm_match(bank_import_id, participant_id)
@@ -943,7 +941,7 @@ def confirm_match_route():
     except Exception as e:
         flash(f"照合確定エラー: {e}", "danger")
 
-    return redirect(url_for("admin.csv_import"))
+    return redirect(url_for("admin.payments") + "#csv")
 
 
 @admin_bp.route("/unmatch/<int:bank_import_id>", methods=["POST"])
@@ -954,7 +952,7 @@ def unmatch_route(bank_import_id):
         flash("照合を解除しました。", "success")
     except Exception as e:
         flash(f"解除エラー: {e}", "danger")
-    return redirect(url_for("admin.csv_import"))
+    return redirect(url_for("admin.payments") + "#csv")
 
 
 @admin_bp.route("/csv-delete/<int:bank_import_id>", methods=["POST"])
@@ -964,7 +962,7 @@ def csv_delete(bank_import_id):
         bank_import = db.session.get(BankImport, bank_import_id)
         if not bank_import:
             flash("データが見つかりません。", "danger")
-            return redirect(url_for("admin.csv_import"))
+            return redirect(url_for("admin.payments") + "#csv")
         # 照合済みの場合は先に照合解除
         if bank_import.match_status != "unmatched":
             unmatch(bank_import_id)
@@ -973,7 +971,7 @@ def csv_delete(bank_import_id):
         flash("取込データを削除しました。", "success")
     except Exception as e:
         flash(f"削除エラー: {e}", "danger")
-    return redirect(url_for("admin.csv_import"))
+    return redirect(url_for("admin.payments") + "#csv")
 
 
 @admin_bp.route("/csv-delete-all", methods=["POST"])
@@ -989,7 +987,7 @@ def csv_delete_all():
         flash(f"{len(all_imports)} 件の取込データをすべて削除しました。", "success")
     except Exception as e:
         flash(f"一括削除エラー: {e}", "danger")
-    return redirect(url_for("admin.csv_import"))
+    return redirect(url_for("admin.payments") + "#csv")
 
 
 # -----------------------------------------------
@@ -1219,12 +1217,12 @@ def roster_import():
     """
     if "csv_file" not in request.files:
         flash("ファイルを選択してください。", "danger")
-        return redirect(url_for("admin.roster"))
+        return redirect(url_for("admin.participants") + "#csv")
 
     file = request.files["csv_file"]
     if file.filename == "":
         flash("ファイルを選択してください。", "danger")
-        return redirect(url_for("admin.roster"))
+        return redirect(url_for("admin.participants") + "#csv")
 
     content = file.read()
     text = None
@@ -1237,14 +1235,14 @@ def roster_import():
 
     if text is None:
         flash("CSVのエンコーディングを判別できませんでした。UTF-8かShift_JISで保存してください。", "danger")
-        return redirect(url_for("admin.roster"))
+        return redirect(url_for("admin.participants") + "#csv")
 
     reader = csv.reader(io.StringIO(text))
     rows = list(reader)
 
     if not rows:
         flash("CSVが空です。", "danger")
-        return redirect(url_for("admin.roster"))
+        return redirect(url_for("admin.participants") + "#csv")
 
     # ヘッダー行の検出と列インデックスの解決
     NAME_HEADERS      = {"氏名", "名前", "name"}
@@ -1280,7 +1278,7 @@ def roster_import():
 
     if idx_name is None:
         flash("CSVに「氏名」列が見つかりません。", "danger")
-        return redirect(url_for("admin.roster"))
+        return redirect(url_for("admin.participants") + "#csv")
 
     def get_col(row, idx):
         if idx is not None and idx < len(row):
@@ -1344,7 +1342,7 @@ def roster_import():
 
     db.session.commit()
     flash(f"名簿を全件上書きしました: {len(new_participants)} 名登録、{skipped} 行スキップ", "success")
-    return redirect(url_for("admin.roster"))
+    return redirect(url_for("admin.participants"))
 
 
 @admin_bp.route("/roster/add", methods=["POST"])
@@ -1360,7 +1358,7 @@ def roster_add():
 
     if not name or not email or "@" not in email:
         flash("氏名と正しいメールアドレスを入力してください。", "danger")
-        return redirect(url_for("admin.roster"))
+        return redirect(url_for("admin.participants") + "#csv")
 
     if role == "学年主任":
         class_ = ""
@@ -1368,7 +1366,7 @@ def roster_add():
     existing = Participant.query.filter_by(email=email).first()
     if existing:
         flash(f"メールアドレス {email} はすでに登録されています（{existing.name}）。", "warning")
-        return redirect(url_for("admin.roster"))
+        return redirect(url_for("admin.participants") + "#csv")
 
     p = Participant(
         name=name, name_kana=name_kana, email=email,
@@ -1378,7 +1376,7 @@ def roster_add():
     db.session.add(p)
     db.session.commit()
     flash(f"{name} を追加しました。", "success")
-    return redirect(url_for("admin.roster"))
+    return redirect(url_for("admin.participants") + "#csv")
 
 
 @admin_bp.route("/roster/delete/<int:participant_id>", methods=["POST"])
