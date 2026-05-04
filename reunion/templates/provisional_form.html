@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>仮出欠フォーム</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body class="bg-light">
@@ -31,9 +32,7 @@
             </p>
 
             <form method="POST" action="{{ url_for('forms.provisional') }}" id="provForm">
-              <!-- hidden: 選択された参加者ID（名簿マッチング用） -->
               <input type="hidden" name="participant_id" id="participant_id" value="">
-              <!-- hidden: 氏名（選択またはテキスト入力） -->
               <input type="hidden" name="name" id="name_hidden" value="{{ name | default('') }}">
 
               <!-- ① クラス選択 -->
@@ -76,7 +75,31 @@
                        value="{{ name | default('') }}" placeholder="山田太郎">
               </div>
 
-              <!-- ④ メールアドレス -->
+              <!-- ③-b 名前変更（名簿から選択した場合に表示） -->
+              <div class="mb-3 d-none" id="name_edit_group">
+                <label class="form-label fw-bold">
+                  お名前 <span class="text-danger">*</span>
+                </label>
+                <div class="input-group">
+                  <input type="text" class="form-control" id="name_edit" placeholder="山田太郎">
+                  <button class="btn btn-outline-secondary" type="button" id="name_edit_reset" title="元に戻す">
+                    <i class="bi bi-arrow-counterclockwise"></i>
+                  </button>
+                </div>
+                <div class="form-text">結婚等で姓が変わった場合はここで修正できます。</div>
+              </div>
+
+              <!-- ④ フリガナ入力 -->
+              <div class="mb-3 d-none" id="name_kana_group">
+                <label for="name_kana" class="form-label fw-bold">
+                  フリガナ
+                </label>
+                <input type="text" class="form-control" id="name_kana" name="name_kana"
+                       value="{{ name_kana | default('') }}" placeholder="ヤマダ タロウ">
+                <div class="form-text">カタカナまたはひらがなで入力してください。振込名義の照合に使用します。</div>
+              </div>
+
+              <!-- ⑤ メールアドレス -->
               <div class="mb-3">
                 <label for="email" class="form-label fw-bold">
                   メールアドレス <span class="text-danger">*</span>
@@ -86,7 +109,6 @@
                 <div class="form-text">本出欠フォームのご案内をお送りします。</div>
               </div>
 
-              <!-- ⑤ クラス（hidden: サーバーへ送信用） -->
               <input type="hidden" name="class_name" id="class_name_hidden" value="">
 
               <!-- ⑥ 参加意思 -->
@@ -123,7 +145,6 @@
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
   <script>
-    // エンターキーで送信しない（送信ボタン以外）
     document.getElementById('provForm').addEventListener('keydown', function(e) {
       if (e.key === 'Enter' && e.target.type !== 'submit') {
         e.preventDefault();
@@ -135,39 +156,71 @@
     const nameSelect      = document.getElementById('name_select');
     const nameTextGroup   = document.getElementById('name_text_group');
     const nameText        = document.getElementById('name_text');
+    const nameEditGroup   = document.getElementById('name_edit_group');
+    const nameEdit        = document.getElementById('name_edit');
+    const nameEditReset   = document.getElementById('name_edit_reset');
+    const nameKanaGroup   = document.getElementById('name_kana_group');
+    const nameKanaInput   = document.getElementById('name_kana');
     const participantId   = document.getElementById('participant_id');
     const nameHidden      = document.getElementById('name_hidden');
     const classHidden     = document.getElementById('class_name_hidden');
     const submitBtn       = document.getElementById('submitBtn');
     const emailInput      = document.getElementById('email');
 
-    // 送信ボタン有効化チェック
+    var originalName = '';
+    var nameDataMap = {};
+
+    function toKatakana(str) {
+      return str.replace(/[ぁ-ゖ]/g, function(ch) {
+        return String.fromCharCode(ch.charCodeAt(0) + 0x60);
+      });
+    }
+
+    nameKanaInput.addEventListener('input', function() {
+      this.value = toKatakana(this.value);
+    });
+
     function checkReady() {
-      const hasName = participantId.value || nameText.value.trim();
-      const hasEmail = emailInput.value.trim() && emailInput.value.includes('@');
+      var hasName = participantId.value || nameText.value.trim() || nameEdit.value.trim();
+      var hasEmail = emailInput.value.trim() && emailInput.value.includes('@');
       submitBtn.disabled = !(hasName && hasEmail);
     }
 
     emailInput.addEventListener('input', checkReady);
-    nameText.addEventListener('input', () => {
+
+    nameText.addEventListener('input', function() {
       nameHidden.value = nameText.value.trim();
-      participantId.value = '';  // テキスト入力時はIDをクリア
+      participantId.value = '';
       checkReady();
     });
 
-    // クラス選択時
-    classSelect.addEventListener('change', async () => {
-      const cls = classSelect.value;
+    nameEdit.addEventListener('input', function() {
+      nameHidden.value = nameEdit.value.trim();
+      checkReady();
+    });
+
+    nameEditReset.addEventListener('click', function() {
+      nameEdit.value = originalName;
+      nameHidden.value = originalName;
+      checkReady();
+    });
+
+    classSelect.addEventListener('change', async function() {
+      var cls = classSelect.value;
       classHidden.value = cls;
       participantId.value = '';
       nameHidden.value = '';
+      nameDataMap = {};
       nameSelect.innerHTML = '<option value="">読み込み中...</option>';
       nameSelect.disabled = true;
 
+      nameEditGroup.classList.add('d-none');
+      nameKanaGroup.classList.add('d-none');
+
       if (!cls || cls === 'other') {
-        // クラス不明 or 教職員 → テキスト入力
         nameSelectGroup.classList.add('d-none');
         nameTextGroup.classList.remove('d-none');
+        nameKanaGroup.classList.remove('d-none');
         checkReady();
         return;
       }
@@ -175,19 +228,18 @@
       nameSelectGroup.classList.remove('d-none');
       nameTextGroup.classList.add('d-none');
 
-      // APIから名前リストを取得
-      const res = await fetch(`{{ url_for('forms.api_names') }}?class=${cls}`);
-      const names = await res.json();
+      var res = await fetch("{{ url_for('forms.api_names') }}?class=" + cls);
+      var names = await res.json();
 
       nameSelect.innerHTML = '<option value="">-- 名前を選択 --</option>';
-      names.forEach(p => {
-        const opt = document.createElement('option');
+      names.forEach(function(p) {
+        var opt = document.createElement('option');
         opt.value = p.id;
         opt.textContent = p.name;
         nameSelect.appendChild(opt);
+        nameDataMap[p.id] = p;
       });
-      // 「一覧にない」選択肢を追加
-      const notFound = document.createElement('option');
+      var notFound = document.createElement('option');
       notFound.value = 'other';
       notFound.textContent = '一覧にない（直接入力）';
       nameSelect.appendChild(notFound);
@@ -196,24 +248,35 @@
       checkReady();
     });
 
-    // 名前選択時
-    nameSelect.addEventListener('change', () => {
-      const val = nameSelect.value;
+    nameSelect.addEventListener('change', function() {
+      var val = nameSelect.value;
       if (!val) {
         participantId.value = '';
         nameHidden.value = '';
         nameTextGroup.classList.add('d-none');
+        nameEditGroup.classList.add('d-none');
+        nameKanaGroup.classList.add('d-none');
       } else if (val === 'other') {
-        // 一覧にない → テキスト入力を表示
         participantId.value = '';
         nameHidden.value = '';
         nameTextGroup.classList.remove('d-none');
+        nameEditGroup.classList.add('d-none');
+        nameKanaGroup.classList.remove('d-none');
+        nameKanaInput.value = '';
         nameText.focus();
       } else {
-        // 名簿から選択
         participantId.value = val;
-        nameHidden.value = nameSelect.options[nameSelect.selectedIndex].textContent;
+        var data = nameDataMap[val];
+        var selectedName = data ? data.name : nameSelect.options[nameSelect.selectedIndex].textContent;
+        originalName = selectedName;
+        nameHidden.value = selectedName;
+
         nameTextGroup.classList.add('d-none');
+        nameEditGroup.classList.remove('d-none');
+        nameEdit.value = selectedName;
+
+        nameKanaGroup.classList.remove('d-none');
+        nameKanaInput.value = data ? data.name_kana : '';
       }
       checkReady();
     });

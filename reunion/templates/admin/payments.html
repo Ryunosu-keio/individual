@@ -4,139 +4,337 @@
 {% block content %}
 <h4 class="mb-3"><i class="bi bi-cash-stack me-2"></i>入金管理</h4>
 
-<!-- 集計 -->
-<div class="row g-2 mb-3">
-  <div class="col-6 col-md-3">
-    <div class="card text-center border-0 shadow-sm">
-      <div class="card-body py-2">
-        <div class="fw-bold text-primary">{{ total_expected | default(0) }} 円</div>
-        <div class="small text-muted">合計予定金額</div>
+<!-- タブ切り替え -->
+<ul class="nav nav-tabs mb-4" id="paymentTabs" role="tablist">
+  <li class="nav-item" role="presentation">
+    <button class="nav-link active" id="list-tab" data-bs-toggle="tab"
+            data-bs-target="#listPane" type="button" role="tab">
+      <i class="bi bi-list-ul me-1"></i>入金一覧
+    </button>
+  </li>
+  <li class="nav-item" role="presentation">
+    <button class="nav-link" id="csv-tab" data-bs-toggle="tab"
+            data-bs-target="#csvPane" type="button" role="tab">
+      <i class="bi bi-file-earmark-spreadsheet me-1"></i>CSV照合
+    </button>
+  </li>
+</ul>
+
+<div class="tab-content" id="paymentTabContent">
+
+  <!-- ========== 入金一覧タブ ========== -->
+  <div class="tab-pane fade show active" id="listPane" role="tabpanel">
+
+    <!-- 集計 -->
+    <div class="row g-2 mb-3">
+      <div class="col-6 col-md-3">
+        <div class="card text-center border-0 shadow-sm">
+          <div class="card-body py-2">
+            <div class="fw-bold text-primary">{{ total_expected | default(0) }} 円</div>
+            <div class="small text-muted">合計予定金額</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="card text-center border-0 shadow-sm">
+          <div class="card-body py-2">
+            <div class="fw-bold text-success">{{ total_paid | default(0) }} 円</div>
+            <div class="small text-muted">合計入金済み</div>
+          </div>
+        </div>
       </div>
     </div>
-  </div>
-  <div class="col-6 col-md-3">
-    <div class="card text-center border-0 shadow-sm">
-      <div class="card-body py-2">
-        <div class="fw-bold text-success">{{ total_paid | default(0) }} 円</div>
-        <div class="small text-muted">合計入金済み</div>
-      </div>
-    </div>
-  </div>
-</div>
 
-<!-- 絞り込み -->
-<form method="GET" class="mb-3 d-flex gap-2">
-  <select class="form-select form-select-sm w-auto" name="status">
-    <option value="all" {% if status_filter == 'all' %}selected{% endif %}>すべて</option>
-    <option value="unpaid" {% if status_filter == 'unpaid' %}selected{% endif %}>未払い</option>
-    <option value="paid" {% if status_filter == 'paid' %}selected{% endif %}>支払済み</option>
-    <option value="partial" {% if status_filter == 'partial' %}selected{% endif %}>一部支払い</option>
-  </select>
-  <button type="submit" class="btn btn-primary btn-sm">絞り込み</button>
-</form>
+    <!-- 絞り込み -->
+    <form method="GET" class="mb-3 d-flex gap-2">
+      <select class="form-select form-select-sm w-auto" name="status">
+        <option value="all" {% if status_filter == 'all' %}selected{% endif %}>すべて</option>
+        <option value="unpaid" {% if status_filter == 'unpaid' %}selected{% endif %}>未払い</option>
+        <option value="paid" {% if status_filter == 'paid' %}selected{% endif %}>支払済み</option>
+        <option value="partial" {% if status_filter == 'partial' %}selected{% endif %}>一部支払い</option>
+      </select>
+      <button type="submit" class="btn btn-primary btn-sm">絞り込み</button>
+    </form>
 
-<!-- テーブル -->
-<div class="table-responsive">
-  <table class="table table-hover table-sm align-middle">
-    <thead class="table-light">
-      <tr>
-        <th>氏名</th>
-        <th>ステータス</th>
-        <th>予定金額</th>
-        <th>入金額</th>
-        <th>支払日</th>
-        <th>振込名義</th>
-        <th>CSV照合</th>
-        <th>操作</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for payment in payments %}
-      <tr>
-        <td>
-          <a href="{{ url_for('admin.participant_detail', participant_id=payment.participant_id) }}">
-            {{ payment.participant.name }}
-          </a>
-        </td>
-        <td>
-          {% if payment.payment_status == 'paid' %}
-            <span class="badge bg-success">支払済み</span>
-          {% elif payment.payment_status == 'partial' %}
-            <span class="badge bg-warning text-dark">一部</span>
-          {% else %}
-            <span class="badge bg-danger">未払い</span>
-          {% endif %}
-        </td>
-        <td>{{ payment.expected_amount }} 円</td>
-        <td>{{ payment.paid_amount }} 円</td>
-        <td class="small">{{ payment.payment_date or '-' }}</td>
-        <td class="small">{{ payment.transfer_name or '-' }}</td>
-        <td>
-          {% if payment.bank_csv_matched %}
-            <span class="badge bg-success">照合済み</span>
-          {% else %}
-            <span class="badge bg-light text-muted border">未照合</span>
-          {% endif %}
-        </td>
-        <td>
-          <!-- 入金ステータス更新モーダルを開く -->
-          <button type="button" class="btn btn-outline-primary btn-sm"
-                  data-bs-toggle="modal"
-                  data-bs-target="#updateModal{{ payment.id }}">
-            更新
-          </button>
-        </td>
-      </tr>
+    <!-- テーブル -->
+    <div class="table-responsive">
+      <table class="table table-hover table-sm align-middle">
+        <thead class="table-light">
+          <tr>
+            <th>氏名</th>
+            <th>ステータス</th>
+            <th>予定金額</th>
+            <th>入金額</th>
+            <th>支払日</th>
+            <th>振込名義</th>
+            <th>CSV照合</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for payment in payments %}
+          <tr>
+            <td>
+              <a href="{{ url_for('admin.participant_detail', participant_id=payment.participant_id) }}">
+                {{ payment.participant.name }}
+              </a>
+            </td>
+            <td>
+              {% if payment.payment_status == 'paid' %}
+                <span class="badge bg-success">支払済み</span>
+              {% elif payment.payment_status == 'partial' %}
+                <span class="badge bg-warning text-dark">一部</span>
+              {% else %}
+                <span class="badge bg-danger">未払い</span>
+              {% endif %}
+            </td>
+            <td>{{ payment.expected_amount }} 円</td>
+            <td>{{ payment.paid_amount }} 円</td>
+            <td class="small">{{ payment.payment_date or '-' }}</td>
+            <td class="small">{{ payment.transfer_name or '-' }}</td>
+            <td>
+              {% if payment.bank_csv_matched %}
+                <span class="badge bg-success">照合済み</span>
+              {% else %}
+                <span class="badge bg-light text-muted border">未照合</span>
+              {% endif %}
+            </td>
+            <td>
+              <button type="button" class="btn btn-outline-primary btn-sm"
+                      data-bs-toggle="modal"
+                      data-bs-target="#updateModal{{ payment.id }}">
+                更新
+              </button>
+            </td>
+          </tr>
 
-      <!-- 更新モーダル -->
-      <div class="modal fade" id="updateModal{{ payment.id }}" tabindex="-1">
-        <div class="modal-dialog">
-          <div class="modal-content">
-            <div class="modal-header">
-              <h5 class="modal-title">入金情報更新 — {{ payment.participant.name }}</h5>
-              <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          <!-- 更新モーダル -->
+          <div class="modal fade" id="updateModal{{ payment.id }}" tabindex="-1">
+            <div class="modal-dialog">
+              <div class="modal-content">
+                <div class="modal-header">
+                  <h5 class="modal-title">入金情報更新 — {{ payment.participant.name }}</h5>
+                  <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form method="POST" action="{{ url_for('admin.update_payment', payment_id=payment.id) }}">
+                  <div class="modal-body">
+                    <div class="mb-3">
+                      <label class="form-label fw-bold">ステータス</label>
+                      <select class="form-select" name="payment_status">
+                        <option value="unpaid" {% if payment.payment_status == 'unpaid' %}selected{% endif %}>未払い</option>
+                        <option value="paid" {% if payment.payment_status == 'paid' %}selected{% endif %}>支払済み</option>
+                        <option value="partial" {% if payment.payment_status == 'partial' %}selected{% endif %}>一部支払い</option>
+                      </select>
+                    </div>
+                    <div class="mb-3">
+                      <label class="form-label fw-bold">支払金額（円）</label>
+                      <input type="number" class="form-control" name="paid_amount"
+                             value="{{ payment.paid_amount }}">
+                    </div>
+                    <div class="mb-3">
+                      <label class="form-label fw-bold">支払日</label>
+                      <input type="date" class="form-control" name="payment_date"
+                             value="{{ payment.payment_date or '' }}">
+                    </div>
+                    <div class="mb-3">
+                      <label class="form-label fw-bold">振込名義</label>
+                      <input type="text" class="form-control" name="transfer_name"
+                             value="{{ payment.transfer_name or '' }}">
+                    </div>
+                  </div>
+                  <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
+                    <button type="submit" class="btn btn-primary">更新する</button>
+                  </div>
+                </form>
+              </div>
             </div>
-            <form method="POST" action="{{ url_for('admin.update_payment', payment_id=payment.id) }}">
-              <div class="modal-body">
-                <div class="mb-3">
-                  <label class="form-label fw-bold">ステータス</label>
-                  <select class="form-select" name="payment_status">
-                    <option value="unpaid" {% if payment.payment_status == 'unpaid' %}selected{% endif %}>未払い</option>
-                    <option value="paid" {% if payment.payment_status == 'paid' %}selected{% endif %}>支払済み</option>
-                    <option value="partial" {% if payment.payment_status == 'partial' %}selected{% endif %}>一部支払い</option>
-                  </select>
-                </div>
-                <div class="mb-3">
-                  <label class="form-label fw-bold">支払金額（円）</label>
-                  <input type="number" class="form-control" name="paid_amount"
-                         value="{{ payment.paid_amount }}">
-                </div>
-                <div class="mb-3">
-                  <label class="form-label fw-bold">支払日</label>
-                  <input type="date" class="form-control" name="payment_date"
-                         value="{{ payment.payment_date or '' }}">
-                </div>
-                <div class="mb-3">
-                  <label class="form-label fw-bold">振込名義</label>
-                  <input type="text" class="form-control" name="transfer_name"
-                         value="{{ payment.transfer_name or '' }}">
+          </div>
+          {% else %}
+          <tr>
+            <td colspan="8" class="text-center text-muted py-4">入金レコードがありません</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div class="text-muted small">{{ payments | length }} 件</div>
+
+  </div>
+
+  <!-- ========== CSV照合タブ ========== -->
+  <div class="tab-pane fade" id="csvPane" role="tabpanel">
+
+    <div class="row g-3 mb-4">
+      <!-- CSV取込フォーム -->
+      <div class="col-md-6">
+        <div class="card h-100">
+          <div class="card-header fw-bold bg-light">CSVファイルを取込む</div>
+          <div class="card-body">
+            <form method="POST" action="{{ url_for('admin.csv_import') }}" enctype="multipart/form-data">
+              <div class="mb-3">
+                <label for="csv_file" class="form-label">銀行CSVファイル</label>
+                <input type="file" class="form-control" id="csv_file" name="csv_file" accept=".csv">
+                <div class="form-text">
+                  UTF-8またはShift_JIS形式のCSVに対応。<br>
+                  列名として「振込名義」「金額」「日付」が含まれている必要があります。
                 </div>
               </div>
-              <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
-                <button type="submit" class="btn btn-primary">更新する</button>
-              </div>
+              <button type="submit" class="btn btn-primary">取込む</button>
             </form>
           </div>
         </div>
       </div>
-      {% else %}
-      <tr>
-        <td colspan="8" class="text-center text-muted py-4">入金レコードがありません</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+
+      <!-- 自動照合 -->
+      <div class="col-md-6">
+        <div class="card h-100">
+          <div class="card-header fw-bold bg-light">自動照合</div>
+          <div class="card-body">
+            <p class="text-muted small">
+              取込済みのCSVレコードと参加者の振込名義を自動で照合します。
+              類似度80%以上で照合候補として、100%（完全一致）で自動確定します。
+            </p>
+            <form method="POST" action="{{ url_for('admin.csv_match') }}"
+                  onsubmit="return confirm('自動照合を実行しますか？')">
+              <button type="submit" class="btn btn-success">
+                <i class="bi bi-arrow-repeat me-1"></i>自動照合を実行
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 取込済みデータ一覧 -->
+    <div class="d-flex justify-content-between align-items-center mb-2">
+      <h5 class="mb-0">取込済みデータ</h5>
+      {% if bank_imports %}
+      <form method="POST" action="{{ url_for('admin.csv_delete_all') }}"
+            onsubmit="return confirm('すべての取込データを削除します。照合済みのデータも解除されます。よろしいですか？')">
+        <button type="submit" class="btn btn-outline-danger btn-sm">
+          <i class="bi bi-trash me-1"></i>すべて削除
+        </button>
+      </form>
+      {% endif %}
+    </div>
+    <div class="table-responsive">
+      <table class="table table-hover table-sm align-middle">
+        <thead class="table-light">
+          <tr>
+            <th>ID</th>
+            <th>ファイル名</th>
+            <th>振込名義（生）</th>
+            <th>取引日</th>
+            <th>金額</th>
+            <th>照合ステータス</th>
+            <th>照合先参加者</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for bi in bank_imports %}
+          <tr>
+            <td class="text-muted small">{{ bi.id }}</td>
+            <td class="small">{{ bi.filename }}</td>
+            <td>{{ bi.raw_name }}</td>
+            <td class="small">{{ bi.raw_date or '-' }}</td>
+            <td>{{ bi.raw_amount }} 円</td>
+            <td>
+              {% if bi.match_status == 'confirmed' %}
+                <span class="badge bg-success">確定済み</span>
+              {% elif bi.match_status == 'matched' %}
+                <span class="badge bg-warning text-dark">候補あり</span>
+              {% else %}
+                <span class="badge bg-light text-muted border">未照合</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if bi.matched_participant %}
+                <a href="{{ url_for('admin.participant_detail', participant_id=bi.matched_participant.id) }}">
+                  {{ bi.matched_participant.name }}
+                </a>
+              {% else %}
+                <span class="text-muted small">-</span>
+              {% endif %}
+            </td>
+            <td>
+              <div class="d-flex gap-1 flex-wrap">
+                {% if bi.match_status != 'confirmed' %}
+                <button type="button" class="btn btn-outline-success btn-sm"
+                        data-bs-toggle="modal"
+                        data-bs-target="#matchModal{{ bi.id }}">
+                  手動確定
+                </button>
+                {% endif %}
+                {% if bi.match_status != 'unmatched' %}
+                <form method="POST" action="{{ url_for('admin.unmatch_route', bank_import_id=bi.id) }}"
+                      onsubmit="return confirm('照合を解除しますか？')">
+                  <button type="submit" class="btn btn-outline-danger btn-sm">解除</button>
+                </form>
+                {% endif %}
+                <form method="POST" action="{{ url_for('admin.csv_delete', bank_import_id=bi.id) }}"
+                      onsubmit="return confirm('この取込データを削除しますか？')">
+                  <button type="submit" class="btn btn-outline-secondary btn-sm" title="削除">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </form>
+              </div>
+            </td>
+          </tr>
+
+          <!-- 手動照合モーダル -->
+          <div class="modal fade" id="matchModal{{ bi.id }}" tabindex="-1">
+            <div class="modal-dialog">
+              <div class="modal-content">
+                <div class="modal-header">
+                  <h5 class="modal-title">手動照合確定</h5>
+                  <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form method="POST" action="{{ url_for('admin.confirm_match_route') }}">
+                  <input type="hidden" name="bank_import_id" value="{{ bi.id }}">
+                  <div class="modal-body">
+                    <p>振込名義: <strong>{{ bi.raw_name }}</strong><br>
+                       金額: <strong>{{ bi.raw_amount }} 円</strong></p>
+                    <div class="mb-3">
+                      <label class="form-label fw-bold">照合する参加者ID</label>
+                      <input type="number" class="form-control" name="participant_id"
+                             value="{{ bi.matched_participant_id or '' }}"
+                             placeholder="参加者のIDを入力">
+                      <div class="form-text">参加者詳細ページのIDを確認してください。</div>
+                    </div>
+                  </div>
+                  <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
+                    <button type="submit" class="btn btn-success">確定する</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+          {% else %}
+          <tr>
+            <td colspan="8" class="text-center text-muted py-4">取込済みデータがありません</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div class="text-muted small">{{ bank_imports | length }} 件</div>
+
+  </div>
 </div>
-<div class="text-muted small">{{ payments | length }} 件</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+  var hash = window.location.hash;
+  if (hash === '#csv') {
+    var csvTab = document.getElementById('csv-tab');
+    if (csvTab) new bootstrap.Tab(csvTab).show();
+  }
+})();
+</script>
 {% endblock %}

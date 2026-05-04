@@ -7,7 +7,9 @@
       "Read(//c/Users/ryuno/Documents/individual/**)",
       "Bash(PYTHONIOENCODING=utf-8 ./venv/Scripts/python:*)",
       "Bash(./venv/Scripts/python -c ':*)",
-      "Bash(python3 -c ':*)"
+      "Bash(python3 -c ':*)",
+      "Bash(python *)",
+      "Bash(git add *)"
     ]
   }
 }
