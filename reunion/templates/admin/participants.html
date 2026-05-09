@@ -25,7 +25,7 @@
   <!-- ========== 参加者一覧タブ ========== -->
   <div class="tab-pane fade show active" id="listPane" role="tabpanel">
 
-<div class="d-flex justify-content-between align-items-center mb-3">
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-start gap-2 mb-3">
   <div class="d-flex gap-2 align-items-center">
     <form class="d-flex gap-1" method="GET">
       <input type="hidden" name="sort" value="{{ sort }}">
@@ -43,23 +43,23 @@
       {% endif %}
     </form>
   </div>
-  <div class="d-flex gap-2 align-items-center">
+  <div class="d-flex flex-wrap gap-2 align-items-center">
     <a href="{{ url_for('admin.roster_export') }}" class="btn btn-outline-secondary btn-sm">
       <i class="bi bi-download me-1"></i>CSVエクスポート
     </a>
-    <form method="POST" action="{{ url_for('admin.send_final_url_bulk') }}" class="d-inline"
+    <form method="POST" action="{{ url_for('admin.send_final_url_bulk') }}"
           onsubmit="return confirm('本出欠URL未送信の全員に一括送信します。よろしいですか？')">
       <button type="submit" class="btn btn-success btn-sm">
         <i class="bi bi-envelope-fill me-1"></i>本出欠URL一括送信
       </button>
     </form>
-    <form method="POST" action="{{ url_for('admin.send_reminder_bulk') }}" class="d-inline"
+    <form method="POST" action="{{ url_for('admin.send_reminder_bulk') }}"
           onsubmit="return confirm('本出欠URL送信済み＆未回答の方にリマインドを一括送信します。よろしいですか？')">
       <button type="submit" class="btn btn-primary btn-sm">
         <i class="bi bi-bell-fill me-1"></i>本出欠リマインド一括送信
       </button>
     </form>
-    <form method="POST" action="{{ url_for('admin.send_final_reminder_bulk') }}" class="d-inline"
+    <form method="POST" action="{{ url_for('admin.send_final_reminder_bulk') }}"
           onsubmit="return confirm('本出欠参加者に最終リマインドメール（PDF添付）を送信します。よろしいですか？')">
       <button type="submit" class="btn btn-danger btn-sm">
         <i class="bi bi-file-earmark-pdf me-1"></i>最終リマインド一括送信
