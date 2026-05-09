@@ -720,6 +720,31 @@ def send_provisional_reminder_single(participant_id):
     return redirect(url_for("admin.participant_detail", participant_id=participant_id))
 
 
+@admin_bp.route("/send-final-reminder/<int:participant_id>", methods=["POST"])
+def send_final_reminder_single(participant_id):
+    """最終リマインドを個別送信"""
+    participant = db.session.get(Participant, participant_id)
+    if participant is None:
+        flash("参加者が見つかりません。", "danger")
+        return redirect(url_for("admin.participants"))
+
+    pdf_path = None
+    s = AppSetting.query.filter_by(key="reunion_guide_pdf").first()
+    if s and s.value and os.path.isfile(s.value):
+        pdf_path = s.value
+
+    try:
+        log = send_final_reminder(participant, attachment_path=pdf_path)
+        if log.status == "simulated":
+            flash(f"[開発モード] {participant.name} への最終リマインド内容をコンソールに出力しました。", "info")
+        else:
+            flash(f"{participant.name} へ最終リマインドを送信しました。", "success")
+    except Exception as e:
+        flash(f"送信失敗: {e}", "danger")
+
+    return redirect(url_for("admin.participant_detail", participant_id=participant_id))
+
+
 @admin_bp.route("/send-provisional-reminder-bulk", methods=["POST"])
 def send_provisional_reminder_bulk():
     """仮出欠リマインドを一括送信（仮出欠未回答の参加者）"""
