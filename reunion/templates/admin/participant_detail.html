@@ -28,9 +28,9 @@
           </dd>
           <dt class="col-4">メール</dt><dd class="col-8">{{ participant.email }}</dd>
           <dt class="col-4">登録日時</dt>
-          <dd class="col-8 small text-muted">{{ participant.created_at.strftime('%Y/%m/%d %H:%M') }}</dd>
+          <dd class="col-8 small text-muted">{{ participant.created_at | jst }}</dd>
           <dt class="col-4">更新日時</dt>
-          <dd class="col-8 small text-muted">{{ participant.updated_at.strftime('%Y/%m/%d %H:%M') }}</dd>
+          <dd class="col-8 small text-muted">{{ participant.updated_at | jst }}</dd>
         </dl>
       </div>
     </div>
@@ -54,7 +54,7 @@
             {% endif %}
           </p>
           <p class="small text-muted mb-2">
-            回答日時: {{ prov.submitted_at.strftime('%Y/%m/%d %H:%M') }}
+            回答日時: {{ prov.submitted_at | jst }}
           </p>
           {% if participant.provisional_responses | length > 1 %}
             <p class="small text-muted mt-1">（{{ participant.provisional_responses | length }} 回回答）</p>
@@ -94,7 +94,7 @@
             <dt class="col-5">支払方法</dt><dd class="col-7">{{ final.payment_method }}</dd>
             <dt class="col-5">備考</dt><dd class="col-7">{{ final.remarks or '-' }}</dd>
             <dt class="col-5">回答日時</dt>
-            <dd class="col-7 small text-muted">{{ final.submitted_at.strftime('%Y/%m/%d %H:%M') }}</dd>
+            <dd class="col-7 small text-muted">{{ final.submitted_at | jst }}</dd>
           </dl>
         {% else %}
           <p class="text-muted mb-2">未回答</p>
@@ -251,7 +251,7 @@
             {% for log in mail_logs %}
             <tr>
               <td>{{ log.mail_type }}</td>
-              <td class="small">{{ log.sent_at.strftime('%Y/%m/%d %H:%M') }}</td>
+              <td class="small">{{ log.sent_at | jst }}</td>
               <td>
                 {% if log.status == 'sent' %}
                   <span class="badge bg-success">送信済み</span>
