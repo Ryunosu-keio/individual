@@ -23,8 +23,7 @@
   </li>
 </ul>
 
-<p class="text-muted small mb-1"><i class="bi bi-envelope-paper me-1"></i>メール文章編集</p>
-<p class="text-muted small mb-4">
+<p class="text-muted small mb-3">
   使える変数:
   <code>{name}</code> 氏名 &nbsp;
   <code>{status}</code> 回答内容 &nbsp;
@@ -46,96 +45,148 @@
   <code>{transfer_deadline}</code> 振込期限
 </p>
 
+<!-- メール種類の選択 -->
+<div class="mb-4">
+  <div class="d-flex gap-3 flex-wrap">
+    <div class="form-check">
+      <input class="form-check-input" type="radio" name="mailSelect" id="sel_provisional_confirm" value="provisional_confirm" checked>
+      <label class="form-check-label" for="sel_provisional_confirm">仮出欠 送信完了</label>
+    </div>
+    <div class="form-check">
+      <input class="form-check-input" type="radio" name="mailSelect" id="sel_final_url" value="final_url">
+      <label class="form-check-label" for="sel_final_url">本出欠URL送信</label>
+    </div>
+    <div class="form-check">
+      <input class="form-check-input" type="radio" name="mailSelect" id="sel_reminder" value="reminder">
+      <label class="form-check-label" for="sel_reminder">リマインド</label>
+    </div>
+    <div class="form-check">
+      <input class="form-check-input" type="radio" name="mailSelect" id="sel_final_confirm" value="final_confirm">
+      <label class="form-check-label" for="sel_final_confirm">本出欠 送信完了</label>
+    </div>
+  </div>
+</div>
+
 <div class="row">
   <div class="col-lg-8">
     <form method="POST" action="{{ url_for('admin.settings_mail_template') }}">
 
       <!-- 本出欠URL送信 -->
-      <div class="card mb-4">
-        <div class="card-header fw-bold bg-light">
-          <i class="bi bi-send me-1"></i>本出欠URL送信メール
-        </div>
-        <div class="card-body">
-          <div class="mb-3">
-            <label class="form-label fw-bold">件名</label>
-            <input type="text" class="form-control" name="mail_final_url_subject"
-                   value="{{ settings.get('mail_final_url_subject', '') }}">
+      <div id="section_final_url" class="mail-section d-none">
+        <div class="card mb-4">
+          <div class="card-header fw-bold bg-light">
+            <i class="bi bi-send me-1"></i>本出欠URL送信メール
           </div>
-          <div class="mb-0">
-            <label class="form-label fw-bold">本文</label>
-            <textarea class="form-control font-monospace" name="mail_final_url_body"
-                      rows="14">{{ settings.get('mail_final_url_body', '') }}</textarea>
+          <div class="card-body">
+            <div class="mb-3">
+              <label class="form-label fw-bold">件名</label>
+              <input type="text" class="form-control" name="mail_final_url_subject"
+                     value="{{ settings.get('mail_final_url_subject', '') }}">
+            </div>
+            <div class="mb-0">
+              <label class="form-label fw-bold">本文</label>
+              <textarea class="form-control font-monospace auto-resize" name="mail_final_url_body">{{ settings.get('mail_final_url_body', '') }}</textarea>
+            </div>
           </div>
         </div>
       </div>
 
       <!-- 仮出欠送信完了 -->
-      <div class="card mb-4">
-        <div class="card-header fw-bold bg-light">
-          <i class="bi bi-check-circle me-1"></i>仮出欠 送信完了メール
-        </div>
-        <div class="card-body">
-          <div class="mb-3">
-            <label class="form-label fw-bold">件名</label>
-            <input type="text" class="form-control" name="mail_provisional_confirm_subject"
-                   value="{{ settings.get('mail_provisional_confirm_subject', '') }}">
+      <div id="section_provisional_confirm" class="mail-section">
+        <div class="card mb-4">
+          <div class="card-header fw-bold bg-light">
+            <i class="bi bi-check-circle me-1"></i>仮出欠 送信完了メール
           </div>
-          <div class="mb-0">
-            <label class="form-label fw-bold">本文</label>
-            <textarea class="form-control font-monospace" name="mail_provisional_confirm_body"
-                      rows="12">{{ settings.get('mail_provisional_confirm_body', '') }}</textarea>
-            <div class="form-text">追加変数: <code>{status}</code> 回答内容、<code>{provisional_url}</code> 変更用URL</div>
+          <div class="card-body">
+            <div class="mb-3">
+              <label class="form-label fw-bold">件名</label>
+              <input type="text" class="form-control" name="mail_provisional_confirm_subject"
+                     value="{{ settings.get('mail_provisional_confirm_subject', '') }}">
+            </div>
+            <div class="mb-0">
+              <label class="form-label fw-bold">本文</label>
+              <textarea class="form-control font-monospace auto-resize" name="mail_provisional_confirm_body">{{ settings.get('mail_provisional_confirm_body', '') }}</textarea>
+              <div class="form-text">追加変数: <code>{status}</code> 回答内容、<code>{provisional_url}</code> 変更用URL</div>
+            </div>
           </div>
         </div>
       </div>
 
       <!-- 本出欠送信完了 -->
-      <div class="card mb-4">
-        <div class="card-header fw-bold bg-light">
-          <i class="bi bi-check-circle me-1"></i>本出欠 送信完了メール
-        </div>
-        <div class="card-body">
-          <div class="mb-3">
-            <label class="form-label fw-bold">件名</label>
-            <input type="text" class="form-control" name="mail_final_confirm_subject"
-                   value="{{ settings.get('mail_final_confirm_subject', '') }}">
+      <div id="section_final_confirm" class="mail-section d-none">
+        <div class="card mb-4">
+          <div class="card-header fw-bold bg-light">
+            <i class="bi bi-check-circle me-1"></i>本出欠 送信完了メール
           </div>
-          <div class="mb-0">
-            <label class="form-label fw-bold">本文</label>
-            <textarea class="form-control font-monospace" name="mail_final_confirm_body"
-                      rows="12">{{ settings.get('mail_final_confirm_body', '') }}</textarea>
-            <div class="form-text">追加変数: <code>{status}</code> 回答内容、<code>{final_url}</code> 変更用URL</div>
+          <div class="card-body">
+            <div class="mb-3">
+              <label class="form-label fw-bold">件名</label>
+              <input type="text" class="form-control" name="mail_final_confirm_subject"
+                     value="{{ settings.get('mail_final_confirm_subject', '') }}">
+            </div>
+            <div class="mb-0">
+              <label class="form-label fw-bold">本文</label>
+              <textarea class="form-control font-monospace auto-resize" name="mail_final_confirm_body">{{ settings.get('mail_final_confirm_body', '') }}</textarea>
+              <div class="form-text">追加変数: <code>{status}</code> 回答内容、<code>{final_url}</code> 変更用URL</div>
+            </div>
           </div>
         </div>
       </div>
 
       <!-- リマインド -->
-      <div class="card mb-4">
-        <div class="card-header fw-bold bg-light">
-          <i class="bi bi-bell me-1"></i>リマインドメール
-        </div>
-        <div class="card-body">
-          <div class="mb-3">
-            <label class="form-label fw-bold">件名</label>
-            <input type="text" class="form-control" name="mail_reminder_subject"
-                   value="{{ settings.get('mail_reminder_subject', '') }}">
+      <div id="section_reminder" class="mail-section d-none">
+        <div class="card mb-4">
+          <div class="card-header fw-bold bg-light">
+            <i class="bi bi-bell me-1"></i>リマインドメール
           </div>
-          <div class="mb-0">
-            <label class="form-label fw-bold">本文</label>
-            <textarea class="form-control font-monospace" name="mail_reminder_body"
-                      rows="12">{{ settings.get('mail_reminder_body', '') }}</textarea>
+          <div class="card-body">
+            <div class="mb-3">
+              <label class="form-label fw-bold">件名</label>
+              <input type="text" class="form-control" name="mail_reminder_subject"
+                     value="{{ settings.get('mail_reminder_subject', '') }}">
+            </div>
+            <div class="mb-0">
+              <label class="form-label fw-bold">本文</label>
+              <textarea class="form-control font-monospace auto-resize" name="mail_reminder_body">{{ settings.get('mail_reminder_body', '') }}</textarea>
+            </div>
           </div>
         </div>
       </div>
 
       <div class="d-flex gap-2 flex-wrap">
         <button type="submit" class="btn btn-primary">保存する</button>
-        <a href="{{ url_for('admin.settings_reunion') }}" class="btn btn-outline-secondary">
-          <i class="bi bi-calendar-event me-1"></i>同窓会情報を編集
-        </a>
       </div>
 
     </form>
   </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  // テキストエリアの自動リサイズ
+  function autoResize(ta) {
+    ta.style.height = 'auto';
+    ta.style.height = ta.scrollHeight + 'px';
+  }
+  document.querySelectorAll('textarea.auto-resize').forEach(function (ta) {
+    autoResize(ta);
+    ta.addEventListener('input', function () { autoResize(ta); });
+  });
+
+  // ラジオボタンで表示切り替え
+  document.querySelectorAll('input[name="mailSelect"]').forEach(function (radio) {
+    radio.addEventListener('change', function () {
+      document.querySelectorAll('.mail-section').forEach(function (sec) {
+        sec.classList.add('d-none');
+      });
+      var target = document.getElementById('section_' + this.value);
+      if (target) {
+        target.classList.remove('d-none');
+        // 表示後にリサイズ
+        target.querySelectorAll('textarea.auto-resize').forEach(autoResize);
+      }
+    });
+  });
+});
+</script>
 {% endblock %}
