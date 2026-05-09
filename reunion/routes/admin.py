@@ -998,7 +998,8 @@ def csv_delete_all():
 def settings_mail():
     """メール設定画面（送信アカウントの確認・変更）"""
     KEYS = [
-        "mail_mode", "mail_smtp_host", "mail_smtp_port",
+        "mail_mode", "brevo_api_key",
+        "mail_smtp_host", "mail_smtp_port",
         "mail_smtp_user", "mail_smtp_password",
         "mail_from", "mail_from_name", "mail_daily_limit",
     ]
@@ -1006,7 +1007,7 @@ def settings_mail():
     if request.method == "POST":
         for key in KEYS:
             val = request.form.get(key, "").strip()
-            if key == "mail_smtp_password" and not val:
+            if key in ("mail_smtp_password", "brevo_api_key") and not val:
                 continue
             setting = AppSetting.query.filter_by(key=key).first()
             if setting:

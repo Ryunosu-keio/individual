@@ -41,6 +41,26 @@
                   GAS送信（Render環境向け）
                 </label>
               </div>
+              <div class="form-check">
+                <input class="form-check-input" type="radio" name="mail_mode"
+                       id="mode_brevo" value="brevo"
+                       {% if settings.get('mail_mode') == 'brevo' %}checked{% endif %}>
+                <label class="form-check-label" for="mode_brevo">
+                  Brevo API送信（推奨）
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <hr class="my-3">
+
+          <!-- Brevo APIキー -->
+          <div class="mb-3">
+            <label class="form-label fw-bold">Brevo APIキー</label>
+            <input type="password" class="form-control" name="brevo_api_key"
+                   placeholder="入力しない場合は変更されません">
+            <div class="form-text">
+              Brevo → 右上アカウント名 → SMTP &amp; API → APIキー で取得できます。
             </div>
           </div>
 

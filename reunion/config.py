@@ -40,7 +40,8 @@ class Config:
     # -----------------------------------------------
     # メール設定
     # -----------------------------------------------
-    MAIL_MODE = os.getenv("MAIL_MODE", "console")  # "console" or "smtp"
+    MAIL_MODE = os.getenv("MAIL_MODE", "console")  # "console" / "smtp" / "brevo"
+    BREVO_API_KEY = os.getenv("BREVO_API_KEY", "")
     MAIL_SMTP_HOST = os.getenv("MAIL_SMTP_HOST", "smtp.gmail.com")
     MAIL_SMTP_PORT = int(os.getenv("MAIL_SMTP_PORT", "587"))
     MAIL_SMTP_USER = os.getenv("MAIL_SMTP_USER", "")
