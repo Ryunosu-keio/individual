@@ -696,6 +696,30 @@ def send_reminder_single(participant_id):
     return redirect(url_for("admin.participant_detail", participant_id=participant_id))
 
 
+@admin_bp.route("/send-provisional-reminder/<int:participant_id>", methods=["POST"])
+def send_provisional_reminder_single(participant_id):
+    """仮出欠リマインドを個別送信"""
+    from services.mail_service import send_provisional_reminder
+    participant = db.session.get(Participant, participant_id)
+    if participant is None:
+        flash("参加者が見つかりません。", "danger")
+        return redirect(url_for("admin.participants"))
+
+    base_url = current_app.config.get("APP_BASE_URL", "http://localhost:5000")
+    provisional_url = f"{base_url}/form/provisional"
+
+    try:
+        log = send_provisional_reminder(participant, provisional_url)
+        if log.status == "simulated":
+            flash(f"[開発モード] {participant.name} への仮出欠リマインド内容をコンソールに出力しました。", "info")
+        else:
+            flash(f"{participant.name} へ仮出欠リマインドを送信しました。", "success")
+    except Exception as e:
+        flash(f"送信失敗: {e}", "danger")
+
+    return redirect(url_for("admin.participant_detail", participant_id=participant_id))
+
+
 @admin_bp.route("/send-provisional-reminder-bulk", methods=["POST"])
 def send_provisional_reminder_bulk():
     """仮出欠リマインドを一括送信（仮出欠未回答の参加者）"""
