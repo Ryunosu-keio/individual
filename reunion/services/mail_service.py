@@ -292,7 +292,7 @@ def _send_smtp_cfg(to_email: str, subject: str, body: str, cfg: dict, attachment
 
 def _send_brevo(to_email: str, subject: str, body: str, cfg: dict) -> None:
     """Brevo Transactional Email APIでメールを送信する"""
-    api_key = os.environ.get("BREVO_API_KEY", "") or current_app.config.get("BREVO_API_KEY", "")
+    api_key = cfg.get("brevo_api_key", "") or os.environ.get("BREVO_API_KEY", "") or current_app.config.get("BREVO_API_KEY", "")
     if not api_key:
         raise ValueError("BREVO_API_KEY が設定されていません")
 
@@ -339,6 +339,7 @@ def _get_mail_config():
     cfg = current_app.config
     return {
         "mode":          get("mail_mode",          cfg.get("MAIL_MODE", "console")),
+        "brevo_api_key": get("brevo_api_key",      cfg.get("BREVO_API_KEY", "")),
         "smtp_host":     get("mail_smtp_host",     cfg.get("MAIL_SMTP_HOST", "smtp.gmail.com")),
         "smtp_port": int(get("mail_smtp_port",     str(cfg.get("MAIL_SMTP_PORT", 587)))),
         "smtp_user":     get("mail_smtp_user",     cfg.get("MAIL_SMTP_USER", "")),
