@@ -174,6 +174,7 @@ def participants():
         "number":  lambda p: (p.class_name or "", _num(p)),
         "role":    lambda p: (_role_order(p), p.class_name or "", _num(p)),
         "created": lambda p: (p.created_at,),
+        "email":   lambda p: (p.email or "",),
     }
     key_func = sort_key_map.get(sort, sort_key_map["class"])
     all_participants.sort(key=key_func, reverse=(order == "desc"))
