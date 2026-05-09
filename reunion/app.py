@@ -92,6 +92,17 @@ def create_app():
     app.register_blueprint(admin_bp)
 
     # -----------------------------------------------
+    # Jinja2 フィルタ: UTC → JST 変換
+    # -----------------------------------------------
+    from datetime import timedelta
+
+    @app.template_filter("jst")
+    def jst_filter(dt, fmt="%Y/%m/%d %H:%M"):
+        if dt is None:
+            return ""
+        return (dt + timedelta(hours=9)).strftime(fmt)
+
+    # -----------------------------------------------
     # トップページ → 管理画面にリダイレクト
     # -----------------------------------------------
     @app.route("/")
