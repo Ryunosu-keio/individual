@@ -28,7 +28,7 @@
 
             <p class="text-muted mb-4">
               同窓会への参加意思をお知らせください。<br>
-              後日、詳細をメールでご案内いたします。
+              後日、本出欠フォームのご案内をお送りします。
             </p>
 
             <form method="POST" action="{{ url_for('forms.provisional') }}" id="provForm">
@@ -60,10 +60,10 @@
                 <label for="name_select" class="form-label fw-bold">
                   お名前 <span class="text-danger">*</span>
                 </label>
+                <div class="form-text text-muted mb-1">※ 名前は当時の姓名で登録されています。（今後のメールでは連絡いただいた現在の姓名が反映されます。）</div>
                 <select class="form-select" id="name_select">
                   <option value="">-- 名前を選択 --</option>
                 </select>
-                <div class="form-text">名前が一覧にない場合は下のテキスト欄に入力してください。</div>
               </div>
 
               <!-- ③ 名前テキスト入力（「一覧にない」場合 or クラス不明時） -->
@@ -73,30 +73,6 @@
                 </label>
                 <input type="text" class="form-control" id="name_text"
                        value="{{ name | default('') }}" placeholder="山田太郎">
-              </div>
-
-              <!-- ③-b 名前変更（名簿から選択した場合に表示） -->
-              <div class="mb-3 d-none" id="name_edit_group">
-                <label class="form-label fw-bold">
-                  お名前 <span class="text-danger">*</span>
-                </label>
-                <div class="input-group">
-                  <input type="text" class="form-control" id="name_edit" placeholder="山田太郎">
-                  <button class="btn btn-outline-secondary" type="button" id="name_edit_reset" title="元に戻す">
-                    <i class="bi bi-arrow-counterclockwise"></i>
-                  </button>
-                </div>
-                <div class="form-text">結婚等で姓が変わった場合はここで修正できます。</div>
-              </div>
-
-              <!-- ④ フリガナ入力 -->
-              <div class="mb-3 d-none" id="name_kana_group">
-                <label for="name_kana" class="form-label fw-bold">
-                  フリガナ
-                </label>
-                <input type="text" class="form-control" id="name_kana" name="name_kana"
-                       value="{{ name_kana | default('') }}" placeholder="ヤマダ タロウ">
-                <div class="form-text">カタカナまたはひらがなで入力してください。振込名義の照合に使用します。</div>
               </div>
 
               <!-- ⑤ メールアドレス -->
@@ -156,32 +132,16 @@
     const nameSelect      = document.getElementById('name_select');
     const nameTextGroup   = document.getElementById('name_text_group');
     const nameText        = document.getElementById('name_text');
-    const nameEditGroup   = document.getElementById('name_edit_group');
-    const nameEdit        = document.getElementById('name_edit');
-    const nameEditReset   = document.getElementById('name_edit_reset');
-    const nameKanaGroup   = document.getElementById('name_kana_group');
-    const nameKanaInput   = document.getElementById('name_kana');
     const participantId   = document.getElementById('participant_id');
     const nameHidden      = document.getElementById('name_hidden');
     const classHidden     = document.getElementById('class_name_hidden');
     const submitBtn       = document.getElementById('submitBtn');
     const emailInput      = document.getElementById('email');
 
-    var originalName = '';
     var nameDataMap = {};
 
-    function toKatakana(str) {
-      return str.replace(/[ぁ-ゖ]/g, function(ch) {
-        return String.fromCharCode(ch.charCodeAt(0) + 0x60);
-      });
-    }
-
-    nameKanaInput.addEventListener('input', function() {
-      this.value = toKatakana(this.value);
-    });
-
-    function checkReady() {
-      var hasName = participantId.value || nameText.value.trim() || nameEdit.value.trim();
+function checkReady() {
+      var hasName = participantId.value || nameText.value.trim();
       var hasEmail = emailInput.value.trim() && emailInput.value.includes('@');
       submitBtn.disabled = !(hasName && hasEmail);
     }
@@ -194,17 +154,6 @@
       checkReady();
     });
 
-    nameEdit.addEventListener('input', function() {
-      nameHidden.value = nameEdit.value.trim();
-      checkReady();
-    });
-
-    nameEditReset.addEventListener('click', function() {
-      nameEdit.value = originalName;
-      nameHidden.value = originalName;
-      checkReady();
-    });
-
     classSelect.addEventListener('change', async function() {
       var cls = classSelect.value;
       classHidden.value = cls;
@@ -214,13 +163,9 @@
       nameSelect.innerHTML = '<option value="">読み込み中...</option>';
       nameSelect.disabled = true;
 
-      nameEditGroup.classList.add('d-none');
-      nameKanaGroup.classList.add('d-none');
-
       if (!cls || cls === 'other') {
         nameSelectGroup.classList.add('d-none');
         nameTextGroup.classList.remove('d-none');
-        nameKanaGroup.classList.remove('d-none');
         checkReady();
         return;
       }
@@ -254,29 +199,17 @@
         participantId.value = '';
         nameHidden.value = '';
         nameTextGroup.classList.add('d-none');
-        nameEditGroup.classList.add('d-none');
-        nameKanaGroup.classList.add('d-none');
       } else if (val === 'other') {
         participantId.value = '';
         nameHidden.value = '';
         nameTextGroup.classList.remove('d-none');
-        nameEditGroup.classList.add('d-none');
-        nameKanaGroup.classList.remove('d-none');
-        nameKanaInput.value = '';
         nameText.focus();
       } else {
         participantId.value = val;
         var data = nameDataMap[val];
         var selectedName = data ? data.name : nameSelect.options[nameSelect.selectedIndex].textContent;
-        originalName = selectedName;
         nameHidden.value = selectedName;
-
         nameTextGroup.classList.add('d-none');
-        nameEditGroup.classList.remove('d-none');
-        nameEdit.value = selectedName;
-
-        nameKanaGroup.classList.remove('d-none');
-        nameKanaInput.value = data ? data.name_kana : '';
       }
       checkReady();
     });

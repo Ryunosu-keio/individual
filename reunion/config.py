@@ -56,10 +56,24 @@ class Config:
     # -----------------------------------------------
     # 同窓会情報（メール本文に使用）
     # -----------------------------------------------
-    REUNION_NAME = os.getenv("REUNION_NAME", "同窓会")
-    REUNION_DATE = os.getenv("REUNION_DATE", "日程未定")
+    REUNION_NAME  = os.getenv("REUNION_NAME", "同窓会")
+    REUNION_DATE  = os.getenv("REUNION_DATE", "日程未定")
+    REUNION_TIME  = os.getenv("REUNION_TIME", "")
     REUNION_VENUE = os.getenv("REUNION_VENUE", "会場未定")
-    REUNION_FEE = os.getenv("REUNION_FEE", "未定")
+    REUNION_FEE   = os.getenv("REUNION_FEE", "未定")
+    DRESS_CODE    = os.getenv("DRESS_CODE", "")
+    BELONGINGS    = os.getenv("BELONGINGS", "")
+
+    # -----------------------------------------------
+    # 振込先情報（メール本文に使用）
+    # -----------------------------------------------
+    TRANSFER_BANK           = os.getenv("TRANSFER_BANK", "")
+    TRANSFER_BRANCH         = os.getenv("TRANSFER_BRANCH", "")
+    TRANSFER_BRANCH_NUMBER  = os.getenv("TRANSFER_BRANCH_NUMBER", "")
+    TRANSFER_ACCOUNT_TYPE   = os.getenv("TRANSFER_ACCOUNT_TYPE", "")
+    TRANSFER_ACCOUNT_NUMBER = os.getenv("TRANSFER_ACCOUNT_NUMBER", "")
+    TRANSFER_ACCOUNT_NAME   = os.getenv("TRANSFER_ACCOUNT_NAME", "")
+    TRANSFER_DEADLINE       = os.getenv("TRANSFER_DEADLINE", "")
 
     # -----------------------------------------------
     # ログ設定

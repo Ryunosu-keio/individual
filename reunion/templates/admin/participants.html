@@ -1,8 +1,8 @@
 {% extends "base.html" %}
-{% block title %}参加者一覧 | 同窓会管理{% endblock %}
+{% block title %}参加者管理 | 同窓会管理{% endblock %}
 
 {% block content %}
-<h4 class="mb-3"><i class="bi bi-person-lines-fill me-2"></i>参加者一覧</h4>
+<h4 class="mb-3"><i class="bi bi-person-gear me-2"></i>参加者管理</h4>
 
 <!-- タブ切り替え -->
 <ul class="nav nav-tabs mb-4" id="participantTabs" role="tablist">
@@ -190,7 +190,12 @@
       {% set final = p.latest_final %}
       <tr>
         <td class="text-muted small">{{ p.id }}</td>
-        <td>{{ p.name }}</td>
+        <td>
+          {{ p.display_name }}
+          {% if p.new_name %}
+            <br><span class="text-muted small">（旧: {{ p.name }}）</span>
+          {% endif %}
+        </td>
         <td class="small text-center">{{ p.class_name or '' }}</td>
         <td class="small text-center">{{ p.student_number or '' }}</td>
         <td class="small">
@@ -353,8 +358,9 @@
 {% block extra_js %}
 <script>
 (function() {
+  var params = new URLSearchParams(window.location.search);
   var hash = window.location.hash;
-  if (hash === '#csv') {
+  if (params.get('tab') === 'csv' || hash === '#csv') {
     var csvTab = document.getElementById('csv-tab');
     if (csvTab) new bootstrap.Tab(csvTab).show();
   }

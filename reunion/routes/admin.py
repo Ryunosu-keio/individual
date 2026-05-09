@@ -150,6 +150,7 @@ def participants():
         query = query.filter(
             db.or_(
                 Participant.name.ilike(f"%{q}%"),
+                Participant.new_name.ilike(f"%{q}%"),
                 Participant.email.ilike(f"%{q}%"),
             )
         )
@@ -1127,9 +1128,10 @@ def settings_mail_test():
 def settings_reunion():
     """同窓会情報設定画面"""
     KEYS = [
-        "reunion_name", "reunion_date", "reunion_venue", "reunion_fee",
-        "transfer_bank", "transfer_branch", "transfer_account_type",
-        "transfer_account_number", "transfer_account_name", "transfer_deadline",
+        "reunion_name", "reunion_date", "reunion_time", "reunion_venue", "reunion_fee",
+        "dress_code", "belongings",
+        "transfer_bank", "transfer_branch", "transfer_branch_number",
+        "transfer_account_type", "transfer_account_number", "transfer_account_name", "transfer_deadline",
     ]
 
     if request.method == "POST":
@@ -1246,12 +1248,14 @@ def roster_import():
 
     # ヘッダー行の検出と列インデックスの解決
     NAME_HEADERS      = {"氏名", "名前", "name"}
-    NAME_KANA_HEADERS = {"氏名カナ", "氏名（カナ）", "フリガナ", "ふりがな", "kana", "name_kana"}
-    EMAIL_HEADERS     = {"メールアドレス", "メール", "email", "mail"}
-    CLASS_HEADERS     = {"クラス", "class", "組", "担当クラス"}
-    NUMBER_HEADERS    = {"出席番号", "番号", "number", "no"}
-    ROLE_HEADERS      = {"役割", "role", "種別", "区分"}
-    MEMO_HEADERS      = {"幹事メモ", "メモ", "memo", "備考"}
+    NAME_KANA_HEADERS     = {"氏名カナ", "氏名（カナ）", "フリガナ", "ふりがな", "kana", "name_kana"}
+    NEW_NAME_HEADERS      = {"新氏名", "新名前", "new_name"}
+    NEW_NAME_KANA_HEADERS = {"新氏名カナ", "新フリガナ", "new_name_kana"}
+    EMAIL_HEADERS         = {"メールアドレス", "メール", "email", "mail"}
+    CLASS_HEADERS         = {"クラス", "class", "組", "担当クラス"}
+    NUMBER_HEADERS        = {"出席番号", "番号", "number", "no"}
+    ROLE_HEADERS          = {"役割", "role", "種別", "区分"}
+    MEMO_HEADERS          = {"幹事メモ", "メモ", "memo", "備考"}
 
     first = [h.strip().lower() for h in rows[0]]
     has_header = any(h in NAME_HEADERS or h in EMAIL_HEADERS for h in first)
@@ -1263,17 +1267,19 @@ def roster_import():
                     return i
             return None
 
-        idx_name      = find_idx(NAME_HEADERS)
-        idx_name_kana = find_idx(NAME_KANA_HEADERS)
-        idx_email     = find_idx(EMAIL_HEADERS)
-        idx_class     = find_idx(CLASS_HEADERS)
-        idx_number    = find_idx(NUMBER_HEADERS)
-        idx_role      = find_idx(ROLE_HEADERS)
-        idx_memo      = find_idx(MEMO_HEADERS)
-        data_rows     = rows[1:]
+        idx_name          = find_idx(NAME_HEADERS)
+        idx_name_kana     = find_idx(NAME_KANA_HEADERS)
+        idx_new_name      = find_idx(NEW_NAME_HEADERS)
+        idx_new_name_kana = find_idx(NEW_NAME_KANA_HEADERS)
+        idx_email         = find_idx(EMAIL_HEADERS)
+        idx_class         = find_idx(CLASS_HEADERS)
+        idx_number        = find_idx(NUMBER_HEADERS)
+        idx_role          = find_idx(ROLE_HEADERS)
+        idx_memo          = find_idx(MEMO_HEADERS)
+        data_rows         = rows[1:]
     else:
-        # ヘッダーなし → 固定順: 氏名, 氏名カナ, メール, クラス, 出席番号, 役割, 幹事メモ
-        idx_name, idx_name_kana, idx_email, idx_class, idx_number, idx_role, idx_memo = 0, 1, 2, 3, 4, 5, 6
+        # ヘッダーなし → 固定順: 氏名, 氏名カナ, 新氏名, 新氏名カナ, メール, クラス, 出席番号, 役割, 幹事メモ
+        idx_name, idx_name_kana, idx_new_name, idx_new_name_kana, idx_email, idx_class, idx_number, idx_role, idx_memo = 0, 1, 2, 3, 4, 5, 6, 7, 8
         data_rows = rows
 
     if idx_name is None:
@@ -1297,13 +1303,15 @@ def roster_import():
         if not row or all(cell.strip() == "" for cell in row):
             continue
 
-        name      = get_col(row, idx_name)
-        name_kana = get_col(row, idx_name_kana)
-        email     = get_col(row, idx_email).lower()
-        class_    = get_col(row, idx_class)
-        number    = get_col(row, idx_number)
-        role      = get_col(row, idx_role) or "生徒"
-        memo      = get_col(row, idx_memo)
+        name          = get_col(row, idx_name)
+        name_kana     = get_col(row, idx_name_kana)
+        new_name      = get_col(row, idx_new_name)
+        new_name_kana = get_col(row, idx_new_name_kana)
+        email         = get_col(row, idx_email).lower()
+        class_        = get_col(row, idx_class)
+        number        = get_col(row, idx_number)
+        role          = get_col(row, idx_role) or "生徒"
+        memo          = get_col(row, idx_memo)
 
         if not name:
             skipped += 1
@@ -1322,8 +1330,16 @@ def roster_import():
         if not email or "@" not in email:
             email = f"__no_email_{name}_{class_}_{role}@placeholder.local"
 
+        # 新氏名が旧氏名と同じなら空にする（表示時に重複を避けるため）
+        if new_name == name:
+            new_name = ""
+        if new_name_kana == name_kana:
+            new_name_kana = ""
+
         new_participants.append(dict(
-            name=name, name_kana=name_kana, email=email, class_name=class_,
+            name=name, name_kana=name_kana,
+            new_name=new_name, new_name_kana=new_name_kana,
+            email=email, class_name=class_,
             student_number=number, role=role, teacher_memo=memo,
         ))
 

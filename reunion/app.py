@@ -15,9 +15,11 @@ from extensions import db
 def _migrate(db):
     """既存テーブルへのカラム追加マイグレーション（MySQL/SQLite/PostgreSQL互換）"""
     migrations = [
-        ("participants", "name_kana", "VARCHAR(100) DEFAULT ''"),
-        ("final_responses", "bank_name", "VARCHAR(100) DEFAULT ''"),
-        ("final_responses", "branch_name", "VARCHAR(100) DEFAULT ''"),
+        ("participants", "name_kana",     "VARCHAR(100) DEFAULT ''"),
+        ("participants", "new_name",      "VARCHAR(100) DEFAULT ''"),
+        ("participants", "new_name_kana", "VARCHAR(100) DEFAULT ''"),
+        ("final_responses", "bank_name",      "VARCHAR(100) DEFAULT ''"),
+        ("final_responses", "branch_name",    "VARCHAR(100) DEFAULT ''"),
         ("final_responses", "account_number", "VARCHAR(50) DEFAULT ''"),
     ]
     with db.engine.connect() as conn:
@@ -122,4 +124,4 @@ if __name__ == "__main__":
     print("仮出欠フォーム: http://localhost:5000/form/provisional")
     print("停止: Ctrl+C")
     print("=" * 50)
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    app.run(host="0.0.0.0", port=5001, debug=True)

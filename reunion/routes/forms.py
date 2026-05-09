@@ -216,8 +216,8 @@ def final(token):
 
     # 振込先情報をDBから取得
     transfer_keys = [
-        "transfer_bank", "transfer_branch", "transfer_account_type",
-        "transfer_account_number", "transfer_account_name", "transfer_deadline",
+        "transfer_bank", "transfer_branch", "transfer_branch_number",
+        "transfer_account_type", "transfer_account_number", "transfer_account_name", "transfer_deadline",
         "reunion_fee",
     ]
     transfer_info = {}
@@ -228,7 +228,8 @@ def final(token):
     student_id = ""
     if participant.class_name and participant.student_number:
         student_id = f"{participant.class_name}{participant.student_number.zfill(2)}"
-    default_transfer_name = f"{student_id} {participant.name_kana}" if student_id and participant.name_kana else participant.name_kana or ""
+    kana = participant.display_name_kana
+    default_transfer_name = f"{student_id} {kana}" if student_id and kana else kana or ""
 
     if request.method == "GET":
         return render_template("final_form.html",
