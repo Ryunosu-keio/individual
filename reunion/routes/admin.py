@@ -487,6 +487,11 @@ def api_mail_preview(mail_type):
     base_url = current_app.config.get("APP_BASE_URL", "http://localhost:5000")
 
     VALID_TYPES = {
+        "provisional_reminder": {
+            "label": "仮出欠リマインド送信",
+            "subject_key": "mail_provisional_reminder_subject",
+            "body_key": "mail_provisional_reminder_body",
+        },
         "final_url": {
             "label": "本出欠URL送信",
             "subject_key": "mail_final_url_subject",
@@ -530,7 +535,11 @@ def api_mail_preview(mail_type):
     ).all()
 
     targets = []
-    if mail_type == "final_url":
+    if mail_type == "provisional_reminder":
+        for p in participants:
+            if p.latest_provisional is None:
+                targets.append(p)
+    elif mail_type == "final_url":
         for p in participants:
             prov = p.latest_provisional
             if prov and prov.status == "attending":
@@ -685,6 +694,60 @@ def send_reminder_single(participant_id):
         flash(f"送信失敗: {e}", "danger")
 
     return redirect(url_for("admin.participant_detail", participant_id=participant_id))
+
+
+@admin_bp.route("/send-provisional-reminder-bulk", methods=["POST"])
+def send_provisional_reminder_bulk():
+    """仮出欠リマインドを一括送信（仮出欠未回答の参加者）"""
+    import threading
+    import time
+    from services.mail_service import send_provisional_reminder
+
+    base_url = current_app.config.get("APP_BASE_URL", "http://localhost:5000")
+    provisional_url = f"{base_url}/form/provisional"
+
+    participants = Participant.query.filter(
+        ~Participant.email.like("%@placeholder.local"),
+    ).all()
+    targets = [p for p in participants if p.latest_provisional is None]
+
+    if not targets:
+        flash("仮出欠リマインド送信対象の参加者がいません。", "info")
+        return redirect(url_for("admin.mail_hub"))
+
+    remaining = get_remaining_today()
+    if remaining <= 0:
+        flash("本日の送信上限に達しています。明日以降に再度送信してください。", "warning")
+        return redirect(url_for("admin.mail_hub"))
+
+    batch = targets[:remaining]
+    app = current_app._get_current_object()
+    pids = [p.id for p in batch]
+
+    def bulk_send():
+        with app.app_context():
+            sent = failed = 0
+            for pid in pids:
+                p = db.session.get(Participant, pid)
+                if p is None:
+                    continue
+                try:
+                    send_provisional_reminder(p, provisional_url)
+                    sent += 1
+                except Exception as e:
+                    logger.error(f"仮出欠リマインド一括送信失敗: {p.email} - {e}", exc_info=True)
+                    failed += 1
+                time.sleep(0.5)
+            logger.info(f"自動送信完了 [仮出欠リマインド]: {sent}件成功 / {failed}件失敗")
+
+    threading.Thread(target=bulk_send, daemon=True).start()
+
+    remaining_after = len(targets) - len(batch)
+    msg = f"{len(batch)} 件の仮出欠リマインド送信を開始しました。"
+    if remaining_after > 0:
+        msg += f"（残り {remaining_after} 件は次回送信してください）"
+    flash(msg, "info")
+    return redirect(url_for("admin.mail_hub"))
 
 
 @admin_bp.route("/send-reminder-bulk", methods=["POST"])
@@ -1130,7 +1193,7 @@ def settings_reunion():
     """同窓会情報設定画面"""
     KEYS = [
         "reunion_name", "reunion_date", "reunion_time", "reunion_venue", "reunion_fee",
-        "dress_code", "belongings",
+        "dress_code", "belongings", "provisional_deadline",
         "transfer_bank", "transfer_branch", "transfer_branch_number",
         "transfer_account_type", "transfer_account_number", "transfer_account_name", "transfer_deadline",
     ]

@@ -91,7 +91,11 @@ def _find_roster_match(name: str, class_name: str, student_number: str):
 def provisional():
     """仮出欠フォーム"""
     if request.method == "GET":
-        return render_template("provisional_form.html")
+        deadline = ""
+        s = AppSetting.query.filter_by(key="provisional_deadline").first()
+        if s and s.value:
+            deadline = s.value
+        return render_template("provisional_form.html", provisional_deadline=deadline)
 
     # クラス選択→名前選択方式: participant_id が送ら��てくる場合はそれを優先
     participant_id  = request.form.get("participant_id", "").strip()

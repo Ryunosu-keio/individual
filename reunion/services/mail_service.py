@@ -117,6 +117,27 @@ MAIL_DEFAULTS = {
         "──────────────────\n"
         "{reunion_name} 幹事"
     ),
+    "mail_provisional_reminder_subject": "【{reunion_name}】仮出欠のご回答をお願いします（リマインド）",
+    "mail_provisional_reminder_body": (
+        "{name} 様\n\n"
+        "{reunion_name}の幹事です。\n\n"
+        "先日ご案内しました仮出欠フォームへのご回答がまだのようでしたので、\n"
+        "リマインドのご連絡を差し上げました。\n\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        "■ 仮出欠フォーム\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        "{provisional_url}\n\n"
+        "{deadline_line}"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        "■ 同窓会の詳細\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        "日時: {reunion_date}\n"
+        "会場: {reunion_venue}\n"
+        "会費: {reunion_fee}\n\n"
+        "お忙しいところ恐れ入りますが、ご確認のほどよろしくお願いいたします。\n\n"
+        "──────────────────\n"
+        "{reunion_name} 幹事"
+    ),
     "mail_final_confirm_subject": "【{reunion_name}】本出欠を受け付けました",
     "mail_final_confirm_body": (
         "{name} 様\n\n"
@@ -175,6 +196,7 @@ def _get_reunion_info() -> dict:
         "reunion_fee":      get("reunion_fee",      cfg.get("REUNION_FEE", "")),
         "dress_code":       get("dress_code",       cfg.get("DRESS_CODE", "")),
         "belongings":       get("belongings",       cfg.get("BELONGINGS", "")),
+        "provisional_deadline":    get("provisional_deadline",    cfg.get("PROVISIONAL_DEADLINE", "")),
         "transfer_bank":           get("transfer_bank",           cfg.get("TRANSFER_BANK", "")),
         "transfer_branch":         get("transfer_branch",         cfg.get("TRANSFER_BRANCH", "")),
         "transfer_branch_number":  get("transfer_branch_number",  cfg.get("TRANSFER_BRANCH_NUMBER", "")),
@@ -457,6 +479,64 @@ def _build_final_confirm_body(participant_name: str, status_label: str, final_ur
         **vars
     )
     return subject, body
+
+
+def _build_provisional_reminder_body(participant_name: str, provisional_url: str) -> tuple:
+    """仮出欠リマインドメールの件名・本文を生成する"""
+    reunion = _get_reunion_info()
+    deadline = reunion.get("provisional_deadline", "")
+    deadline_line = f"※ 回答期限: {deadline}\n\n" if deadline else ""
+    vars = dict(
+        name=participant_name,
+        provisional_url=provisional_url,
+        deadline_line=deadline_line,
+        reunion_name=reunion["reunion_name"],
+        reunion_date=reunion["reunion_date"],
+        reunion_time=reunion["reunion_time"],
+        reunion_venue=reunion["reunion_venue"],
+        reunion_fee=reunion["reunion_fee"],
+        dress_code=reunion["dress_code"],
+        belongings=reunion["belongings"],
+    )
+    subject = _render_template(
+        _get_template('mail_provisional_reminder_subject',
+                      MAIL_DEFAULTS['mail_provisional_reminder_subject']),
+        **vars
+    )
+    body = _render_template(
+        _get_template('mail_provisional_reminder_body',
+                      MAIL_DEFAULTS['mail_provisional_reminder_body']),
+        **vars
+    )
+    return subject, body
+
+
+def send_provisional_reminder(participant, provisional_url: str) -> MailLog:
+    """仮出欠リマインドメールを送信する。"""
+    mail_cfg = _get_mail_config()
+    subject, body = _build_provisional_reminder_body(participant.name, provisional_url)
+
+    log = MailLog(
+        participant_id=participant.id,
+        mail_type="provisional_reminder",
+        sent_at=datetime.utcnow(),
+    )
+
+    try:
+        log.status = _dispatch_send(participant.email, subject, body, mail_cfg)
+        if log.status == "sent":
+            logger.info(f"仮出欠リマインド送信成功: {participant.email}")
+        db.session.add(log)
+        db.session.commit()
+    except Exception as e:
+        log.status = "failed"
+        log.error_message = str(e)
+        db.session.add(log)
+        db.session.commit()
+        logger.error(f"仮出欠リマインド送信失敗: {participant.email} - {e}", exc_info=True)
+        raise
+
+    return log
 
 
 def send_provisional_confirmation(participant, status_label: str, provisional_url: str) -> MailLog:

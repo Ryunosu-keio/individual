@@ -30,6 +30,11 @@
               同窓会への参加意思をお知らせください。<br>
               後日、本出欠フォームのご案内をお送りします。
             </p>
+            {% if provisional_deadline %}
+            <div class="alert alert-warning py-2 small">
+              <i class="bi bi-clock me-1"></i>回答期限: <strong>{{ provisional_deadline }}</strong>
+            </div>
+            {% endif %}
 
             <form method="POST" action="{{ url_for('forms.provisional') }}" id="provForm">
               <input type="hidden" name="participant_id" id="participant_id" value="">
