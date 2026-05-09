@@ -1132,11 +1132,12 @@ def settings_pdf_upload():
 def settings_mail_template():
     """メール文章編集画面"""
     KEYS = [
-        "mail_final_url_subject", "mail_final_url_body",
-        "mail_reminder_subject",  "mail_reminder_body",
-        "mail_final_reminder_subject", "mail_final_reminder_body",
-        "mail_provisional_confirm_subject", "mail_provisional_confirm_body",
-        "mail_final_confirm_subject",       "mail_final_confirm_body",
+        "mail_provisional_confirm_subject",   "mail_provisional_confirm_body",
+        "mail_provisional_reminder_subject",  "mail_provisional_reminder_body",
+        "mail_final_url_subject",             "mail_final_url_body",
+        "mail_reminder_subject",              "mail_reminder_body",
+        "mail_final_confirm_subject",         "mail_final_confirm_body",
+        "mail_final_reminder_subject",        "mail_final_reminder_body",
     ]
     if request.method == "POST":
         for key in KEYS:
