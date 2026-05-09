@@ -4,6 +4,7 @@ services/mail_service.py - メール送信サービス
 MAIL_MODE=console の場合: コンソールに出力するだけ（開発用）
 MAIL_MODE=smtp    の場合: SMTPで実際に送信する
 MAIL_MODE=gas     の場合: GAS Webhookで送信する
+MAIL_MODE=brevo   の場合: Brevo Transactional Email APIで送信する
 """
 import json
 import os
@@ -289,6 +290,34 @@ def _send_smtp_cfg(to_email: str, subject: str, body: str, cfg: dict, attachment
         server.sendmail(cfg["from_addr"], [to_email], msg.as_string())
 
 
+def _send_brevo(to_email: str, subject: str, body: str, cfg: dict) -> None:
+    """Brevo Transactional Email APIでメールを送信する"""
+    api_key = os.environ.get("BREVO_API_KEY", "") or current_app.config.get("BREVO_API_KEY", "")
+    if not api_key:
+        raise ValueError("BREVO_API_KEY が設定されていません")
+
+    payload = json.dumps({
+        "sender":   {"name": cfg["from_name"], "email": cfg["from_addr"]},
+        "to":       [{"email": to_email}],
+        "subject":  subject,
+        "textContent": body,
+    }).encode("utf-8")
+
+    req = urllib.request.Request(
+        "https://api.brevo.com/v3/smtp/email",
+        data=payload,
+        headers={
+            "Content-Type":  "application/json",
+            "Accept":        "application/json",
+            "api-key":       api_key,
+        },
+        method="POST",
+    )
+    with urllib.request.urlopen(req, timeout=30) as res:
+        if res.status not in (200, 201):
+            raise RuntimeError(f"Brevo APIエラー: HTTP {res.status}")
+
+
 def _send_console(to_email: str, subject: str, body: str) -> None:
     """コンソールにメール内容を出力する。開発用。"""
     separator = "=" * 60
@@ -327,6 +356,9 @@ def _dispatch_send(to_email: str, subject: str, body: str, mail_cfg: dict, attac
         return "sent"
     elif mode == "smtp":
         _send_smtp_cfg(to_email, subject, body, mail_cfg, attachment_path=attachment_path)
+        return "sent"
+    elif mode == "brevo":
+        _send_brevo(to_email, subject, body, mail_cfg)
         return "sent"
     else:
         if attachment_path:
