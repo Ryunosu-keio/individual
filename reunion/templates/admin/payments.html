@@ -330,8 +330,9 @@
 {% block extra_js %}
 <script>
 (function() {
+  var params = new URLSearchParams(window.location.search);
   var hash = window.location.hash;
-  if (hash === '#csv') {
+  if (params.get('tab') === 'csv' || hash === '#csv') {
     var csvTab = document.getElementById('csv-tab');
     if (csvTab) new bootstrap.Tab(csvTab).show();
   }

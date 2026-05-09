@@ -8,10 +8,14 @@
   ここで設定した値がメール文章の変数として使われます。<br>
   <code>{reunion_name}</code> 同窓会名 &nbsp;
   <code>{reunion_date}</code> 日程 &nbsp;
+  <code>{reunion_time}</code> 時刻 &nbsp;
   <code>{reunion_venue}</code> 会場 &nbsp;
-  <code>{reunion_fee}</code> 会費<br>
+  <code>{reunion_fee}</code> 会費 &nbsp;
+  <code>{dress_code}</code> 服装 &nbsp;
+  <code>{belongings}</code> 持ち物<br>
   <code>{transfer_bank}</code> 振込先銀行 &nbsp;
   <code>{transfer_branch}</code> 支店 &nbsp;
+  <code>{transfer_branch_number}</code> 支店番号 &nbsp;
   <code>{transfer_account_type}</code> 口座種別 &nbsp;
   <code>{transfer_account_number}</code> 口座番号 &nbsp;
   <code>{transfer_account_name}</code> 口座名義 &nbsp;
@@ -46,7 +50,14 @@
             <label class="form-label fw-bold">日程</label>
             <input type="text" class="form-control" name="reunion_date"
                    value="{{ settings.get('reunion_date', '') }}"
-                   placeholder="2025年〇月〇日（〇）〇〇:〇〇〜">
+                   placeholder="2025年〇月〇日（〇）">
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-bold">時刻</label>
+            <input type="text" class="form-control" name="reunion_time"
+                   value="{{ settings.get('reunion_time', '') }}"
+                   placeholder="〇〇:〇〇〜〇〇:〇〇">
           </div>
 
           <div class="mb-3">
@@ -56,11 +67,25 @@
                    placeholder="〇〇ホテル 〇〇の間">
           </div>
 
-          <div class="mb-0">
+          <div class="mb-3">
             <label class="form-label fw-bold">会費</label>
             <input type="text" class="form-control" name="reunion_fee"
                    value="{{ settings.get('reunion_fee', '') }}"
                    placeholder="10,000円">
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-bold">服装</label>
+            <input type="text" class="form-control" name="dress_code"
+                   value="{{ settings.get('dress_code', '') }}"
+                   placeholder="平服・スーツ など">
+          </div>
+
+          <div class="mb-0">
+            <label class="form-label fw-bold">持ち物</label>
+            <input type="text" class="form-control" name="belongings"
+                   value="{{ settings.get('belongings', '') }}"
+                   placeholder="卒業アルバム など">
           </div>
 
         </div>
@@ -77,11 +102,19 @@
                    placeholder="〇〇銀行">
           </div>
 
-          <div class="mb-3">
-            <label class="form-label fw-bold">支店名</label>
-            <input type="text" class="form-control" name="transfer_branch"
-                   value="{{ settings.get('transfer_branch', '') }}"
-                   placeholder="〇〇支店">
+          <div class="row mb-3">
+            <div class="col-md-8">
+              <label class="form-label fw-bold">支店名</label>
+              <input type="text" class="form-control" name="transfer_branch"
+                     value="{{ settings.get('transfer_branch', '') }}"
+                     placeholder="〇〇">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-bold">支店番号</label>
+              <input type="text" class="form-control" name="transfer_branch_number"
+                     value="{{ settings.get('transfer_branch_number', '') }}"
+                     placeholder="123">
+            </div>
           </div>
 
           <div class="row mb-3">

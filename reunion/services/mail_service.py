@@ -130,7 +130,7 @@ MAIL_DEFAULTS = {
         "■ 振込のご案内\n"
         "━━━━━━━━━━━━━━━━━━━━\n"
         "会費: {reunion_fee}\n"
-        "振込先: {transfer_bank} {transfer_branch}支店\n"
+        "振込先: {transfer_bank} {transfer_branch}（支店番号: {transfer_branch_number}）\n"
         "口座: {transfer_account_type}口座 {transfer_account_number}\n"
         "口座名義: {transfer_account_name}\n"
         "振込期限: {transfer_deadline}\n\n"
@@ -167,16 +167,20 @@ def _get_reunion_info() -> dict:
         s = AppSetting.query.filter_by(key=key).first()
         return s.value if (s and s.value) else fallback
     return {
-        "reunion_name":  get("reunion_name",  cfg.get("REUNION_NAME", "同窓会")),
-        "reunion_date":  get("reunion_date",  cfg.get("REUNION_DATE", "")),
-        "reunion_venue": get("reunion_venue", cfg.get("REUNION_VENUE", "")),
-        "reunion_fee":   get("reunion_fee",   cfg.get("REUNION_FEE", "")),
-        "transfer_bank":           get("transfer_bank", ""),
-        "transfer_branch":         get("transfer_branch", ""),
-        "transfer_account_type":   get("transfer_account_type", ""),
-        "transfer_account_number": get("transfer_account_number", ""),
-        "transfer_account_name":   get("transfer_account_name", ""),
-        "transfer_deadline":       get("transfer_deadline", ""),
+        "reunion_name":     get("reunion_name",     cfg.get("REUNION_NAME", "同窓会")),
+        "reunion_date":     get("reunion_date",     cfg.get("REUNION_DATE", "")),
+        "reunion_time":     get("reunion_time",     cfg.get("REUNION_TIME", "")),
+        "reunion_venue":    get("reunion_venue",    cfg.get("REUNION_VENUE", "")),
+        "reunion_fee":      get("reunion_fee",      cfg.get("REUNION_FEE", "")),
+        "dress_code":       get("dress_code",       cfg.get("DRESS_CODE", "")),
+        "belongings":       get("belongings",       cfg.get("BELONGINGS", "")),
+        "transfer_bank":           get("transfer_bank",           cfg.get("TRANSFER_BANK", "")),
+        "transfer_branch":         get("transfer_branch",         cfg.get("TRANSFER_BRANCH", "")),
+        "transfer_branch_number":  get("transfer_branch_number",  cfg.get("TRANSFER_BRANCH_NUMBER", "")),
+        "transfer_account_type":   get("transfer_account_type",   cfg.get("TRANSFER_ACCOUNT_TYPE", "")),
+        "transfer_account_number": get("transfer_account_number", cfg.get("TRANSFER_ACCOUNT_NUMBER", "")),
+        "transfer_account_name":   get("transfer_account_name",   cfg.get("TRANSFER_ACCOUNT_NAME", "")),
+        "transfer_deadline":       get("transfer_deadline",       cfg.get("TRANSFER_DEADLINE", "")),
     }
 
 
@@ -188,8 +192,11 @@ def _build_final_url_mail_body(participant_name: str, final_url: str, config=Non
         final_url=final_url,
         reunion_name=reunion["reunion_name"],
         reunion_date=reunion["reunion_date"],
+        reunion_time=reunion["reunion_time"],
         reunion_venue=reunion["reunion_venue"],
         reunion_fee=reunion["reunion_fee"],
+        dress_code=reunion["dress_code"],
+        belongings=reunion["belongings"],
     )
     subject = _render_template(
         _get_template('mail_final_url_subject', MAIL_DEFAULTS['mail_final_url_subject']),
@@ -210,8 +217,11 @@ def _build_reminder_mail_body(participant_name: str, final_url: str, config=None
         final_url=final_url,
         reunion_name=reunion["reunion_name"],
         reunion_date=reunion["reunion_date"],
+        reunion_time=reunion["reunion_time"],
         reunion_venue=reunion["reunion_venue"],
         reunion_fee=reunion["reunion_fee"],
+        dress_code=reunion["dress_code"],
+        belongings=reunion["belongings"],
     )
     subject = _render_template(
         _get_template('mail_reminder_subject', MAIL_DEFAULTS['mail_reminder_subject']),
@@ -328,7 +338,7 @@ def _dispatch_send(to_email: str, subject: str, body: str, mail_cfg: dict, attac
 def send_final_url(participant, final_url: str) -> MailLog:
     """参加者に本出欠URLを送信する。"""
     mail_cfg = _get_mail_config()
-    subject, body = _build_final_url_mail_body(participant.name, final_url)
+    subject, body = _build_final_url_mail_body(participant.display_name, final_url)
 
     log = MailLog(
         participant_id=participant.id,
@@ -362,8 +372,11 @@ def _build_provisional_confirm_body(participant_name: str, status_label: str, pr
         provisional_url=provisional_url,
         reunion_name=reunion["reunion_name"],
         reunion_date=reunion["reunion_date"],
+        reunion_time=reunion["reunion_time"],
         reunion_venue=reunion["reunion_venue"],
         reunion_fee=reunion["reunion_fee"],
+        dress_code=reunion["dress_code"],
+        belongings=reunion["belongings"],
     )
     subject = _render_template(
         _get_template('mail_provisional_confirm_subject',
@@ -387,10 +400,14 @@ def _build_final_confirm_body(participant_name: str, status_label: str, final_ur
         final_url=final_url,
         reunion_name=reunion["reunion_name"],
         reunion_date=reunion["reunion_date"],
+        reunion_time=reunion["reunion_time"],
         reunion_venue=reunion["reunion_venue"],
         reunion_fee=reunion["reunion_fee"],
+        dress_code=reunion["dress_code"],
+        belongings=reunion["belongings"],
         transfer_bank=reunion["transfer_bank"],
         transfer_branch=reunion["transfer_branch"],
+        transfer_branch_number=reunion["transfer_branch_number"],
         transfer_account_type=reunion["transfer_account_type"],
         transfer_account_number=reunion["transfer_account_number"],
         transfer_account_name=reunion["transfer_account_name"],
@@ -439,7 +456,7 @@ def send_provisional_confirmation(participant, status_label: str, provisional_ur
 def send_final_confirmation(participant, status_label: str, final_url: str) -> MailLog:
     """本出欠フォーム送信完了メールを送信する。"""
     mail_cfg = _get_mail_config()
-    subject, body = _build_final_confirm_body(participant.name, status_label, final_url)
+    subject, body = _build_final_confirm_body(participant.display_name, status_label, final_url)
 
     log = MailLog(
         participant_id=participant.id,
@@ -466,7 +483,7 @@ def send_final_confirmation(participant, status_label: str, final_url: str) -> M
 def send_reminder(participant, final_url: str) -> MailLog:
     """参加者にリマインドメールを送信する。"""
     mail_cfg = _get_mail_config()
-    subject, body = _build_reminder_mail_body(participant.name, final_url)
+    subject, body = _build_reminder_mail_body(participant.display_name, final_url)
 
     log = MailLog(
         participant_id=participant.id,
@@ -498,8 +515,11 @@ def _build_final_reminder_body(participant_name: str) -> tuple:
         name=participant_name,
         reunion_name=reunion["reunion_name"],
         reunion_date=reunion["reunion_date"],
+        reunion_time=reunion["reunion_time"],
         reunion_venue=reunion["reunion_venue"],
         reunion_fee=reunion["reunion_fee"],
+        dress_code=reunion["dress_code"],
+        belongings=reunion["belongings"],
     )
     subject = _render_template(
         _get_template('mail_final_reminder_subject',
@@ -517,7 +537,7 @@ def _build_final_reminder_body(participant_name: str) -> tuple:
 def send_final_reminder(participant, attachment_path: str = None) -> MailLog:
     """本出欠参加者に最終リマインドメール（PDF添付）を送信する。"""
     mail_cfg = _get_mail_config()
-    subject, body = _build_final_reminder_body(participant.name)
+    subject, body = _build_final_reminder_body(participant.display_name)
 
     log = MailLog(
         participant_id=participant.id,

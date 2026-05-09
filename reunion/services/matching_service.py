@@ -51,14 +51,25 @@ def _similarity_score(a: str, b: str) -> float:
 
 
 def _expected_transfer_name(participant) -> str:
-    """参加者の名簿情報から期待される振込名義を生成する"""
+    """参加者の期待振込名義（新カナ優先）を返す"""
     student_id = ""
     if participant.class_name and participant.student_number:
         student_id = f"{participant.class_name}{participant.student_number.zfill(2)}"
-    name_kana = participant.name_kana or ""
-    if student_id and name_kana:
-        return f"{student_id} {name_kana}"
-    return name_kana or participant.name or ""
+    kana = participant.display_name_kana or ""
+    if student_id and kana:
+        return f"{student_id} {kana}"
+    return kana or participant.display_name or ""
+
+
+def _alt_transfer_name(participant) -> str:
+    """旧カナによる照合候補（旧姓で振込む人向け）"""
+    student_id = ""
+    if participant.class_name and participant.student_number:
+        student_id = f"{participant.class_name}{participant.student_number.zfill(2)}"
+    kana = participant.name_kana or ""
+    if student_id and kana:
+        return f"{student_id} {kana}"
+    return kana or participant.name or ""
 
 
 def run_auto_matching(threshold: float = 0.8) -> dict:
@@ -81,9 +92,15 @@ def run_auto_matching(threshold: float = 0.8) -> dict:
             expected = _expected_transfer_name(participant)
             if expected:
                 candidate_names.append(expected)
-            # カナ氏名単体でも照合
+            # 旧カナでも照合（旧姓で振込む場合に対応）
+            alt = _alt_transfer_name(participant)
+            if alt and alt != expected:
+                candidate_names.append(alt)
+            # カナ氏名単体でも照合（新旧両方）
             if participant.name_kana:
                 candidate_names.append(participant.name_kana)
+            if participant.new_name_kana:
+                candidate_names.append(participant.new_name_kana)
 
             for name in candidate_names:
                 score = _similarity_score(bank_import.raw_name, name)
