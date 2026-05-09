@@ -2,7 +2,7 @@
 {% block title %}同窓会情報設定 | 同窓会管理{% endblock %}
 
 {% block content %}
-<h4 class="mb-4"><i class="bi bi-calendar-event me-2"></i>同窓会情報設定</h4>
+<h4 class="mb-3"><i class="bi bi-calendar-event me-2"></i>同窓会情報設定</h4>
 
 <p class="text-muted small mb-4">
   ここで設定した値がメール文章の変数として使われます。<br>
@@ -22,20 +22,20 @@
   <code>{transfer_deadline}</code> 振込期限
 </p>
 
-<div class="row">
-  <div class="col-md-6">
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    {% for category, message in messages %}
+      <div class="alert alert-{{ category }} py-2">{{ message }}</div>
+    {% endfor %}
+  {% endif %}
+{% endwith %}
 
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        {% for category, message in messages %}
-          <div class="alert alert-{{ category }} py-2">{{ message }}</div>
-        {% endfor %}
-      {% endif %}
-    {% endwith %}
+<form method="POST" action="{{ url_for('admin.settings_reunion') }}">
+  <div class="row g-4">
 
-    <form method="POST" action="{{ url_for('admin.settings_reunion') }}">
-
-      <div class="card">
+    <!-- 同窓会情報 -->
+    <div class="col-md-6">
+      <div class="card h-100">
         <div class="card-header fw-bold bg-light">同窓会情報</div>
         <div class="card-body">
 
@@ -90,8 +90,11 @@
 
         </div>
       </div>
+    </div>
 
-      <div class="card mt-4">
+    <!-- 振込先情報 -->
+    <div class="col-md-6">
+      <div class="card h-100">
         <div class="card-header fw-bold bg-light">振込先情報</div>
         <div class="card-body">
 
@@ -103,13 +106,13 @@
           </div>
 
           <div class="row mb-3">
-            <div class="col-md-8">
+            <div class="col-8">
               <label class="form-label fw-bold">支店名</label>
               <input type="text" class="form-control" name="transfer_branch"
                      value="{{ settings.get('transfer_branch', '') }}"
                      placeholder="〇〇">
             </div>
-            <div class="col-md-4">
+            <div class="col-4">
               <label class="form-label fw-bold">支店番号</label>
               <input type="text" class="form-control" name="transfer_branch_number"
                      value="{{ settings.get('transfer_branch_number', '') }}"
@@ -118,7 +121,7 @@
           </div>
 
           <div class="row mb-3">
-            <div class="col-md-4">
+            <div class="col-4">
               <label class="form-label fw-bold">口座種別</label>
               <select class="form-select" name="transfer_account_type">
                 {% set acct_type = settings.get('transfer_account_type', '普通') %}
@@ -127,7 +130,7 @@
                 <option value="貯蓄" {% if acct_type == '貯蓄' %}selected{% endif %}>貯蓄</option>
               </select>
             </div>
-            <div class="col-md-8">
+            <div class="col-8">
               <label class="form-label fw-bold">口座番号</label>
               <input type="text" class="form-control" name="transfer_account_number"
                      value="{{ settings.get('transfer_account_number', '') }}"
@@ -151,15 +154,19 @@
 
         </div>
       </div>
+    </div>
 
-      <div class="mt-3 d-flex gap-2">
-        <button type="submit" class="btn btn-primary">保存する</button>
-        <a href="{{ url_for('admin.settings_mail_template') }}" class="btn btn-outline-secondary">
-          <i class="bi bi-envelope-paper me-1"></i>メール文章を編集
-        </a>
-      </div>
-
-    </form>
   </div>
-</div>
+
+  <div class="mt-3 d-flex gap-2 flex-wrap">
+    <button type="submit" class="btn btn-primary">保存する</button>
+    <a href="{{ url_for('admin.settings_mail_template') }}" class="btn btn-outline-secondary">
+      <i class="bi bi-envelope-paper me-1"></i>メール文章を編集
+    </a>
+    <a href="{{ url_for('admin.settings_mail') }}" class="btn btn-outline-secondary">
+      <i class="bi bi-envelope-gear me-1"></i>メール送信設定
+    </a>
+  </div>
+
+</form>
 {% endblock %}
