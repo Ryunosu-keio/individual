@@ -182,7 +182,7 @@
           {% if not prov %}
           <form method="POST" action="{{ url_for('admin.send_provisional_reminder_single', participant_id=participant.id) }}"
                 onsubmit="return confirm('仮出欠リマインドを送信しますか？')">
-            <button type="submit" class="btn btn-outline-warning btn-sm">
+            <button type="submit" class="btn btn-info btn-sm text-white">
               <i class="bi bi-bell me-1"></i>仮出欠リマインド
             </button>
           </form>
@@ -200,7 +200,7 @@
           {% if participant.token and not final %}
           <form method="POST" action="{{ url_for('admin.send_reminder_single', participant_id=participant.id) }}"
                 onsubmit="return confirm('本出欠リマインドを送信しますか？')">
-            <button type="submit" class="btn btn-warning btn-sm">
+            <button type="submit" class="btn btn-primary btn-sm">
               <i class="bi bi-bell me-1"></i>本出欠リマインド
             </button>
           </form>
