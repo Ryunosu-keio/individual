@@ -1248,7 +1248,7 @@ def roster_import():
         return redirect(url_for("admin.participants") + "#csv")
 
     # ヘッダー行の検出と列インデックスの解決
-    NAME_HEADERS      = {"氏名", "名前", "name"}
+    NAME_HEADERS          = {"氏名", "名前", "name"}
     NAME_KANA_HEADERS     = {"氏名カナ", "氏名（カナ）", "フリガナ", "ふりがな", "kana", "name_kana"}
     NEW_NAME_HEADERS      = {"新氏名", "新名前", "new_name"}
     NEW_NAME_KANA_HEADERS = {"新氏名カナ", "新フリガナ", "new_name_kana"}
@@ -1257,6 +1257,14 @@ def roster_import():
     NUMBER_HEADERS        = {"出席番号", "番号", "number", "no"}
     ROLE_HEADERS          = {"役割", "role", "種別", "区分"}
     MEMO_HEADERS          = {"幹事メモ", "メモ", "memo", "備考"}
+    TOKEN_HEADERS         = {"トークン", "token"}
+    PROV_STATUS_HEADERS   = {"仮出欠", "provisional_status"}
+    FINAL_STATUS_HEADERS  = {"本出欠", "final_status"}
+    COMPANIONS_HEADERS    = {"同伴者数", "companions"}
+    TRANSFER_NAME_HEADERS = {"振込名義", "transfer_name"}
+    PAY_STATUS_HEADERS    = {"入金ステータス", "payment_status"}
+    PAID_AMOUNT_HEADERS   = {"入金金額", "paid_amount"}
+    PAYMENT_DATE_HEADERS  = {"支払日", "payment_date"}
 
     first = [h.strip().lower() for h in rows[0]]
     has_header = any(h in NAME_HEADERS or h in EMAIL_HEADERS for h in first)
@@ -1277,10 +1285,20 @@ def roster_import():
         idx_number        = find_idx(NUMBER_HEADERS)
         idx_role          = find_idx(ROLE_HEADERS)
         idx_memo          = find_idx(MEMO_HEADERS)
+        idx_token         = find_idx(TOKEN_HEADERS)
+        idx_prov_status   = find_idx(PROV_STATUS_HEADERS)
+        idx_final_status  = find_idx(FINAL_STATUS_HEADERS)
+        idx_companions    = find_idx(COMPANIONS_HEADERS)
+        idx_transfer_name = find_idx(TRANSFER_NAME_HEADERS)
+        idx_pay_status    = find_idx(PAY_STATUS_HEADERS)
+        idx_paid_amount   = find_idx(PAID_AMOUNT_HEADERS)
+        idx_payment_date  = find_idx(PAYMENT_DATE_HEADERS)
         data_rows         = rows[1:]
     else:
         # ヘッダーなし → 固定順: 氏名, 氏名カナ, 新氏名, 新氏名カナ, メール, クラス, 出席番号, 役割, 幹事メモ
         idx_name, idx_name_kana, idx_new_name, idx_new_name_kana, idx_email, idx_class, idx_number, idx_role, idx_memo = 0, 1, 2, 3, 4, 5, 6, 7, 8
+        idx_token = idx_prov_status = idx_final_status = None
+        idx_companions = idx_transfer_name = idx_pay_status = idx_paid_amount = idx_payment_date = None
         data_rows = rows
 
     if idx_name is None:
@@ -1295,8 +1313,16 @@ def roster_import():
     # 有効な役割値
     VALID_ROLES = {"生徒", "教師", "学年主任"}
 
+    PROV_STATUS_MAP  = {"参加": "attending", "不参加": "not_attending", "未定": "undecided",
+                        "attending": "attending", "not_attending": "not_attending", "undecided": "undecided"}
+    FINAL_STATUS_MAP = {"参加": "attending", "不参加": "not_attending",
+                        "attending": "attending", "not_attending": "not_attending"}
+    PAY_STATUS_MAP   = {"未払い": "unpaid", "支払済み": "paid", "一部支払い": "partial",
+                        "unpaid": "unpaid", "paid": "paid", "partial": "partial"}
+
     # CSVの行を先にパースしてから全削除→全追加
     import re
+    from datetime import date as date_type
     new_participants = []
     skipped = 0
 
@@ -1313,6 +1339,23 @@ def roster_import():
         number        = get_col(row, idx_number)
         role          = get_col(row, idx_role) or "生徒"
         memo          = get_col(row, idx_memo)
+        token         = get_col(row, idx_token)
+        prov_status   = PROV_STATUS_MAP.get(get_col(row, idx_prov_status), "")
+        final_status  = FINAL_STATUS_MAP.get(get_col(row, idx_final_status), "")
+        companions_raw = get_col(row, idx_companions)
+        companions    = int(companions_raw) if companions_raw.isdigit() else 0
+        transfer_name = get_col(row, idx_transfer_name)
+        pay_status    = PAY_STATUS_MAP.get(get_col(row, idx_pay_status), "")
+        paid_raw      = get_col(row, idx_paid_amount)
+        paid_amount   = int(paid_raw) if paid_raw.isdigit() else 0
+        pay_date_raw  = get_col(row, idx_payment_date)
+        payment_date  = None
+        if pay_date_raw:
+            try:
+                from datetime import datetime as dt
+                payment_date = dt.strptime(pay_date_raw, "%Y-%m-%d").date()
+            except ValueError:
+                pass
 
         if not name:
             skipped += 1
@@ -1342,6 +1385,10 @@ def roster_import():
             new_name=new_name, new_name_kana=new_name_kana,
             email=email, class_name=class_,
             student_number=number, role=role, teacher_memo=memo,
+            _token=token,
+            _prov_status=prov_status, _final_status=final_status,
+            _companions=companions, _transfer_name=transfer_name,
+            _pay_status=pay_status, _paid_amount=paid_amount, _payment_date=payment_date,
         ))
 
     # 全テーブルをリセットして再登録
@@ -1354,8 +1401,37 @@ def roster_import():
     Participant.query.delete()
     db.session.flush()
 
-    for p in new_participants:
-        db.session.add(Participant(**p))
+    for p_data in new_participants:
+        token         = p_data.pop("_token")
+        prov_status   = p_data.pop("_prov_status")
+        final_status  = p_data.pop("_final_status")
+        companions    = p_data.pop("_companions")
+        transfer_name = p_data.pop("_transfer_name")
+        pay_status    = p_data.pop("_pay_status")
+        paid_amount   = p_data.pop("_paid_amount")
+        payment_date  = p_data.pop("_payment_date")
+
+        p = Participant(**p_data)
+        if token:
+            p.token = token
+        db.session.add(p)
+        db.session.flush()
+
+        if prov_status:
+            db.session.add(ProvisionalResponse(participant_id=p.id, status=prov_status))
+
+        if final_status:
+            db.session.add(FinalResponse(
+                participant_id=p.id, status=final_status,
+                companions=companions, transfer_name=transfer_name,
+            ))
+            db.session.add(Payment(
+                participant_id=p.id,
+                payment_status=pay_status or "unpaid",
+                paid_amount=paid_amount,
+                payment_date=payment_date,
+                transfer_name=transfer_name,
+            ))
 
     db.session.commit()
     flash(f"名簿を全件上書きしました: {len(new_participants)} 名登録、{skipped} 行スキップ", "success")
@@ -1414,38 +1490,55 @@ def roster_delete(participant_id):
 @admin_bp.route("/roster/export")
 def roster_export():
     """
-    現在の参加者名簿をCSVでエクスポートする。
-    来年以降の同窓会で名簿として再利用できる形式で出力する。
-
-    出力列: 氏名, メールアドレス, 幹事メモ
+    現在の参加者名簿を全データ付きでCSVエクスポートする。
+    このCSVを再インポートすることで仮出欠・本出欠・入金状態を含め完全復元できる。
     """
-    participants = Participant.query.order_by(Participant.name).all()
+    from models import ProvisionalResponse, FinalResponse, Payment
+    participants = Participant.query.order_by(Participant.class_name, Participant.student_number).all()
 
     output = io.StringIO()
     writer = csv.writer(output)
 
-    # ヘッダー行（次回取込時にそのまま使えるフォーマット）
-    writer.writerow(["氏名", "氏名（カナ）", "メールアドレス", "クラス", "出席番号", "役割", "幹事メモ"])
+    writer.writerow([
+        "氏名", "氏名（カナ）", "新氏名", "新氏名カナ",
+        "メールアドレス", "クラス", "出席番号", "役割", "幹事メモ",
+        "トークン", "仮出欠", "本出欠", "同伴者数", "振込名義",
+        "入金ステータス", "入金金額", "支払日",
+    ])
+
+    PROV_LABELS  = {"attending": "参加", "not_attending": "不参加", "undecided": "未定"}
+    FINAL_LABELS = {"attending": "参加", "not_attending": "不参加"}
+    PAY_LABELS   = {"unpaid": "未払い", "paid": "支払済み", "partial": "一部支払い"}
 
     for p in participants:
         email_out = "" if p.email and "@placeholder.local" in p.email else (p.email or "")
+        prov  = p.latest_provisional
+        final = p.latest_final
+        pay   = p.payment
         writer.writerow([
             p.name,
             p.name_kana or "",
+            p.new_name or "",
+            p.new_name_kana or "",
             email_out,
             p.class_name or "",
             p.student_number or "",
             p.role or "生徒",
             p.teacher_memo or "",
+            p.token or "",
+            PROV_LABELS.get(prov.status, "")    if prov  else "",
+            FINAL_LABELS.get(final.status, "")  if final else "",
+            final.companions                    if final else "",
+            final.transfer_name                 if final else "",
+            PAY_LABELS.get(pay.payment_status, "") if pay else "",
+            pay.paid_amount                     if pay else "",
+            pay.payment_date.strftime("%Y-%m-%d") if (pay and pay.payment_date) else "",
         ])
 
     csv_content = output.getvalue()
 
     return Response(
-        # BOM付きUTF-8でExcelでも文字化けしない
         "\ufeff" + csv_content,
         mimetype="text/csv",
-        headers={
-            "Content-Disposition": "attachment; filename=roster_export.csv"
-        }
+        headers={"Content-Disposition": "attachment; filename=roster_export.csv"}
     )
