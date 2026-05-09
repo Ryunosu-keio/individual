@@ -132,7 +132,7 @@
           </div>
           <a href="{{ sort_url('role') }}"><i class="bi {{ sort_icon('role') }}"></i></a>
         </th>
-        <th>メール</th>
+        <th><a href="{{ sort_url('email') }}" class="text-decoration-none text-dark">メール <i class="bi {{ sort_icon('email') }}"></i></a></th>
         <th class="th-filter">
           <div class="dropdown d-inline">
             <a href="#" class="dropdown-toggle {{ 'filter-active' if status_filter != 'all' }}"
