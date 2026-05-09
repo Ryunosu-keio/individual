@@ -1,8 +1,27 @@
 {% extends "base.html" %}
-{% block title %}メール送信 | 同窓会管理{% endblock %}
+{% block title %}メール管理 | 同窓会管理{% endblock %}
 
 {% block content %}
-<h4 class="mb-4"><i class="bi bi-envelope-fill me-2"></i>メール送信</h4>
+<h4 class="mb-3"><i class="bi bi-envelope-fill me-2"></i>メール管理</h4>
+
+<!-- タブナビ -->
+<ul class="nav nav-tabs mb-4">
+  <li class="nav-item">
+    <a class="nav-link active" href="{{ url_for('admin.mail_hub') }}">
+      <i class="bi bi-send me-1"></i>メール送信
+    </a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link" href="{{ url_for('admin.settings_mail_template') }}">
+      <i class="bi bi-envelope-paper me-1"></i>メール文章編集
+    </a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link" href="{{ url_for('admin.settings_mail') }}">
+      <i class="bi bi-envelope-gear me-1"></i>メール設定
+    </a>
+  </li>
+</ul>
 
 <!-- フェーズ選択 -->
 <div class="card border-0 shadow-sm mb-4">
@@ -62,7 +81,7 @@
           <div class="text-muted small">
             <i class="bi bi-info-circle me-1"></i>
             テンプレートを編集するには
-            <a href="{{ url_for('admin.settings_mail_template') }}">メール文章編集</a>
+            <a href="{{ url_for('admin.settings_mail_template') }}">メール文章編集タブ</a>
             を開いてください。
           </div>
         </div>

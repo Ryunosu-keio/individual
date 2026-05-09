@@ -2,31 +2,56 @@
 {% block title %}メール文章編集 | 同窓会管理{% endblock %}
 
 {% block content %}
-<h4 class="mb-1"><i class="bi bi-envelope-paper me-2"></i>メール文章編集</h4>
+<h4 class="mb-3"><i class="bi bi-envelope-fill me-2"></i>メール管理</h4>
+
+<!-- タブナビ -->
+<ul class="nav nav-tabs mb-4">
+  <li class="nav-item">
+    <a class="nav-link" href="{{ url_for('admin.mail_hub') }}">
+      <i class="bi bi-send me-1"></i>メール送信
+    </a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link active" href="{{ url_for('admin.settings_mail_template') }}">
+      <i class="bi bi-envelope-paper me-1"></i>メール文章編集
+    </a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link" href="{{ url_for('admin.settings_mail') }}">
+      <i class="bi bi-envelope-gear me-1"></i>メール設定
+    </a>
+  </li>
+</ul>
+
+<p class="text-muted small mb-1"><i class="bi bi-envelope-paper me-1"></i>メール文章編集</p>
 <p class="text-muted small mb-4">
   使える変数:
-  <code>{name}</code> 氏名
-  <code>{status}</code> 回答内容（参加/不参加/未定）
-  <code>{provisional_url}</code> 仮出欠フォームURL
-  <code>{final_url}</code> 本出欠URL
-  <code>{reunion_name}</code> 同窓会名
-  <code>{reunion_date}</code> 日程
-  <code>{reunion_venue}</code> 会場
-  <code>{reunion_fee}</code> 会費<br>
-  <code>{transfer_bank}</code> 振込先銀行
-  <code>{transfer_branch}</code> 支店
-  <code>{transfer_account_type}</code> 口座種別
-  <code>{transfer_account_number}</code> 口座番号
-  <code>{transfer_account_name}</code> 口座名義
+  <code>{name}</code> 氏名 &nbsp;
+  <code>{status}</code> 回答内容 &nbsp;
+  <code>{provisional_url}</code> 仮出欠URL &nbsp;
+  <code>{final_url}</code> 本出欠URL<br>
+  <code>{reunion_name}</code> 同窓会名 &nbsp;
+  <code>{reunion_date}</code> 日程 &nbsp;
+  <code>{reunion_time}</code> 時刻 &nbsp;
+  <code>{reunion_venue}</code> 会場 &nbsp;
+  <code>{reunion_fee}</code> 会費 &nbsp;
+  <code>{dress_code}</code> 服装 &nbsp;
+  <code>{belongings}</code> 持ち物<br>
+  <code>{transfer_bank}</code> 振込先銀行 &nbsp;
+  <code>{transfer_branch}</code> 支店 &nbsp;
+  <code>{transfer_branch_number}</code> 支店番号 &nbsp;
+  <code>{transfer_account_type}</code> 口座種別 &nbsp;
+  <code>{transfer_account_number}</code> 口座番号 &nbsp;
+  <code>{transfer_account_name}</code> 口座名義 &nbsp;
   <code>{transfer_deadline}</code> 振込期限
 </p>
 
-<form method="POST" action="{{ url_for('admin.settings_mail_template') }}">
-  <div class="row g-4">
+<div class="row">
+  <div class="col-lg-8">
+    <form method="POST" action="{{ url_for('admin.settings_mail_template') }}">
 
-    <!-- 本出欠URL送信 -->
-    <div class="col-12">
-      <div class="card">
+      <!-- 本出欠URL送信 -->
+      <div class="card mb-4">
         <div class="card-header fw-bold bg-light">
           <i class="bi bi-send me-1"></i>本出欠URL送信メール
         </div>
@@ -43,11 +68,9 @@
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- 仮出欠送信完了 -->
-    <div class="col-12">
-      <div class="card">
+      <!-- 仮出欠送信完了 -->
+      <div class="card mb-4">
         <div class="card-header fw-bold bg-light">
           <i class="bi bi-check-circle me-1"></i>仮出欠 送信完了メール
         </div>
@@ -65,11 +88,9 @@
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- 本出欠送信完了 -->
-    <div class="col-12">
-      <div class="card">
+      <!-- 本出欠送信完了 -->
+      <div class="card mb-4">
         <div class="card-header fw-bold bg-light">
           <i class="bi bi-check-circle me-1"></i>本出欠 送信完了メール
         </div>
@@ -87,11 +108,9 @@
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- リマインド -->
-    <div class="col-12">
-      <div class="card">
+      <!-- リマインド -->
+      <div class="card mb-4">
         <div class="card-header fw-bold bg-light">
           <i class="bi bi-bell me-1"></i>リマインドメール
         </div>
@@ -108,16 +127,15 @@
           </div>
         </div>
       </div>
-    </div>
 
-  </div>
+      <div class="d-flex gap-2 flex-wrap">
+        <button type="submit" class="btn btn-primary">保存する</button>
+        <a href="{{ url_for('admin.settings_reunion') }}" class="btn btn-outline-secondary">
+          <i class="bi bi-calendar-event me-1"></i>同窓会情報を編集
+        </a>
+      </div>
 
-  <div class="mt-3 d-flex gap-2">
-    <button type="submit" class="btn btn-primary">保存する</button>
-    <a href="{{ url_for('admin.settings_mail') }}" class="btn btn-outline-secondary">メール設定へ</a>
-    <a href="{{ url_for('admin.settings_reunion') }}" class="btn btn-outline-secondary">
-      <i class="bi bi-calendar-event me-1"></i>同窓会情報を編集
-    </a>
+    </form>
   </div>
-</form>
+</div>
 {% endblock %}
