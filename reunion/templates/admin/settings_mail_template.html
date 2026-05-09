@@ -62,11 +62,15 @@
     </div>
     <div class="form-check">
       <input class="form-check-input" type="radio" name="mailSelect" id="sel_reminder" value="reminder">
-      <label class="form-check-label" for="sel_reminder">リマインド</label>
+      <label class="form-check-label" for="sel_reminder">本出欠リマインド</label>
     </div>
     <div class="form-check">
       <input class="form-check-input" type="radio" name="mailSelect" id="sel_final_confirm" value="final_confirm">
       <label class="form-check-label" for="sel_final_confirm">本出欠 送信完了</label>
+    </div>
+    <div class="form-check">
+      <input class="form-check-input" type="radio" name="mailSelect" id="sel_final_reminder" value="final_reminder">
+      <label class="form-check-label" for="sel_final_reminder">最終リマインド</label>
     </div>
   </div>
 </div>
@@ -158,11 +162,11 @@
         </div>
       </div>
 
-      <!-- リマインド -->
+      <!-- 本出欠リマインド -->
       <div id="section_reminder" class="mail-section d-none">
         <div class="card mb-4">
           <div class="card-header fw-bold bg-light">
-            <i class="bi bi-bell me-1"></i>リマインドメール
+            <i class="bi bi-bell me-1"></i>本出欠リマインドメール
           </div>
           <div class="card-body">
             <div class="mb-3">
@@ -173,6 +177,26 @@
             <div class="mb-0">
               <label class="form-label fw-bold">本文</label>
               <textarea class="form-control font-monospace auto-resize" name="mail_reminder_body">{{ settings.get('mail_reminder_body', '') }}</textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 最終リマインド -->
+      <div id="section_final_reminder" class="mail-section d-none">
+        <div class="card mb-4">
+          <div class="card-header fw-bold bg-light">
+            <i class="bi bi-envelope-fill me-1"></i>最終リマインドメール
+          </div>
+          <div class="card-body">
+            <div class="mb-3">
+              <label class="form-label fw-bold">件名</label>
+              <input type="text" class="form-control" name="mail_final_reminder_subject"
+                     value="{{ settings.get('mail_final_reminder_subject', '') }}">
+            </div>
+            <div class="mb-0">
+              <label class="form-label fw-bold">本文</label>
+              <textarea class="form-control font-monospace auto-resize" name="mail_final_reminder_body">{{ settings.get('mail_final_reminder_body', '') }}</textarea>
             </div>
           </div>
         </div>
