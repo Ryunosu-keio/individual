@@ -47,6 +47,12 @@
     <a href="{{ url_for('admin.roster_export') }}" class="btn btn-outline-secondary btn-sm">
       <i class="bi bi-download me-1"></i>CSVエクスポート
     </a>
+    <form method="POST" action="{{ url_for('admin.send_provisional_reminder_bulk') }}" class="d-inline"
+          onsubmit="return confirm('仮出欠未回答の方に一括送信します。よろしいですか？')">
+      <button type="submit" class="btn btn-outline-warning btn-sm">
+        <i class="bi bi-bell me-1"></i>仮出欠リマインド一括送信
+      </button>
+    </form>
     <form method="POST" action="{{ url_for('admin.send_final_url_bulk') }}" class="d-inline"
           onsubmit="return confirm('本出欠URL未送信の全員に一括送信します。よろしいですか？')">
       <button type="submit" class="btn btn-success btn-sm">
@@ -56,13 +62,13 @@
     <form method="POST" action="{{ url_for('admin.send_reminder_bulk') }}" class="d-inline"
           onsubmit="return confirm('本出欠URL送信済み＆未回答の方にリマインドを一括送信します。よろしいですか？')">
       <button type="submit" class="btn btn-warning btn-sm">
-        <i class="bi bi-bell-fill me-1"></i>リマインド一括送信
+        <i class="bi bi-bell-fill me-1"></i>本出欠リマインド一括送信
       </button>
     </form>
     <form method="POST" action="{{ url_for('admin.send_final_reminder_bulk') }}" class="d-inline"
           onsubmit="return confirm('本出欠参加者に最終リマインドメール（PDF添付）を送信します。よろしいですか？')">
       <button type="submit" class="btn btn-danger btn-sm">
-        <i class="bi bi-file-earmark-pdf me-1"></i>最終リマインド
+        <i class="bi bi-file-earmark-pdf me-1"></i>最終リマインド一括送信
       </button>
     </form>
   </div>
