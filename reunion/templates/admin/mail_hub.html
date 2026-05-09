@@ -32,7 +32,6 @@
         <label class="form-label fw-bold">メールの種類</label>
         <select id="mailType" class="form-select form-select-lg">
           <option value="">-- 選択してください --</option>
-          <option value="provisional_reminder">0. 仮出欠リマインド（仮出欠未回答の方へ）</option>
           <option value="final_url">1. 本出欠URL送信（仮出欠「参加」で未送信の方へ）</option>
           <option value="reminder">2. リマインド送信（本出欠URL送信済み・未回答の方へ）</option>
           <option value="final_reminder">3. 最終リマインド送信（本出欠「参加」の方へ）</option>
@@ -149,14 +148,12 @@ document.addEventListener('DOMContentLoaded', function() {
   const targetList = document.getElementById('targetList');
 
   const SEND_URLS = {
-    'provisional_reminder': '{{ url_for("admin.send_provisional_reminder_bulk") }}',
     'final_url': '{{ url_for("admin.send_final_url_bulk") }}',
     'reminder': '{{ url_for("admin.send_reminder_bulk") }}',
     'final_reminder': '{{ url_for("admin.send_final_reminder_bulk") }}',
   };
 
   const SEND_LABELS = {
-    'provisional_reminder': '仮出欠リマインドを一括送信',
     'final_url': '本出欠URLを一括送信',
     'reminder': 'リマインドメールを一括送信',
     'final_reminder': '最終リマインドメールを一括送信',

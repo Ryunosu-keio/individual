@@ -179,15 +179,6 @@
       <div class="card-body">
         <div class="d-flex gap-2 flex-wrap">
 
-          {% if not prov %}
-          <form method="POST" action="{{ url_for('admin.send_provisional_reminder_single', participant_id=participant.id) }}"
-                onsubmit="return confirm('仮出欠リマインドを送信しますか？')">
-            <button type="submit" class="btn btn-info btn-sm text-white">
-              <i class="bi bi-bell me-1"></i>仮出欠リマインド
-            </button>
-          </form>
-          {% endif %}
-
           {% if prov and prov.status == 'attending' %}
           <form method="POST" action="{{ url_for('admin.send_final_url_single', participant_id=participant.id) }}"
                 onsubmit="return confirm('本出欠URLを送信しますか？')">
@@ -216,7 +207,7 @@
           {% endif %}
 
         </div>
-        {% if not prov and not participant.token and not final %}
+        {% if (not prov or prov.status != 'attending') and not participant.token and not final %}
         <p class="text-muted small mb-0 mt-1">送信可能なメールはありません。</p>
         {% endif %}
       </div>
