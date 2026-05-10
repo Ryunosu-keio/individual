@@ -56,7 +56,8 @@
                   <option value="37">37</option>
                   <option value="38">38</option>
                   <option value="39">39</option>
-                  <option value="other">クラスが分からない / 教職員</option>
+                  <option value="teacher">教職員</option>
+                  <option value="other">クラスが分からない</option>
                 </select>
               </div>
 
@@ -65,7 +66,7 @@
                 <label for="name_select" class="form-label fw-bold">
                   お名前 <span class="text-danger">*</span>
                 </label>
-                <div class="form-text text-muted mb-1">※ 名前は当時の姓名で登録されています。（今後のメールでは連絡いただいた現在の姓名が反映されます。）</div>
+                <div class="form-text text-muted mb-1">※ 名前は当時の姓名で登録されています。</div>
                 <select class="form-select" id="name_select">
                   <option value="">-- 名前を選択 --</option>
                 </select>
@@ -168,7 +169,14 @@ function checkReady() {
       nameSelect.innerHTML = '<option value="">読み込み中...</option>';
       nameSelect.disabled = true;
 
-      if (!cls || cls === 'other') {
+      if (!cls) {
+        nameSelectGroup.classList.add('d-none');
+        nameTextGroup.classList.add('d-none');
+        checkReady();
+        return;
+      }
+
+      if (cls === 'other') {
         nameSelectGroup.classList.add('d-none');
         nameTextGroup.classList.remove('d-none');
         checkReady();
@@ -185,7 +193,8 @@ function checkReady() {
       names.forEach(function(p) {
         var opt = document.createElement('option');
         opt.value = p.id;
-        opt.textContent = p.name;
+        var isTeacher = p.role === '教師' || p.role === '学年主任';
+        opt.textContent = isTeacher ? p.name + ' 先生' : p.name;
         nameSelect.appendChild(opt);
         nameDataMap[p.id] = p;
       });

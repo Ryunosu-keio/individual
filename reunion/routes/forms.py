@@ -314,14 +314,25 @@ def final(token):
 def api_names():
     """クラスに属する生徒名一覧をJSON返却（仮出欠フォームのドロップダウン用）"""
     from flask import jsonify
+    from sqlalchemy import or_
     class_name = request.args.get("class", "").strip()
     if not class_name:
         return jsonify([])
-    participants = Participant.query.filter_by(
-        class_name=class_name, role="生徒"
-    ).all()
-    participants.sort(key=lambda p: (int(p.student_number) if p.student_number and p.student_number.isdigit() else 9999))
-    return jsonify([{"id": p.id, "name": p.name, "name_kana": p.name_kana or "", "number": p.student_number or ""} for p in participants])
+    if class_name == "teacher":
+        participants = Participant.query.filter(
+            or_(Participant.role == "教師", Participant.role == "学年主任")
+        ).all()
+        participants.sort(key=lambda p: p.name)
+    else:
+        students = Participant.query.filter_by(class_name=class_name, role="生徒").all()
+        students.sort(key=lambda p: (int(p.student_number) if p.student_number and p.student_number.isdigit() else 9999))
+        teachers = Participant.query.filter(
+            Participant.class_name == class_name,
+            Participant.role.in_(["教師", "学年主任"])
+        ).all()
+        teachers.sort(key=lambda p: p.name)
+        participants = students + teachers
+    return jsonify([{"id": p.id, "name": p.name, "role": p.role or "", "name_kana": p.name_kana or "", "number": p.student_number or ""} for p in participants])
 
 
 @forms_bp.route("/done")
