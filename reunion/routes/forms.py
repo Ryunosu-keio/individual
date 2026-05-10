@@ -314,13 +314,20 @@ def final(token):
 def api_names():
     """クラスに属する生徒名一覧をJSON返却（仮出欠フォームのドロップダウン用）"""
     from flask import jsonify
+    from sqlalchemy import or_
     class_name = request.args.get("class", "").strip()
     if not class_name:
         return jsonify([])
-    participants = Participant.query.filter_by(
-        class_name=class_name, role="生徒"
-    ).all()
-    participants.sort(key=lambda p: (int(p.student_number) if p.student_number and p.student_number.isdigit() else 9999))
+    if class_name == "teacher":
+        participants = Participant.query.filter(
+            or_(Participant.role == "教師", Participant.role == "学年主任")
+        ).all()
+        participants.sort(key=lambda p: p.name)
+    else:
+        participants = Participant.query.filter_by(
+            class_name=class_name, role="生徒"
+        ).all()
+        participants.sort(key=lambda p: (int(p.student_number) if p.student_number and p.student_number.isdigit() else 9999))
     return jsonify([{"id": p.id, "name": p.name, "name_kana": p.name_kana or "", "number": p.student_number or ""} for p in participants])
 
 
