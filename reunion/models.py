@@ -52,13 +52,13 @@ class Participant(db.Model):
 
     @property
     def display_name(self) -> str:
-        """メール・本出欠フォームで使う氏名（新氏名があれば新氏名、なければ旧氏名）"""
-        return self.new_name if self.new_name else self.name
+        """メール・本出欠フォームで使う氏名"""
+        return self.name
 
     @property
     def display_name_kana(self) -> str:
-        """振込名義等で使うカナ（新氏名カナがあれば新、なければ旧）"""
-        return self.new_name_kana if self.new_name_kana else self.name_kana
+        """振込名義等で使うカナ"""
+        return self.name_kana
 
     @property
     def latest_provisional(self):
