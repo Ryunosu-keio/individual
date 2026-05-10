@@ -324,11 +324,15 @@ def api_names():
         ).all()
         participants.sort(key=lambda p: p.name)
     else:
-        participants = Participant.query.filter_by(
-            class_name=class_name, role="生徒"
+        students = Participant.query.filter_by(class_name=class_name, role="生徒").all()
+        students.sort(key=lambda p: (int(p.student_number) if p.student_number and p.student_number.isdigit() else 9999))
+        teachers = Participant.query.filter(
+            Participant.class_name == class_name,
+            Participant.role.in_(["教師", "学年主任"])
         ).all()
-        participants.sort(key=lambda p: (int(p.student_number) if p.student_number and p.student_number.isdigit() else 9999))
-    return jsonify([{"id": p.id, "name": p.name, "name_kana": p.name_kana or "", "number": p.student_number or ""} for p in participants])
+        teachers.sort(key=lambda p: p.name)
+        participants = students + teachers
+    return jsonify([{"id": p.id, "name": p.name, "role": p.role or "", "name_kana": p.name_kana or "", "number": p.student_number or ""} for p in participants])
 
 
 @forms_bp.route("/done")
