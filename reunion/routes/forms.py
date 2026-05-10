@@ -318,20 +318,24 @@ def api_names():
     class_name = request.args.get("class", "").strip()
     if not class_name:
         return jsonify([])
+    def _teacher_sort_key(p):
+        role_order = 0 if p.role == "学年主任" else 1
+        num = int(p.student_number) if p.student_number and p.student_number.isdigit() else 9999
+        return (role_order, p.class_name or "", num)
+
     if class_name == "teacher":
         participants = Participant.query.filter(
             or_(Participant.role == "教師", Participant.role == "学年主任")
         ).all()
-        participants.sort(key=lambda p: p.name)
+        participants.sort(key=_teacher_sort_key)
     else:
         students = Participant.query.filter_by(class_name=class_name, role="生徒").all()
         students.sort(key=lambda p: (int(p.student_number) if p.student_number and p.student_number.isdigit() else 9999))
-        teachers = Participant.query.filter(
-            Participant.class_name == class_name,
-            Participant.role.in_(["教師", "学年主任"])
-        ).all()
-        teachers.sort(key=lambda p: p.name)
-        participants = students + teachers
+        # 学年主任（class_nameが空）＋当クラスの教師
+        heads = Participant.query.filter_by(role="学年主任").all()
+        class_teachers = Participant.query.filter_by(class_name=class_name, role="教師").all()
+        class_teachers.sort(key=lambda p: (int(p.student_number) if p.student_number and p.student_number.isdigit() else 9999))
+        participants = students + heads + class_teachers
     return jsonify([{"id": p.id, "name": p.name, "role": p.role or "", "name_kana": p.name_kana or "", "number": p.student_number or ""} for p in participants])
 
 
