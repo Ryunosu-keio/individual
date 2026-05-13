@@ -30,6 +30,11 @@
               同窓会への参加意思をお知らせください。<br>
               後日、本出欠フォームのご案内をお送りします。
             </p>
+            {% if locked %}
+            <div class="alert alert-danger">
+              <i class="bi bi-lock me-1"></i>仮出欠の回答期限を過ぎているため、受け付けを終了しました。
+            </div>
+            {% else %}
             {% if provisional_deadline %}
             <div class="alert alert-warning py-2 small">
               <i class="bi bi-clock me-1"></i>回答期限: <strong>{{ provisional_deadline }}</strong>
@@ -119,6 +124,7 @@
                 <button type="submit" class="btn btn-primary btn-lg" id="submitBtn" disabled>送信する</button>
               </div>
             </form>
+            {% endif %}
           </div>
         </div>
       </div>
