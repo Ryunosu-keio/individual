@@ -29,7 +29,7 @@ MAIL_DEFAULTS = {
     "mail_final_url_subject": "【{final_deadline_short} 23:59締切】【{reunion_name}】本出欠のご確認をお願いします",
     "mail_final_url_body": (
         "{name} 様\n\n"
-        "ご無沙汰しております。\n"
+        "お世話になっております。\n"
         "{reunion_name}幹事代表の{organizer_name}です。\n\n"
         "先日は仮出欠にご回答いただき、ありがとうございました。\n"
         "つきましては、本出欠フォームのURLをお送りします。\n\n"
@@ -56,7 +56,7 @@ MAIL_DEFAULTS = {
     "mail_reminder_subject": "【{final_deadline_short} 23:59締切】【{reunion_name}】本出欠のご回答をお願いします（リマインド）",
     "mail_reminder_body": (
         "{name} 様\n\n"
-        "ご無沙汰しております。\n"
+        "お世話になっております。\n"
         "{reunion_name}幹事代表の{organizer_name}です。\n\n"
         "先日お送りした本出欠フォームについて、改めてご連絡いたします。\n"
         "ご回答済みの方はご放念ください。\n\n"
@@ -108,7 +108,7 @@ MAIL_DEFAULTS = {
     "mail_final_reminder_subject": "【{reunion_name}】開催のご案内（最終リマインド）",
     "mail_final_reminder_body": (
         "{name} 様\n\n"
-        "ご無沙汰しております。\n"
+        "お世話になっております。\n"
         "{reunion_name}幹事代表の{organizer_name}です。\n\n"
         "本出欠にてご参加のご回答をいただき、ありがとうございます。\n"
         "開催が近づいてまいりましたので、最終のご案内をお送りいたします。\n\n"
@@ -154,7 +154,7 @@ MAIL_DEFAULTS = {
     "mail_final_url_subject_teacher": "【{final_deadline_short} 23:59締切】【{reunion_name}】ご出席のご確認をお願いいたします",
     "mail_final_url_body_teacher": (
         "{name} 先生\n\n"
-        "ご無沙汰しております。\n"
+        "お世話になっております。\n"
         "{reunion_name}幹事代表の{organizer_name}です。\n\n"
         "このたびは{reunion_name}を開催する運びとなりました。\n"
         "先生にもぜひご出席いただければ、生徒一同大変嬉しく思います。\n\n"
@@ -181,7 +181,7 @@ MAIL_DEFAULTS = {
     "mail_reminder_subject_teacher": "【{final_deadline_short} 23:59締切】【{reunion_name}】ご出席のご確認（リマインド）",
     "mail_reminder_body_teacher": (
         "{name} 先生\n\n"
-        "ご無沙汰しております。\n"
+        "お世話になっております。\n"
         "{reunion_name}幹事代表の{organizer_name}です。\n\n"
         "先日お送りした出欠フォームについて、改めてご連絡いたします。\n"
         "ご回答済みの場合はご放念ください。\n\n"
@@ -206,7 +206,7 @@ MAIL_DEFAULTS = {
     "mail_final_reminder_subject_teacher": "【{reunion_name}】開催のご案内（最終リマインド）",
     "mail_final_reminder_body_teacher": (
         "{name} 先生\n\n"
-        "ご無沙汰しております。\n"
+        "お世話になっております。\n"
         "{reunion_name}幹事代表の{organizer_name}です。\n\n"
         "ご出席のご回答をいただき、誠にありがとうございます。\n"
         "開催が近づいてまいりましたので、最終のご案内をお送りいたします。\n\n"
