@@ -28,10 +28,11 @@ MAIL_DEFAULTS = {
     "mail_final_url_subject": "【{reunion_name}】本出欠のご確認をお願いします",
     "mail_final_url_body": (
         "{name} 様\n\n"
-        "いつもお世話になっております。\n"
+        "ご無沙汰しております。\n"
         "{reunion_name}の幹事です。\n\n"
         "先日は仮出欠にご回答いただき、ありがとうございました。\n"
-        "つきましては、本出欠のご確認をお願いいたします。\n\n"
+        "つきましては、本出欠フォームのURLをお送りします。\n"
+        "ご都合のよい方は、下記URLより出欠のご確認をお願いいたします。\n\n"
         "━━━━━━━━━━━━━━━━━━━━\n"
         "■ 同窓会の詳細\n"
         "━━━━━━━━━━━━━━━━━━━━\n"
@@ -43,23 +44,25 @@ MAIL_DEFAULTS = {
         "━━━━━━━━━━━━━━━━━━━━\n"
         "■ 本出欠フォーム\n"
         "━━━━━━━━━━━━━━━━━━━━\n"
-        "下記URLより、出欠のご回答と会費のお振込をお願いいたします。\n"
+        "下記URLより出欠のご確認をお願いいたします。\n"
+        "（ご参加の場合は会費のお振込もこちらからご確認ください）\n"
         "{final_url}\n\n"
         "※このURLはあなた専用です。他の方には共有しないでください。\n"
         "※回答は何度でも変更できます。\n\n"
-        "ご不明な点がございましたら、お気軽にご連絡ください。\n"
-        "皆様のご参加を心よりお待ちしております。\n\n"
+        "ご不明な点がございましたら、お気軽にご連絡ください。\n\n"
         "──────────────────\n"
         "{reunion_name} 幹事"
     ),
     "mail_reminder_subject": "【{reunion_name}】本出欠のご回答がまだお済みでない方へ（リマインド）",
     "mail_reminder_body": (
         "{name} 様\n\n"
-        "いつもお世話になっております。\n"
+        "ご無沙汰しております。\n"
         "{reunion_name}の幹事です。\n\n"
-        "本出欠フォームをお送りしておりますが、\n"
+        "先日お送りした本出欠フォームについて、\n"
         "まだご回答をいただけていないようでしたので、\n"
-        "リマインドのご連絡を差し上げました。\n\n"
+        "ご連絡いたしました。\n\n"
+        "ご参加を予定されている方は、下記URLより出欠のご確認をお願いいたします。\n"
+        "ご欠席の方はご放念ください。\n\n"
         "━━━━━━━━━━━━━━━━━━━━\n"
         "■ 同窓会の詳細\n"
         "━━━━━━━━━━━━━━━━━━━━\n"
@@ -71,11 +74,9 @@ MAIL_DEFAULTS = {
         "━━━━━━━━━━━━━━━━━━━━\n"
         "■ 本出欠フォーム\n"
         "━━━━━━━━━━━━━━━━━━━━\n"
-        "下記URLより、出欠のご回答と会費のお振込をお願いいたします。\n"
         "{final_url}\n\n"
-        "※このURLはあなた専用です。他の方には共有しないでください。\n"
-        "※既にご回答済みの場合は、本メールは無視してください。\n\n"
-        "お忙しいところ恐れ入りますが、ご確認のほどよろしくお願いいたします。\n\n"
+        "※このURLはあなた専用です。他の方には共有しないでください。\n\n"
+        "お忙しいところ恐れ入りますが、よろしくお願いいたします。\n\n"
         "──────────────────\n"
         "{reunion_name} 幹事"
     ),
@@ -108,7 +109,7 @@ MAIL_DEFAULTS = {
     "mail_final_reminder_subject": "【{reunion_name}】開催のご案内（最終リマインド）",
     "mail_final_reminder_body": (
         "{name} 様\n\n"
-        "いつもお世話になっております。\n"
+        "ご無沙汰しております。\n"
         "{reunion_name}の幹事です。\n\n"
         "本出欠にてご参加のご回答をいただき、ありがとうございます。\n"
         "開催が近づいてまいりましたので、最終のご案内をお送りいたします。\n\n"
@@ -148,6 +149,84 @@ MAIL_DEFAULTS = {
         "──────────────────\n"
         "{reunion_name} 幹事"
     ),
+    # ── 先生向けテンプレート ──────────────────────────────
+    "mail_final_url_subject_teacher": "【{reunion_name}】ご出席のご確認をお願いいたします",
+    "mail_final_url_body_teacher": (
+        "{name} 先生\n\n"
+        "先生、ご無沙汰しております。\n"
+        "{reunion_name}の幹事（元生徒）です。\n\n"
+        "このたびは{reunion_name}を開催する運びとなりました。\n"
+        "先生にもぜひご出席いただければ、生徒一同大変嬉しく思います。\n\n"
+        "ご多用の中大変恐れ入りますが、ご都合がよろしければ\n"
+        "下記URLより出欠のご確認をお願いいたします。\n\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        "■ 同窓会の詳細\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        "日時: {reunion_date} {reunion_time}\n"
+        "会場: {reunion_venue}\n"
+        "服装: {dress_code}\n"
+        "持ち物: {belongings}\n"
+        "会費: {reunion_fee}\n\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        "■ 本出欠フォーム\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        "下記URLよりご確認をお願いいたします。\n"
+        "（ご参加の場合は会費のお振込もこちらからご確認ください）\n"
+        "{final_url}\n\n"
+        "※このURLはあなた専用です。他の方には共有しないでください。\n"
+        "※回答は何度でも変更できます。\n\n"
+        "先生のご出席を心よりお待ちしております。\n\n"
+        "──────────────────\n"
+        "{reunion_name} 幹事一同"
+    ),
+    "mail_reminder_subject_teacher": "【{reunion_name}】ご出席のご確認（リマインド）",
+    "mail_reminder_body_teacher": (
+        "{name} 先生\n\n"
+        "先生、ご無沙汰しております。\n"
+        "{reunion_name}の幹事です。\n\n"
+        "先日お送りした本出欠フォームについて、\n"
+        "まだご確認いただけていないようでしたのでご連絡いたしました。\n\n"
+        "ご多用の中お手数をおかけして恐れ入りますが、\n"
+        "ご参加いただける場合は下記URLよりご確認をお願いいたします。\n"
+        "ご欠席の場合はご放念ください。\n\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        "■ 同窓会の詳細\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        "日時: {reunion_date} {reunion_time}\n"
+        "会場: {reunion_venue}\n"
+        "服装: {dress_code}\n"
+        "持ち物: {belongings}\n"
+        "会費: {reunion_fee}\n\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        "■ 本出欠フォーム\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        "{final_url}\n\n"
+        "※このURLはあなた専用です。他の方には共有しないでください。\n\n"
+        "──────────────────\n"
+        "{reunion_name} 幹事一同"
+    ),
+    "mail_final_reminder_subject_teacher": "【{reunion_name}】開催のご案内（最終リマインド）",
+    "mail_final_reminder_body_teacher": (
+        "{name} 先生\n\n"
+        "先生、ご無沙汰しております。\n"
+        "{reunion_name}の幹事です。\n\n"
+        "本出欠にてご参加のご回答をいただき、誠にありがとうございます。\n"
+        "開催が近づいてまいりましたので、最終のご案内をお送りいたします。\n\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        "■ 同窓会の詳細\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        "日時: {reunion_date} {reunion_time}\n"
+        "会場: {reunion_venue}\n"
+        "服装: {dress_code}\n"
+        "持ち物: {belongings}\n"
+        "会費: {reunion_fee}\n\n"
+        "※詳細は添付のご案内PDFをご確認ください。\n\n"
+        "先生にお会いできることを楽しみにしております。\n\n"
+        "──────────────────\n"
+        "{reunion_name} 幹事一同"
+    ),
+    # ── ここまで先生向けテンプレート ─────────────────────────
+
     "mail_final_confirm_subject": "【{reunion_name}】本出欠を受け付けました",
     "mail_final_confirm_body": (
         "{name} 様\n\n"
@@ -186,6 +265,10 @@ MAIL_DEFAULTS = {
 }
 
 
+def _is_teacher(role: str) -> bool:
+    return role in ("教師", "学年主任", "副担任")
+
+
 def _render_template(template: str, **kwargs) -> str:
     """テンプレート文字列の {変数} を置換する"""
     for key, val in kwargs.items():
@@ -221,12 +304,14 @@ def _get_reunion_info() -> dict:
         "transfer_account_number": get("transfer_account_number", cfg.get("TRANSFER_ACCOUNT_NUMBER", "")),
         "transfer_account_name":   get("transfer_account_name",   cfg.get("TRANSFER_ACCOUNT_NAME", "")),
         "transfer_deadline":       get("transfer_deadline",       cfg.get("TRANSFER_DEADLINE", "")),
+        "organizer_name":          get("organizer_name",          cfg.get("ORGANIZER_NAME", "")),
     }
 
 
-def _build_final_url_mail_body(participant_name: str, final_url: str, config=None) -> tuple:
+def _build_final_url_mail_body(participant_name: str, final_url: str, role: str = "") -> tuple:
     """本出欠URL送信メールの件名・本文を生成する（DBテンプレート優先）"""
     reunion = _get_reunion_info()
+    teacher = _is_teacher(role)
     vars = dict(
         name=participant_name,
         final_url=final_url,
@@ -237,21 +322,19 @@ def _build_final_url_mail_body(participant_name: str, final_url: str, config=Non
         reunion_fee=reunion["reunion_fee"],
         dress_code=reunion["dress_code"],
         belongings=reunion["belongings"],
+        organizer_name=reunion["organizer_name"],
     )
-    subject = _render_template(
-        _get_template('mail_final_url_subject', MAIL_DEFAULTS['mail_final_url_subject']),
-        **vars
-    )
-    body = _render_template(
-        _get_template('mail_final_url_body', MAIL_DEFAULTS['mail_final_url_body']),
-        **vars
-    )
+    s_key = 'mail_final_url_subject_teacher' if teacher else 'mail_final_url_subject'
+    b_key = 'mail_final_url_body_teacher'    if teacher else 'mail_final_url_body'
+    subject = _render_template(_get_template(s_key, MAIL_DEFAULTS[s_key]), **vars)
+    body    = _render_template(_get_template(b_key, MAIL_DEFAULTS[b_key]), **vars)
     return subject, body
 
 
-def _build_reminder_mail_body(participant_name: str, final_url: str, config=None) -> tuple:
+def _build_reminder_mail_body(participant_name: str, final_url: str, role: str = "") -> tuple:
     """リマインドメールの件名・本文を生成する（DBテンプレート優先）"""
     reunion = _get_reunion_info()
+    teacher = _is_teacher(role)
     vars = dict(
         name=participant_name,
         final_url=final_url,
@@ -262,15 +345,12 @@ def _build_reminder_mail_body(participant_name: str, final_url: str, config=None
         reunion_fee=reunion["reunion_fee"],
         dress_code=reunion["dress_code"],
         belongings=reunion["belongings"],
+        organizer_name=reunion["organizer_name"],
     )
-    subject = _render_template(
-        _get_template('mail_reminder_subject', MAIL_DEFAULTS['mail_reminder_subject']),
-        **vars
-    )
-    body = _render_template(
-        _get_template('mail_reminder_body', MAIL_DEFAULTS['mail_reminder_body']),
-        **vars
-    )
+    s_key = 'mail_reminder_subject_teacher' if teacher else 'mail_reminder_subject'
+    b_key = 'mail_reminder_body_teacher'    if teacher else 'mail_reminder_body'
+    subject = _render_template(_get_template(s_key, MAIL_DEFAULTS[s_key]), **vars)
+    body    = _render_template(_get_template(b_key, MAIL_DEFAULTS[b_key]), **vars)
     return subject, body
 
 
@@ -410,7 +490,7 @@ def _dispatch_send(to_email: str, subject: str, body: str, mail_cfg: dict, attac
 def send_final_url(participant, final_url: str) -> MailLog:
     """参加者に本出欠URLを送信する。"""
     mail_cfg = _get_mail_config()
-    subject, body = _build_final_url_mail_body(participant.display_name, final_url)
+    subject, body = _build_final_url_mail_body(participant.display_name, final_url, role=participant.role or "")
 
     log = MailLog(
         participant_id=participant.id,
@@ -449,6 +529,7 @@ def _build_provisional_confirm_body(participant_name: str, status_label: str, pr
         reunion_fee=reunion["reunion_fee"],
         dress_code=reunion["dress_code"],
         belongings=reunion["belongings"],
+        organizer_name=reunion["organizer_name"],
     )
     subject = _render_template(
         _get_template('mail_provisional_confirm_subject',
@@ -477,6 +558,7 @@ def _build_final_confirm_body(participant_name: str, status_label: str, final_ur
         reunion_fee=reunion["reunion_fee"],
         dress_code=reunion["dress_code"],
         belongings=reunion["belongings"],
+        organizer_name=reunion["organizer_name"],
         transfer_bank=reunion["transfer_bank"],
         transfer_branch=reunion["transfer_branch"],
         transfer_branch_number=reunion["transfer_branch_number"],
@@ -514,6 +596,7 @@ def _build_provisional_reminder_body(participant_name: str, provisional_url: str
         reunion_fee=reunion["reunion_fee"],
         dress_code=reunion["dress_code"],
         belongings=reunion["belongings"],
+        organizer_name=reunion["organizer_name"],
     )
     subject = _render_template(
         _get_template('mail_provisional_reminder_subject',
@@ -613,7 +696,7 @@ def send_final_confirmation(participant, status_label: str, final_url: str) -> M
 def send_reminder(participant, final_url: str) -> MailLog:
     """参加者にリマインドメールを送信する。"""
     mail_cfg = _get_mail_config()
-    subject, body = _build_reminder_mail_body(participant.display_name, final_url)
+    subject, body = _build_reminder_mail_body(participant.display_name, final_url, role=participant.role or "")
 
     log = MailLog(
         participant_id=participant.id,
@@ -638,9 +721,10 @@ def send_reminder(participant, final_url: str) -> MailLog:
     return log
 
 
-def _build_final_reminder_body(participant_name: str) -> tuple:
+def _build_final_reminder_body(participant_name: str, role: str = "") -> tuple:
     """最終リマインドメールの件名・本文を生成する"""
     reunion = _get_reunion_info()
+    teacher = _is_teacher(role)
     vars = dict(
         name=participant_name,
         reunion_name=reunion["reunion_name"],
@@ -650,24 +734,19 @@ def _build_final_reminder_body(participant_name: str) -> tuple:
         reunion_fee=reunion["reunion_fee"],
         dress_code=reunion["dress_code"],
         belongings=reunion["belongings"],
+        organizer_name=reunion["organizer_name"],
     )
-    subject = _render_template(
-        _get_template('mail_final_reminder_subject',
-                      MAIL_DEFAULTS['mail_final_reminder_subject']),
-        **vars
-    )
-    body = _render_template(
-        _get_template('mail_final_reminder_body',
-                      MAIL_DEFAULTS['mail_final_reminder_body']),
-        **vars
-    )
+    s_key = 'mail_final_reminder_subject_teacher' if teacher else 'mail_final_reminder_subject'
+    b_key = 'mail_final_reminder_body_teacher'    if teacher else 'mail_final_reminder_body'
+    subject = _render_template(_get_template(s_key, MAIL_DEFAULTS[s_key]), **vars)
+    body    = _render_template(_get_template(b_key, MAIL_DEFAULTS[b_key]), **vars)
     return subject, body
 
 
 def send_final_reminder(participant, attachment_path: str = None) -> MailLog:
     """本出欠参加者に最終リマインドメール（PDF添付）を送信する。"""
     mail_cfg = _get_mail_config()
-    subject, body = _build_final_reminder_body(participant.display_name)
+    subject, body = _build_final_reminder_body(participant.display_name, role=participant.role or "")
 
     log = MailLog(
         participant_id=participant.id,

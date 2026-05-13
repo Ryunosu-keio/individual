@@ -132,6 +132,7 @@ class FinalResponse(db.Model):
     STATUS_LABELS = {
         "attending": "参加",
         "not_attending": "不参加",
+        "cancelled": "直前キャンセル",
     }
 
     @property

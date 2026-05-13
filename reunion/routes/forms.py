@@ -209,6 +209,18 @@ def provisional():
     return redirect(url_for("forms.done", type="provisional"))
 
 
+def _is_final_form_locked() -> bool:
+    """final_reminder_date を過ぎていたらフォームをロックする。未設定ならロックしない。"""
+    from datetime import date as _date
+    s = AppSetting.query.filter_by(key="final_reminder_date").first()
+    if not (s and s.value):
+        return False
+    try:
+        return _date.today() >= _date.fromisoformat(s.value)
+    except ValueError:
+        return False
+
+
 @forms_bp.route("/final/<token>", methods=["GET", "POST"])
 def final(token):
     """本出欠フォーム（トークン付きURL）"""
@@ -235,13 +247,38 @@ def final(token):
     kana = participant.display_name_kana
     default_transfer_name = f"{student_id} {kana}" if student_id and kana else kana or ""
 
+    locked = _is_final_form_locked()
+    can_cancel = locked and existing and existing.status == "attending"
+
     if request.method == "GET":
         return render_template("final_form.html",
                                participant=participant,
                                existing=existing,
                                token=token,
                                transfer_info=transfer_info,
-                               default_transfer_name=default_transfer_name)
+                               default_transfer_name=default_transfer_name,
+                               locked=locked,
+                               can_cancel=can_cancel)
+
+    # ロック中の制御
+    if locked:
+        if can_cancel and request.form.get("status") == "cancelled":
+            # 直前キャンセルのみ受け付ける
+            response = FinalResponse(
+                participant_id=participant.id,
+                status="cancelled",
+                submitted_at=datetime.utcnow(),
+                ip_address=request.remote_addr or "",
+            )
+            db.session.add(response)
+            participant.updated_at = datetime.utcnow()
+            db.session.commit()
+            logger.info(f"直前キャンセル: {participant.name} ({participant.email})")
+            flash("欠席のご連絡を受け付けました。", "success")
+            return redirect(url_for("forms.done", type="final"))
+        else:
+            flash("回答期限を過ぎているため変更できません。", "danger")
+            return redirect(url_for("forms.final", token=token))
 
     status        = request.form.get("status", "").strip()
     transfer_name = request.form.get("transfer_name", "").strip()

@@ -47,6 +47,14 @@
           </div>
 
           <div class="mb-3">
+            <label class="form-label fw-bold">幹事名 <code>{organizer_name}</code></label>
+            <input type="text" class="form-control" name="organizer_name"
+                   value="{{ settings.get('organizer_name', '') }}"
+                   placeholder="山田太郎">
+            <div class="form-text">「{organizer_name}の幹事です。」のように使います。</div>
+          </div>
+
+          <div class="mb-3">
             <label class="form-label fw-bold">日程</label>
             <input type="text" class="form-control" name="reunion_date"
                    value="{{ settings.get('reunion_date', '') }}"
@@ -88,12 +96,26 @@
                    placeholder="卒業アルバム など">
           </div>
 
-          <div class="mb-0">
+          <div class="mb-3">
             <label class="form-label fw-bold">仮出欠 回答期限</label>
             <input type="text" class="form-control" name="provisional_deadline"
                    value="{{ settings.get('provisional_deadline', '') }}"
                    placeholder="〇月〇日">
             <div class="form-text">仮出欠フォームに表示され、リマインドメールにも使われます。</div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-bold">本出欠 回答期限</label>
+            <input type="date" class="form-control" name="final_deadline"
+                   value="{{ settings.get('final_deadline', '') }}">
+            <div class="form-text">この日を過ぎると、未回答者がリマインド送信の対象になります。未設定の場合は期限なし（常に対象）として扱われます。</div>
+          </div>
+
+          <div class="mb-0">
+            <label class="form-label fw-bold">最終リマインド 送信日</label>
+            <input type="date" class="form-control" name="final_reminder_date"
+                   value="{{ settings.get('final_reminder_date', '') }}">
+            <div class="form-text">この日以降、本出欠参加確定者が最終リマインド送信の対象になります。未設定の場合は自動判定に含まれません。</div>
           </div>
 
         </div>
