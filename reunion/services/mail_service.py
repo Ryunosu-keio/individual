@@ -305,6 +305,7 @@ def _get_reunion_info() -> dict:
         "transfer_account_name":   get("transfer_account_name",   cfg.get("TRANSFER_ACCOUNT_NAME", "")),
         "transfer_deadline":       get("transfer_deadline",       cfg.get("TRANSFER_DEADLINE", "")),
         "organizer_name":          get("organizer_name",          cfg.get("ORGANIZER_NAME", "")),
+        "final_deadline":          get("final_deadline",          cfg.get("FINAL_DEADLINE", "")),
     }
 
 
@@ -323,6 +324,7 @@ def _build_final_url_mail_body(participant_name: str, final_url: str, role: str 
         dress_code=reunion["dress_code"],
         belongings=reunion["belongings"],
         organizer_name=reunion["organizer_name"],
+        final_deadline=reunion["final_deadline"],
     )
     s_key = 'mail_final_url_subject_teacher' if teacher else 'mail_final_url_subject'
     b_key = 'mail_final_url_body_teacher'    if teacher else 'mail_final_url_body'
@@ -346,6 +348,7 @@ def _build_reminder_mail_body(participant_name: str, final_url: str, role: str =
         dress_code=reunion["dress_code"],
         belongings=reunion["belongings"],
         organizer_name=reunion["organizer_name"],
+        final_deadline=reunion["final_deadline"],
     )
     s_key = 'mail_reminder_subject_teacher' if teacher else 'mail_reminder_subject'
     b_key = 'mail_reminder_body_teacher'    if teacher else 'mail_reminder_body'
@@ -735,6 +738,7 @@ def _build_final_reminder_body(participant_name: str, role: str = "") -> tuple:
         dress_code=reunion["dress_code"],
         belongings=reunion["belongings"],
         organizer_name=reunion["organizer_name"],
+        final_deadline=reunion["final_deadline"],
     )
     s_key = 'mail_final_reminder_subject_teacher' if teacher else 'mail_final_reminder_subject'
     b_key = 'mail_final_reminder_body_teacher'    if teacher else 'mail_final_reminder_body'
