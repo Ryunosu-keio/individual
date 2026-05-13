@@ -381,9 +381,10 @@ def _collect_pending_jobs(base_url: str) -> list:
 
     if _get_final_deadline_passed():
         for p in participants:
-            if any(ml.mail_type == "final_url" and ml.status in ("sent", "simulated") for ml in p.mail_logs):
-                if p.latest_final is None:
-                    jobs.append({"phase": "reminder", "pid": p.id, "final_url": generate_final_url(p, base_url)})
+            has_url = any(ml.mail_type == "final_url" and ml.status in ("sent", "simulated") for ml in p.mail_logs)
+            has_reminded = any(ml.mail_type == "reminder" and ml.status in ("sent", "simulated") for ml in p.mail_logs)
+            if has_url and not has_reminded:
+                jobs.append({"phase": "reminder", "pid": p.id, "final_url": generate_final_url(p, base_url)})
 
     if _get_final_reminder_date_passed():
         for p in participants:
@@ -514,7 +515,7 @@ def mail_hub():
 @admin_bp.route("/api/mail-preview/<mail_type>")
 def api_mail_preview(mail_type):
     """メール種別ごとのプレビュー・対象者リストをJSON返却"""
-    from services.mail_service import MAIL_DEFAULTS, _get_template, _get_reunion_info, _deadline_prefix
+    from services.mail_service import MAIL_DEFAULTS, _get_template, _get_reunion_info
 
     is_teacher = request.args.get("teacher", "0") == "1"
     reunion = _get_reunion_info()
@@ -565,6 +566,11 @@ def api_mail_preview(mail_type):
         "belongings": reunion["belongings"],
         "organizer_name": reunion["organizer_name"],
         "final_deadline": reunion["final_deadline"],
+        "final_deadline_short": reunion["final_deadline_short"],
+        "reminder_deadline": reunion["reminder_deadline"],
+        "reminder_deadline_short": reunion["reminder_deadline_short"],
+        "final_reminder_deadline": reunion["final_reminder_deadline"],
+        "final_reminder_deadline_short": reunion["final_reminder_deadline_short"],
         "final_url": f"{base_url}/form/final/（トークン）",
         "provisional_url": f"{base_url}/form/provisional",
         "status": "参加",
@@ -579,10 +585,6 @@ def api_mail_preview(mail_type):
     for k, v in preview_vars.items():
         subject_tmpl = subject_tmpl.replace("{" + k + "}", str(v))
         body_tmpl    = body_tmpl.replace("{" + k + "}", str(v))
-
-    # 締め切りプレフィックスをプレビュー件名にも付与
-    if mail_type in ("final_url", "reminder"):
-        subject_tmpl = _deadline_prefix(reunion["final_deadline"]) + subject_tmpl
 
     participants = Participant.query.filter(
         ~Participant.email.like("%@placeholder.local"),
@@ -601,11 +603,9 @@ def api_mail_preview(mail_type):
     elif mail_type == "reminder":
         if _get_final_deadline_passed():
             for p in participants:
-                has_sent = any(
-                    ml.mail_type == "final_url" and ml.status in ("sent", "simulated")
-                    for ml in p.mail_logs
-                )
-                if has_sent and p.latest_final is None:
+                has_url = any(ml.mail_type == "final_url" and ml.status in ("sent", "simulated") for ml in p.mail_logs)
+                has_reminded = any(ml.mail_type == "reminder" and ml.status in ("sent", "simulated") for ml in p.mail_logs)
+                if has_url and not has_reminded:
                     targets.append(p)
     elif mail_type == "final_reminder":
         if _get_final_reminder_date_passed():
@@ -788,7 +788,7 @@ def send_reminder_bulk():
     targets = [
         p for p in participants
         if any(ml.mail_type == "final_url" and ml.status in ("sent", "simulated") for ml in p.mail_logs)
-        and p.latest_final is None
+        and not any(ml.mail_type == "reminder" and ml.status in ("sent", "simulated") for ml in p.mail_logs)
     ]
 
     if not targets:
@@ -1223,7 +1223,8 @@ def settings_reunion():
     """同窓会情報設定画面"""
     KEYS = [
         "reunion_name", "organizer_name", "reunion_date", "reunion_time", "reunion_venue", "reunion_fee",
-        "dress_code", "belongings", "provisional_deadline", "final_deadline", "final_reminder_date",
+        "dress_code", "belongings", "provisional_deadline",
+        "final_deadline", "reminder_deadline", "final_reminder_deadline", "final_reminder_date",
         "transfer_bank", "transfer_branch", "transfer_branch_number",
         "transfer_account_type", "transfer_account_number", "transfer_account_name", "transfer_deadline",
     ]
