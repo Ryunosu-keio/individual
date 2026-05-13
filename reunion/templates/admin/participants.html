@@ -225,7 +225,10 @@
           {% endif %}
         </td>
         <td>
-          {% if p.payment %}
+          {% set final = p.latest_final %}
+          {% if final and final.status in ('not_attending', 'cancelled') %}
+            <span class="text-muted small">-</span>
+          {% elif p.payment %}
             {% if p.payment.payment_status == 'paid' %}<span class="badge bg-success">済</span>
             {% elif p.payment.payment_status == 'partial' %}<span class="badge bg-warning text-dark">一部</span>
             {% else %}<span class="badge bg-danger">未</span>{% endif %}

@@ -96,9 +96,10 @@ def index():
             final_url_unsent += 1
 
         if p.payment:
+            final_status = final.status if final else None
             if p.payment.payment_status == "paid":
                 paid_count += 1
-            else:
+            elif final_status not in ("not_attending", "cancelled"):
                 unpaid_count += 1
 
     no_email_count = Participant.query.filter(

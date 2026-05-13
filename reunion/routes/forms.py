@@ -324,12 +324,11 @@ def final(token):
     )
     db.session.add(response)
 
-    payment = participant.payment
-    if payment is None:
-        payment = Payment(participant_id=participant.id)
-        db.session.add(payment)
-
     if status == "attending":
+        payment = participant.payment
+        if payment is None:
+            payment = Payment(participant_id=participant.id)
+            db.session.add(payment)
         payment.expected_amount = payment_expected
         payment.payment_method  = "bank_transfer"
         payment.transfer_name   = transfer_name
