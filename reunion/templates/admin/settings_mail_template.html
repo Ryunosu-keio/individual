@@ -23,62 +23,100 @@
   </li>
 </ul>
 
-<p class="text-muted small mb-3">
-  使える変数:
-  <code>{name}</code> 氏名 &nbsp;
-  <code>{status}</code> 回答内容 &nbsp;
-  <code>{provisional_url}</code> 仮出欠URL &nbsp;
-  <code>{final_url}</code> 本出欠URL<br>
-  <code>{reunion_name}</code> 同窓会名 &nbsp;
-  <code>{reunion_date}</code> 日程 &nbsp;
-  <code>{reunion_time}</code> 時刻 &nbsp;
-  <code>{reunion_venue}</code> 会場 &nbsp;
-  <code>{reunion_fee}</code> 会費 &nbsp;
-  <code>{dress_code}</code> 服装 &nbsp;
-  <code>{belongings}</code> 持ち物<br>
-  <code>{transfer_bank}</code> 振込先銀行 &nbsp;
-  <code>{transfer_branch}</code> 支店 &nbsp;
-  <code>{transfer_branch_number}</code> 支店番号 &nbsp;
-  <code>{transfer_account_type}</code> 口座種別 &nbsp;
-  <code>{transfer_account_number}</code> 口座番号 &nbsp;
-  <code>{transfer_account_name}</code> 口座名義 &nbsp;
-  <code>{transfer_deadline}</code> 振込期限
-</p>
+<div class="card bg-light border-0 mb-4 p-3">
+  <div class="small text-muted mb-1 fw-bold">使える変数</div>
+  <div class="d-flex flex-wrap gap-2 small">
+    <span>氏名 <code>{name}</code></span>
+    <span>回答内容 <code>{status}</code></span>
+    <span>仮出欠URL <code>{provisional_url}</code></span>
+    <span>本出欠URL <code>{final_url}</code></span>
+  </div>
+  <hr class="my-2">
+  <div class="d-flex flex-wrap gap-2 small">
+    <span>同窓会名 <code>{reunion_name}</code></span>
+    <span>日程 <code>{reunion_date}</code></span>
+    <span>時刻 <code>{reunion_time}</code></span>
+    <span>会場 <code>{reunion_venue}</code></span>
+    <span>会費 <code>{reunion_fee}</code></span>
+    <span>服装 <code>{dress_code}</code></span>
+    <span>持ち物 <code>{belongings}</code></span>
+  </div>
+  <hr class="my-2">
+  <div class="d-flex flex-wrap gap-2 small">
+    <span>振込先銀行 <code>{transfer_bank}</code></span>
+    <span>支店 <code>{transfer_branch}</code></span>
+    <span>支店番号 <code>{transfer_branch_number}</code></span>
+    <span>口座種別 <code>{transfer_account_type}</code></span>
+    <span>口座番号 <code>{transfer_account_number}</code></span>
+    <span>口座名義 <code>{transfer_account_name}</code></span>
+    <span>振込期限 <code>{transfer_deadline}</code></span>
+  </div>
+</div>
 
 <!-- メール種類の選択 -->
 <div class="mb-4">
-  <div class="d-flex gap-3 flex-wrap">
-    <div class="form-check">
-      <input class="form-check-input" type="radio" name="mailSelect" id="sel_provisional_confirm" value="provisional_confirm" checked>
-      <label class="form-check-label" for="sel_provisional_confirm">仮出欠 送信完了</label>
+  <div class="row g-2">
+    <!-- 仮出欠 -->
+    <div class="col-12">
+      <div class="text-muted small fw-bold mb-1">仮出欠</div>
+      <div class="d-flex gap-3 flex-wrap">
+        <div class="form-check">
+          <input class="form-check-input" type="radio" name="mailSelect" id="sel_provisional_confirm" value="provisional_confirm" checked>
+          <label class="form-check-label" for="sel_provisional_confirm">送信完了</label>
+        </div>
+      </div>
     </div>
-    <div class="form-check">
-      <input class="form-check-input" type="radio" name="mailSelect" id="sel_final_url" value="final_url">
-      <label class="form-check-label" for="sel_final_url">本出欠URL送信</label>
+    <!-- 本出欠URL送信 -->
+    <div class="col-12 mt-2">
+      <div class="text-muted small fw-bold mb-1">本出欠URL送信</div>
+      <div class="d-flex gap-3 flex-wrap">
+        <div class="form-check">
+          <input class="form-check-input" type="radio" name="mailSelect" id="sel_final_url" value="final_url">
+          <label class="form-check-label" for="sel_final_url">生徒用</label>
+        </div>
+        <div class="form-check">
+          <input class="form-check-input" type="radio" name="mailSelect" id="sel_final_url_teacher" value="final_url_teacher">
+          <label class="form-check-label" for="sel_final_url_teacher">先生用</label>
+        </div>
+      </div>
     </div>
-    <div class="form-check">
-      <input class="form-check-input" type="radio" name="mailSelect" id="sel_final_url_teacher" value="final_url_teacher">
-      <label class="form-check-label" for="sel_final_url_teacher">本出欠URL送信（先生用）</label>
+    <!-- 本出欠リマインド -->
+    <div class="col-12 mt-2">
+      <div class="text-muted small fw-bold mb-1">本出欠リマインド</div>
+      <div class="d-flex gap-3 flex-wrap">
+        <div class="form-check">
+          <input class="form-check-input" type="radio" name="mailSelect" id="sel_reminder" value="reminder">
+          <label class="form-check-label" for="sel_reminder">生徒用</label>
+        </div>
+        <div class="form-check">
+          <input class="form-check-input" type="radio" name="mailSelect" id="sel_reminder_teacher" value="reminder_teacher">
+          <label class="form-check-label" for="sel_reminder_teacher">先生用</label>
+        </div>
+      </div>
     </div>
-    <div class="form-check">
-      <input class="form-check-input" type="radio" name="mailSelect" id="sel_reminder" value="reminder">
-      <label class="form-check-label" for="sel_reminder">本出欠リマインド</label>
+    <!-- 本出欠 送信完了 -->
+    <div class="col-12 mt-2">
+      <div class="text-muted small fw-bold mb-1">本出欠 送信完了</div>
+      <div class="d-flex gap-3 flex-wrap">
+        <div class="form-check">
+          <input class="form-check-input" type="radio" name="mailSelect" id="sel_final_confirm" value="final_confirm">
+          <label class="form-check-label" for="sel_final_confirm">共通</label>
+        </div>
+      </div>
     </div>
-    <div class="form-check">
-      <input class="form-check-input" type="radio" name="mailSelect" id="sel_reminder_teacher" value="reminder_teacher">
-      <label class="form-check-label" for="sel_reminder_teacher">本出欠リマインド（先生用）</label>
-    </div>
-    <div class="form-check">
-      <input class="form-check-input" type="radio" name="mailSelect" id="sel_final_confirm" value="final_confirm">
-      <label class="form-check-label" for="sel_final_confirm">本出欠 送信完了</label>
-    </div>
-    <div class="form-check">
-      <input class="form-check-input" type="radio" name="mailSelect" id="sel_final_reminder" value="final_reminder">
-      <label class="form-check-label" for="sel_final_reminder">最終リマインド</label>
-    </div>
-    <div class="form-check">
-      <input class="form-check-input" type="radio" name="mailSelect" id="sel_final_reminder_teacher" value="final_reminder_teacher">
-      <label class="form-check-label" for="sel_final_reminder_teacher">最終リマインド（先生用）</label>
+    <!-- 最終リマインド -->
+    <div class="col-12 mt-2">
+      <div class="text-muted small fw-bold mb-1">最終リマインド</div>
+      <div class="d-flex gap-3 flex-wrap">
+        <div class="form-check">
+          <input class="form-check-input" type="radio" name="mailSelect" id="sel_final_reminder" value="final_reminder">
+          <label class="form-check-label" for="sel_final_reminder">生徒用</label>
+        </div>
+        <div class="form-check">
+          <input class="form-check-input" type="radio" name="mailSelect" id="sel_final_reminder_teacher" value="final_reminder_teacher">
+          <label class="form-check-label" for="sel_final_reminder_teacher">先生用</label>
+        </div>
+      </div>
     </div>
   </div>
 </div>
