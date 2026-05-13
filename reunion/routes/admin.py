@@ -515,7 +515,7 @@ def mail_hub():
 @admin_bp.route("/api/mail-preview/<mail_type>")
 def api_mail_preview(mail_type):
     """メール種別ごとのプレビュー・対象者リストをJSON返却"""
-    from services.mail_service import MAIL_DEFAULTS, _get_template, _get_reunion_info
+    from services.mail_service import MAIL_DEFAULTS, _get_template, _get_reunion_info, _get_mail_config
 
     is_teacher = request.args.get("teacher", "0") == "1"
     reunion = _get_reunion_info()
@@ -583,6 +583,11 @@ def api_mail_preview(mail_type):
     for k, v in preview_vars.items():
         subject_tmpl = subject_tmpl.replace("{" + k + "}", str(v))
         body_tmpl    = body_tmpl.replace("{" + k + "}", str(v))
+
+    mail_cfg = _get_mail_config()
+    from_addr = mail_cfg.get("from_addr", "")
+    if from_addr:
+        body_tmpl = body_tmpl.rstrip("\n") + f"\nE-mail: {from_addr}\n"
 
     participants = Participant.query.filter(
         ~Participant.email.like("%@placeholder.local"),
