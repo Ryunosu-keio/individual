@@ -273,6 +273,18 @@ def _is_teacher(role: str) -> bool:
     return role in ("教師", "学年主任", "副担任")
 
 
+def _deadline_prefix(deadline: str) -> str:
+    """final_deadlineからメール件名用プレフィックスを生成。例: 【8/31締め切り】"""
+    if not deadline:
+        return ""
+    try:
+        from datetime import date as _date
+        d = _date.fromisoformat(deadline)
+        return f"【{d.month}/{d.day}締め切り】"
+    except ValueError:
+        return ""
+
+
 def _render_template(template: str, **kwargs) -> str:
     """テンプレート文字列の {変数} を置換する"""
     for key, val in kwargs.items():
@@ -332,7 +344,7 @@ def _build_final_url_mail_body(participant_name: str, final_url: str, role: str 
     )
     s_key = 'mail_final_url_subject_teacher' if teacher else 'mail_final_url_subject'
     b_key = 'mail_final_url_body_teacher'    if teacher else 'mail_final_url_body'
-    subject = _render_template(_get_template(s_key, MAIL_DEFAULTS[s_key]), **vars)
+    subject = _deadline_prefix(reunion["final_deadline"]) + _render_template(_get_template(s_key, MAIL_DEFAULTS[s_key]), **vars)
     body    = _render_template(_get_template(b_key, MAIL_DEFAULTS[b_key]), **vars)
     return subject, body
 
@@ -356,7 +368,7 @@ def _build_reminder_mail_body(participant_name: str, final_url: str, role: str =
     )
     s_key = 'mail_reminder_subject_teacher' if teacher else 'mail_reminder_subject'
     b_key = 'mail_reminder_body_teacher'    if teacher else 'mail_reminder_body'
-    subject = _render_template(_get_template(s_key, MAIL_DEFAULTS[s_key]), **vars)
+    subject = _deadline_prefix(reunion["final_deadline"]) + _render_template(_get_template(s_key, MAIL_DEFAULTS[s_key]), **vars)
     body    = _render_template(_get_template(b_key, MAIL_DEFAULTS[b_key]), **vars)
     return subject, body
 
