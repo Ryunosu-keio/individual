@@ -256,7 +256,7 @@ def _is_teacher(role: str) -> bool:
 
 
 def _format_deadline_short(deadline: str) -> str:
-    """final_deadlineを m/d 形式に変換する。未設定なら空文字。"""
+    """ISO日付を m/d 形式に変換する。未設定なら空文字。"""
     if not deadline:
         return ""
     try:
@@ -265,6 +265,18 @@ def _format_deadline_short(deadline: str) -> str:
         return f"{d.month}/{d.day}"
     except ValueError:
         return ""
+
+
+def _format_deadline_jp(deadline: str) -> str:
+    """ISO日付を M月D日 形式に変換する。未設定なら空文字。"""
+    if not deadline:
+        return ""
+    try:
+        from datetime import date as _date
+        d = _date.fromisoformat(deadline)
+        return f"{d.month}月{d.day}日"
+    except ValueError:
+        return deadline
 
 
 def _render_template(template: str, **kwargs) -> str:
@@ -640,7 +652,7 @@ def _build_final_confirm_body(participant_name: str, status_label: str, final_ur
 def _build_provisional_reminder_body(participant_name: str, provisional_url: str) -> tuple:
     """仮出欠リマインドメールの件名・本文を生成する"""
     reunion = _get_reunion_info()
-    deadline = reunion.get("provisional_deadline", "")
+    deadline = _format_deadline_jp(reunion.get("provisional_deadline", ""))
     deadline_line = f"※ 回答期限: {deadline}\n\n" if deadline else ""
     vars = dict(
         name=participant_name,
