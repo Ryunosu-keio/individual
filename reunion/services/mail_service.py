@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 # デフォルトテンプレート（DB未設定時に使用される）
 MAIL_DEFAULTS = {
-    "mail_final_url_subject": "【{reunion_name}】本出欠のご確認をお願いします",
+    "mail_final_url_subject": "【{final_deadline_short}締め切り】【{reunion_name}】本出欠のご確認をお願いします",
     "mail_final_url_body": (
         "{name} 様\n\n"
         "ご無沙汰しております。\n"
@@ -54,7 +54,7 @@ MAIL_DEFAULTS = {
         "──────────────────\n"
         "{reunion_name} 幹事"
     ),
-    "mail_reminder_subject": "【{reunion_name}】本出欠のご回答がまだお済みでない方へ（リマインド）",
+    "mail_reminder_subject": "【{final_deadline_short}締め切り】【{reunion_name}】本出欠のご回答がまだお済みでない方へ（リマインド）",
     "mail_reminder_body": (
         "{name} 様\n\n"
         "ご無沙汰しております。\n"
@@ -152,7 +152,7 @@ MAIL_DEFAULTS = {
         "{reunion_name} 幹事"
     ),
     # ── 先生向けテンプレート ──────────────────────────────
-    "mail_final_url_subject_teacher": "【{reunion_name}】ご出席のご確認をお願いいたします",
+    "mail_final_url_subject_teacher": "【{final_deadline_short}締め切り】【{reunion_name}】ご出席のご確認をお願いいたします",
     "mail_final_url_body_teacher": (
         "{name} 先生\n\n"
         "先生、ご無沙汰しております。\n"
@@ -182,7 +182,7 @@ MAIL_DEFAULTS = {
         "──────────────────\n"
         "{reunion_name} 幹事一同"
     ),
-    "mail_reminder_subject_teacher": "【{reunion_name}】ご出席のご確認（リマインド）",
+    "mail_reminder_subject_teacher": "【{final_deadline_short}締め切り】【{reunion_name}】ご出席のご確認（リマインド）",
     "mail_reminder_body_teacher": (
         "{name} 先生\n\n"
         "先生、ご無沙汰しております。\n"
@@ -273,14 +273,14 @@ def _is_teacher(role: str) -> bool:
     return role in ("教師", "学年主任", "副担任")
 
 
-def _deadline_prefix(deadline: str) -> str:
-    """final_deadlineからメール件名用プレフィックスを生成。例: 【8/31締め切り】"""
+def _format_deadline_short(deadline: str) -> str:
+    """final_deadlineを m/d 形式に変換する。未設定なら空文字。"""
     if not deadline:
         return ""
     try:
         from datetime import date as _date
         d = _date.fromisoformat(deadline)
-        return f"【{d.month}/{d.day}締め切り】"
+        return f"{d.month}/{d.day}"
     except ValueError:
         return ""
 
@@ -304,7 +304,7 @@ def _get_reunion_info() -> dict:
     def get(key, fallback):
         s = AppSetting.query.filter_by(key=key).first()
         return s.value if (s and s.value) else fallback
-    return {
+    info = {
         "reunion_name":     get("reunion_name",     cfg.get("REUNION_NAME", "同窓会")),
         "reunion_date":     get("reunion_date",     cfg.get("REUNION_DATE", "")),
         "reunion_time":     get("reunion_time",     cfg.get("REUNION_TIME", "")),
@@ -323,6 +323,8 @@ def _get_reunion_info() -> dict:
         "organizer_name":          get("organizer_name",          cfg.get("ORGANIZER_NAME", "")),
         "final_deadline":          get("final_deadline",          cfg.get("FINAL_DEADLINE", "")),
     }
+    info["final_deadline_short"] = _format_deadline_short(info["final_deadline"])
+    return info
 
 
 def _build_final_url_mail_body(participant_name: str, final_url: str, role: str = "") -> tuple:
@@ -341,10 +343,11 @@ def _build_final_url_mail_body(participant_name: str, final_url: str, role: str 
         belongings=reunion["belongings"],
         organizer_name=reunion["organizer_name"],
         final_deadline=reunion["final_deadline"],
+        final_deadline_short=reunion["final_deadline_short"],
     )
     s_key = 'mail_final_url_subject_teacher' if teacher else 'mail_final_url_subject'
     b_key = 'mail_final_url_body_teacher'    if teacher else 'mail_final_url_body'
-    subject = _deadline_prefix(reunion["final_deadline"]) + _render_template(_get_template(s_key, MAIL_DEFAULTS[s_key]), **vars)
+    subject = _render_template(_get_template(s_key, MAIL_DEFAULTS[s_key]), **vars)
     body    = _render_template(_get_template(b_key, MAIL_DEFAULTS[b_key]), **vars)
     return subject, body
 
@@ -365,10 +368,11 @@ def _build_reminder_mail_body(participant_name: str, final_url: str, role: str =
         belongings=reunion["belongings"],
         organizer_name=reunion["organizer_name"],
         final_deadline=reunion["final_deadline"],
+        final_deadline_short=reunion["final_deadline_short"],
     )
     s_key = 'mail_reminder_subject_teacher' if teacher else 'mail_reminder_subject'
     b_key = 'mail_reminder_body_teacher'    if teacher else 'mail_reminder_body'
-    subject = _deadline_prefix(reunion["final_deadline"]) + _render_template(_get_template(s_key, MAIL_DEFAULTS[s_key]), **vars)
+    subject = _render_template(_get_template(s_key, MAIL_DEFAULTS[s_key]), **vars)
     body    = _render_template(_get_template(b_key, MAIL_DEFAULTS[b_key]), **vars)
     return subject, body
 
@@ -549,6 +553,8 @@ def _build_provisional_confirm_body(participant_name: str, status_label: str, pr
         dress_code=reunion["dress_code"],
         belongings=reunion["belongings"],
         organizer_name=reunion["organizer_name"],
+        final_deadline=reunion["final_deadline"],
+        final_deadline_short=reunion["final_deadline_short"],
     )
     subject = _render_template(
         _get_template('mail_provisional_confirm_subject',
@@ -585,6 +591,8 @@ def _build_final_confirm_body(participant_name: str, status_label: str, final_ur
         transfer_account_number=reunion["transfer_account_number"],
         transfer_account_name=reunion["transfer_account_name"],
         transfer_deadline=reunion["transfer_deadline"],
+        final_deadline=reunion["final_deadline"],
+        final_deadline_short=reunion["final_deadline_short"],
     )
     subject = _render_template(
         _get_template('mail_final_confirm_subject',
@@ -616,6 +624,8 @@ def _build_provisional_reminder_body(participant_name: str, provisional_url: str
         dress_code=reunion["dress_code"],
         belongings=reunion["belongings"],
         organizer_name=reunion["organizer_name"],
+        final_deadline=reunion["final_deadline"],
+        final_deadline_short=reunion["final_deadline_short"],
     )
     subject = _render_template(
         _get_template('mail_provisional_reminder_subject',
@@ -755,6 +765,7 @@ def _build_final_reminder_body(participant_name: str, role: str = "") -> tuple:
         belongings=reunion["belongings"],
         organizer_name=reunion["organizer_name"],
         final_deadline=reunion["final_deadline"],
+        final_deadline_short=reunion["final_deadline_short"],
     )
     s_key = 'mail_final_reminder_subject_teacher' if teacher else 'mail_final_reminder_subject'
     b_key = 'mail_final_reminder_body_teacher'    if teacher else 'mail_final_reminder_body'

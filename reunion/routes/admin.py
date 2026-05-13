@@ -514,7 +514,7 @@ def mail_hub():
 @admin_bp.route("/api/mail-preview/<mail_type>")
 def api_mail_preview(mail_type):
     """メール種別ごとのプレビュー・対象者リストをJSON返却"""
-    from services.mail_service import MAIL_DEFAULTS, _get_template, _get_reunion_info, _deadline_prefix
+    from services.mail_service import MAIL_DEFAULTS, _get_template, _get_reunion_info
 
     is_teacher = request.args.get("teacher", "0") == "1"
     reunion = _get_reunion_info()
@@ -565,6 +565,7 @@ def api_mail_preview(mail_type):
         "belongings": reunion["belongings"],
         "organizer_name": reunion["organizer_name"],
         "final_deadline": reunion["final_deadline"],
+        "final_deadline_short": reunion["final_deadline_short"],
         "final_url": f"{base_url}/form/final/（トークン）",
         "provisional_url": f"{base_url}/form/provisional",
         "status": "参加",
@@ -579,10 +580,6 @@ def api_mail_preview(mail_type):
     for k, v in preview_vars.items():
         subject_tmpl = subject_tmpl.replace("{" + k + "}", str(v))
         body_tmpl    = body_tmpl.replace("{" + k + "}", str(v))
-
-    # 締め切りプレフィックスをプレビュー件名にも付与
-    if mail_type in ("final_url", "reminder"):
-        subject_tmpl = _deadline_prefix(reunion["final_deadline"]) + subject_tmpl
 
     participants = Participant.query.filter(
         ~Participant.email.like("%@placeholder.local"),
