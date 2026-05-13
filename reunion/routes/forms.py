@@ -246,7 +246,9 @@ def final(token):
     if participant.class_name and participant.student_number:
         student_id = f"{participant.class_name}{participant.student_number.zfill(2)}"
     kana = participant.display_name_kana
-    default_transfer_name = f"{student_id} {kana}" if student_id and kana else kana or ""
+    default_transfer_name = normalize_transfer_name(
+        f"{student_id}{kana}" if student_id and kana else kana or ""
+    )
 
     locked = _is_final_form_locked()
     can_cancel = locked and existing and existing.status == "attending"
