@@ -32,8 +32,7 @@ MAIL_DEFAULTS = {
         "ご無沙汰しております。\n"
         "{reunion_name}の幹事です。\n\n"
         "先日は仮出欠にご回答いただき、ありがとうございました。\n"
-        "つきましては、本出欠フォームのURLをお送りします。\n"
-        "下記URLより出欠のご確認をお願いいたします。\n\n"
+        "つきましては、本出欠フォームのURLをお送りします。\n\n"
         "━━━━━━━━━━━━━━━━━━━━\n"
         "■ 同窓会の詳細\n"
         "━━━━━━━━━━━━━━━━━━━━\n"
@@ -45,7 +44,7 @@ MAIL_DEFAULTS = {
         "━━━━━━━━━━━━━━━━━━━━\n"
         "■ 本出欠フォーム\n"
         "━━━━━━━━━━━━━━━━━━━━\n"
-        "下記URLより出欠のご確認をお願いいたします。\n"
+        "下記URLよりご回答をお願いいたします。\n"
         "（ご参加の場合は会費のお振込もこちらからご確認ください）\n"
         "{final_url}\n\n"
         "※回答期限（{final_deadline_short}）まで何度でも変更できます。\n\n"
@@ -244,21 +243,10 @@ MAIL_DEFAULTS = {
         "会場: {reunion_venue}\n"
         "服装: {dress_code}\n"
         "持ち物: {belongings}\n\n"
-        "━━━━━━━━━━━━━━━━━━━━\n"
-        "■ 振込のご案内\n"
-        "━━━━━━━━━━━━━━━━━━━━\n"
-        "会費: {reunion_fee}\n"
-        "振込先: {transfer_bank} {transfer_branch}（支店番号: {transfer_branch_number}）\n"
-        "口座: {transfer_account_type}口座 {transfer_account_number}\n"
-        "口座名義: {transfer_account_name}\n"
-        "振込期限: {transfer_deadline}\n\n"
-        "※振込名義は本出欠フォームでご入力いただいた名義と\n"
-        "  一致するようお願いいたします。\n"
-        "※振込手数料はご負担をお願いいたします。\n\n"
+        "{transfer_section}"
         "内容を変更する場合は、下記URLから再度ご回答ください。\n"
         "{final_url}\n\n"
-        "ご不明な点がございましたら、お気軽にご連絡ください。\n"
-        "当日お会いできることを楽しみにしております。\n\n"
+        "ご不明な点がございましたら、お気軽にご連絡ください。\n\n"
         "──────────────────\n"
         "{reunion_name} 幹事 {organizer_name}"
     ),
@@ -282,9 +270,20 @@ def _format_deadline_short(deadline: str) -> str:
 
 
 def _render_template(template: str, **kwargs) -> str:
-    """テンプレート文字列の {変数} を置換する"""
+    """テンプレート文字列の {変数} を置換し、空になったブラケットを除去する"""
+    import re
     for key, val in kwargs.items():
         template = template.replace("{" + key + "}", str(val))
+    # 期限未設定時に残る空パターンを除去
+    template = re.sub(r'【締め切り】', '', template)
+    template = re.sub(r'【までに】', '', template)
+    template = re.sub(r'※回答期限（）まで[^\n]*\n', '', template)
+    template = re.sub(r'※ご回答期限（）まで[^\n]*\n', '', template)
+    template = re.sub(r'※やむを得ず[^\n]*（）まで[^\n]*\n', '', template)
+    template = re.sub(r'※やむを得ず[^\n]*までにご連絡ください。\n', lambda m: m.group() if '/' in m.group() else '', template)
+    # 署名末尾スペース除去
+    template = re.sub(r' +\n', '\n', template)
+    template = template.rstrip() + '\n' if template.strip() else template
     return template
 
 
@@ -584,10 +583,28 @@ def _build_provisional_confirm_body(participant_name: str, status_label: str, pr
 def _build_final_confirm_body(participant_name: str, status_label: str, final_url: str) -> tuple:
     """本出欠送信完了メールの件名・本文を生成する"""
     reunion = _get_reunion_info()
+    is_attending = "不参加" not in status_label and "欠席" not in status_label
+    if is_attending:
+        transfer_section = (
+            "━━━━━━━━━━━━━━━━━━━━\n"
+            "■ 振込のご案内\n"
+            "━━━━━━━━━━━━━━━━━━━━\n"
+            f"会費: {reunion['reunion_fee']}\n"
+            f"振込先: {reunion['transfer_bank']} {reunion['transfer_branch']}（支店番号: {reunion['transfer_branch_number']}）\n"
+            f"口座: {reunion['transfer_account_type']}口座 {reunion['transfer_account_number']}\n"
+            f"口座名義: {reunion['transfer_account_name']}\n"
+            f"振込期限: {reunion['transfer_deadline']}\n\n"
+            "※振込名義は本出欠フォームでご入力いただいた名義と\n"
+            "  一致するようお願いいたします。\n"
+            "※振込手数料はご負担をお願いいたします。\n\n"
+        )
+    else:
+        transfer_section = ""
     vars = dict(
         name=participant_name,
         status=status_label,
         final_url=final_url,
+        transfer_section=transfer_section,
         reunion_name=reunion["reunion_name"],
         reunion_date=reunion["reunion_date"],
         reunion_time=reunion["reunion_time"],
