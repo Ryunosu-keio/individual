@@ -48,7 +48,7 @@ MAIL_DEFAULTS = {
         "ご参加の場合は会費のお振込もこちらからご確認ください。\n"
         "{final_url}\n\n"
         "※回答期限（{final_deadline_short} 23:59）まで何度でも変更できます。\n\n"
-        "ご不明な点がございましたら、お気軽にご連絡ください。\n\n"
+        "ご不明な点がございましたら、このメールへの返信またはお気軽にご連絡ください。\n（連絡先は本メール末尾に記載しています）\n\n"
         "──────────────────\n"
         "{reunion_name} 幹事代表 {organizer_name}"
     ),
@@ -121,7 +121,7 @@ MAIL_DEFAULTS = {
         "持ち物: {belongings}\n"
         "会費: {reunion_fee}\n\n"
         "※詳細は添付のご案内PDFをご確認ください。\n"
-        "※やむを得ずキャンセルされる場合は{final_reminder_deadline_short} 23:59までにご連絡ください。\n\n"
+        "※やむを得ずキャンセルされる場合は{final_reminder_deadline_short} 23:59までにこのメールへ返信してご連絡ください。\n\n"
         "当日お会いできることを楽しみにしております。\n\n"
         "──────────────────\n"
         "{reunion_name} 幹事代表 {organizer_name}"
@@ -219,7 +219,7 @@ MAIL_DEFAULTS = {
         "持ち物: {belongings}\n"
         "会費: {reunion_fee}\n\n"
         "※詳細は添付のご案内PDFをご確認ください。\n"
-        "※やむを得ずご欠席される場合は{final_reminder_deadline_short} 23:59までにご連絡ください。\n\n"
+        "※やむを得ずご欠席される場合は{final_reminder_deadline_short} 23:59までにこのメールへ返信してご連絡ください。\n\n"
         "先生にお会いできることを楽しみにしております。\n\n"
         "──────────────────\n"
         "{reunion_name} 幹事代表 {organizer_name}"
@@ -246,7 +246,7 @@ MAIL_DEFAULTS = {
         "{transfer_section}"
         "内容を変更する場合は、下記URLから再度ご回答ください。\n"
         "{final_url}\n\n"
-        "ご不明な点がございましたら、お気軽にご連絡ください。\n\n"
+        "ご不明な点がございましたら、このメールへの返信またはお気軽にご連絡ください。\n（連絡先は本メール末尾に記載しています）\n\n"
         "──────────────────\n"
         "{reunion_name} 幹事代表 {organizer_name}"
     ),
@@ -279,7 +279,7 @@ def _render_template(template: str, **kwargs) -> str:
     template = re.sub(r'【\s*23:59までに】', '', template)
     template = re.sub(r'※回答期限（\s*23:59）まで[^\n]*\n', '', template)
     template = re.sub(r'※ご回答期限（\s*23:59）まで[^\n]*\n', '', template)
-    template = re.sub(r'※やむを得ず[^\n]*\s23:59までにご連絡ください。\n', lambda m: m.group() if '/' in m.group() else '', template)
+    template = re.sub(r'※やむを得ず[^\n]*23:59まで[^\n]*ご連絡ください。\n', lambda m: m.group() if '/' in m.group() else '', template)
     # 署名末尾スペース除去
     template = re.sub(r' +\n', '\n', template)
     template = template.rstrip() + '\n' if template.strip() else template
