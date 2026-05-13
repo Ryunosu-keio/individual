@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 # デフォルトテンプレート（DB未設定時に使用される）
 MAIL_DEFAULTS = {
     # ── 本出欠URL送信（生徒用） ──────────────────────────────
-    "mail_final_url_subject": "【{final_deadline_short}締め切り】【{reunion_name}】本出欠のご確認をお願いします",
+    "mail_final_url_subject": "【{final_deadline_short} 23:59締め切り】【{reunion_name}】本出欠のご確認をお願いします",
     "mail_final_url_body": (
         "{name} 様\n\n"
         "ご無沙汰しております。\n"
@@ -47,13 +47,13 @@ MAIL_DEFAULTS = {
         "下記URLよりご回答をお願いいたします。\n"
         "（ご参加の場合は会費のお振込もこちらからご確認ください）\n"
         "{final_url}\n\n"
-        "※回答期限（{final_deadline_short}）まで何度でも変更できます。\n\n"
+        "※回答期限（{final_deadline_short} 23:59）まで何度でも変更できます。\n\n"
         "ご不明な点がございましたら、お気軽にご連絡ください。\n\n"
         "──────────────────\n"
         "{reunion_name} 幹事 {organizer_name}"
     ),
     # ── 本出欠リマインド（生徒用） ───────────────────────────
-    "mail_reminder_subject": "【{reminder_deadline_short}締め切り】【{reunion_name}】本出欠のご回答をお願いします（リマインド）",
+    "mail_reminder_subject": "【{reminder_deadline_short} 23:59締め切り】【{reunion_name}】本出欠のご回答をお願いします（リマインド）",
     "mail_reminder_body": (
         "{name} 様\n\n"
         "ご無沙汰しております。\n"
@@ -72,7 +72,7 @@ MAIL_DEFAULTS = {
         "■ 本出欠フォーム\n"
         "━━━━━━━━━━━━━━━━━━━━\n"
         "{final_url}\n\n"
-        "※回答期限（{reminder_deadline_short}）まで何度でも変更できます。\n\n"
+        "※回答期限（{reminder_deadline_short} 23:59）まで何度でも変更できます。\n\n"
         "お忙しいところ恐れ入りますが、よろしくお願いいたします。\n\n"
         "──────────────────\n"
         "{reunion_name} 幹事 {organizer_name}"
@@ -105,7 +105,7 @@ MAIL_DEFAULTS = {
         "{reunion_name} 幹事 {organizer_name}"
     ),
     # ── 最終リマインド（生徒用） ─────────────────────────────
-    "mail_final_reminder_subject": "【{final_reminder_deadline_short}までに】【{reunion_name}】開催のご案内（最終リマインド）",
+    "mail_final_reminder_subject": "【{final_reminder_deadline_short} 23:59までに】【{reunion_name}】開催のご案内（最終リマインド）",
     "mail_final_reminder_body": (
         "{name} 様\n\n"
         "ご無沙汰しております。\n"
@@ -121,7 +121,7 @@ MAIL_DEFAULTS = {
         "持ち物: {belongings}\n"
         "会費: {reunion_fee}\n\n"
         "※詳細は添付のご案内PDFをご確認ください。\n"
-        "※やむを得ずキャンセルされる場合は{final_reminder_deadline_short}までにご連絡ください。\n\n"
+        "※やむを得ずキャンセルされる場合は{final_reminder_deadline_short} 23:59までにご連絡ください。\n\n"
         "当日お会いできることを楽しみにしております。\n\n"
         "──────────────────\n"
         "{reunion_name} 幹事 {organizer_name}"
@@ -151,7 +151,7 @@ MAIL_DEFAULTS = {
         "{reunion_name} 幹事 {organizer_name}"
     ),
     # ── 先生向けテンプレート ──────────────────────────────
-    "mail_final_url_subject_teacher": "【{final_deadline_short}締め切り】【{reunion_name}】ご出席のご確認をお願いいたします",
+    "mail_final_url_subject_teacher": "【{final_deadline_short} 23:59締め切り】【{reunion_name}】ご出席のご確認をお願いいたします",
     "mail_final_url_body_teacher": (
         "{name} 先生\n\n"
         "先生、ご無沙汰しております。\n"
@@ -173,12 +173,12 @@ MAIL_DEFAULTS = {
         "━━━━━━━━━━━━━━━━━━━━\n"
         "（ご参加の場合は会費のお振込もこちらからご確認ください）\n"
         "{final_url}\n\n"
-        "※ご回答期限（{final_deadline_short}）まで何度でも変更いただけます。\n\n"
+        "※ご回答期限（{final_deadline_short} 23:59）まで何度でも変更いただけます。\n\n"
         "先生のご出席を心よりお待ちしております。\n\n"
         "──────────────────\n"
         "{reunion_name} 幹事一同"
     ),
-    "mail_reminder_subject_teacher": "【{reminder_deadline_short}締め切り】【{reunion_name}】ご出席のご確認（リマインド）",
+    "mail_reminder_subject_teacher": "【{reminder_deadline_short} 23:59締め切り】【{reunion_name}】ご出席のご確認（リマインド）",
     "mail_reminder_body_teacher": (
         "{name} 先生\n\n"
         "先生、ご無沙汰しております。\n"
@@ -199,11 +199,11 @@ MAIL_DEFAULTS = {
         "■ 出欠フォーム\n"
         "━━━━━━━━━━━━━━━━━━━━\n"
         "{final_url}\n\n"
-        "※ご回答期限（{reminder_deadline_short}）まで何度でも変更いただけます。\n\n"
+        "※ご回答期限（{reminder_deadline_short} 23:59）まで何度でも変更いただけます。\n\n"
         "──────────────────\n"
         "{reunion_name} 幹事一同"
     ),
-    "mail_final_reminder_subject_teacher": "【{final_reminder_deadline_short}までに】【{reunion_name}】開催のご案内（最終リマインド）",
+    "mail_final_reminder_subject_teacher": "【{final_reminder_deadline_short} 23:59までに】【{reunion_name}】開催のご案内（最終リマインド）",
     "mail_final_reminder_body_teacher": (
         "{name} 先生\n\n"
         "先生、ご無沙汰しております。\n"
@@ -219,7 +219,7 @@ MAIL_DEFAULTS = {
         "持ち物: {belongings}\n"
         "会費: {reunion_fee}\n\n"
         "※詳細は添付のご案内PDFをご確認ください。\n"
-        "※やむを得ずご欠席される場合は{final_reminder_deadline_short}までにご連絡ください。\n\n"
+        "※やむを得ずご欠席される場合は{final_reminder_deadline_short} 23:59までにご連絡ください。\n\n"
         "先生にお会いできることを楽しみにしております。\n\n"
         "──────────────────\n"
         "{reunion_name} 幹事一同"
@@ -275,12 +275,11 @@ def _render_template(template: str, **kwargs) -> str:
     for key, val in kwargs.items():
         template = template.replace("{" + key + "}", str(val))
     # 期限未設定時に残る空パターンを除去
-    template = re.sub(r'【締め切り】', '', template)
-    template = re.sub(r'【までに】', '', template)
-    template = re.sub(r'※回答期限（）まで[^\n]*\n', '', template)
-    template = re.sub(r'※ご回答期限（）まで[^\n]*\n', '', template)
-    template = re.sub(r'※やむを得ず[^\n]*（）まで[^\n]*\n', '', template)
-    template = re.sub(r'※やむを得ず[^\n]*までにご連絡ください。\n', lambda m: m.group() if '/' in m.group() else '', template)
+    template = re.sub(r'【\s*23:59締め切り】', '', template)
+    template = re.sub(r'【\s*23:59までに】', '', template)
+    template = re.sub(r'※回答期限（\s*23:59）まで[^\n]*\n', '', template)
+    template = re.sub(r'※ご回答期限（\s*23:59）まで[^\n]*\n', '', template)
+    template = re.sub(r'※やむを得ず[^\n]*\s23:59までにご連絡ください。\n', lambda m: m.group() if '/' in m.group() else '', template)
     # 署名末尾スペース除去
     template = re.sub(r' +\n', '\n', template)
     template = template.rstrip() + '\n' if template.strip() else template
