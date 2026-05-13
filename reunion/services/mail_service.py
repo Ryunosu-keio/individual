@@ -105,7 +105,7 @@ MAIL_DEFAULTS = {
         "{reunion_name} 幹事代表 {organizer_name}"
     ),
     # ── 最終リマインド（生徒用） ─────────────────────────────
-    "mail_final_reminder_subject": "【{final_reminder_deadline_short} 23:59までに】【{reunion_name}】開催のご案内（最終リマインド）",
+    "mail_final_reminder_subject": "【{reunion_name}】開催のご案内（最終リマインド）",
     "mail_final_reminder_body": (
         "{name} 様\n\n"
         "ご無沙汰しております。\n"
@@ -203,7 +203,7 @@ MAIL_DEFAULTS = {
         "──────────────────\n"
         "{reunion_name} 幹事代表 {organizer_name}"
     ),
-    "mail_final_reminder_subject_teacher": "【{final_reminder_deadline_short} 23:59までに】【{reunion_name}】開催のご案内（最終リマインド）",
+    "mail_final_reminder_subject_teacher": "【{reunion_name}】開催のご案内（最終リマインド）",
     "mail_final_reminder_body_teacher": (
         "{name} 先生\n\n"
         "ご無沙汰しております。\n"
