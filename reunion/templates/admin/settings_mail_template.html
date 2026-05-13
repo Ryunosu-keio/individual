@@ -57,8 +57,16 @@
       <label class="form-check-label" for="sel_final_url">本出欠URL送信</label>
     </div>
     <div class="form-check">
+      <input class="form-check-input" type="radio" name="mailSelect" id="sel_final_url_teacher" value="final_url_teacher">
+      <label class="form-check-label" for="sel_final_url_teacher">本出欠URL送信（先生用）</label>
+    </div>
+    <div class="form-check">
       <input class="form-check-input" type="radio" name="mailSelect" id="sel_reminder" value="reminder">
       <label class="form-check-label" for="sel_reminder">本出欠リマインド</label>
+    </div>
+    <div class="form-check">
+      <input class="form-check-input" type="radio" name="mailSelect" id="sel_reminder_teacher" value="reminder_teacher">
+      <label class="form-check-label" for="sel_reminder_teacher">本出欠リマインド（先生用）</label>
     </div>
     <div class="form-check">
       <input class="form-check-input" type="radio" name="mailSelect" id="sel_final_confirm" value="final_confirm">
@@ -67,6 +75,10 @@
     <div class="form-check">
       <input class="form-check-input" type="radio" name="mailSelect" id="sel_final_reminder" value="final_reminder">
       <label class="form-check-label" for="sel_final_reminder">最終リマインド</label>
+    </div>
+    <div class="form-check">
+      <input class="form-check-input" type="radio" name="mailSelect" id="sel_final_reminder_teacher" value="final_reminder_teacher">
+      <label class="form-check-label" for="sel_final_reminder_teacher">最終リマインド（先生用）</label>
     </div>
   </div>
 </div>
@@ -137,6 +149,26 @@
         </div>
       </div>
 
+      <!-- 本出欠URL送信（先生用） -->
+      <div id="section_final_url_teacher" class="mail-section d-none">
+        <div class="card mb-4">
+          <div class="card-header fw-bold bg-light">
+            <i class="bi bi-send me-1"></i>本出欠URL送信メール（先生用）
+          </div>
+          <div class="card-body">
+            <div class="mb-3">
+              <label class="form-label fw-bold">件名</label>
+              <input type="text" class="form-control" name="mail_final_url_subject_teacher"
+                     value="{{ settings.get('mail_final_url_subject_teacher', '') }}">
+            </div>
+            <div class="mb-0">
+              <label class="form-label fw-bold">本文</label>
+              <textarea class="form-control font-monospace auto-resize" name="mail_final_url_body_teacher">{{ settings.get('mail_final_url_body_teacher', '') }}</textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- 本出欠リマインド -->
       <div id="section_reminder" class="mail-section d-none">
         <div class="card mb-4">
@@ -157,6 +189,26 @@
         </div>
       </div>
 
+      <!-- 本出欠リマインド（先生用） -->
+      <div id="section_reminder_teacher" class="mail-section d-none">
+        <div class="card mb-4">
+          <div class="card-header fw-bold bg-light">
+            <i class="bi bi-bell me-1"></i>本出欠リマインドメール（先生用）
+          </div>
+          <div class="card-body">
+            <div class="mb-3">
+              <label class="form-label fw-bold">件名</label>
+              <input type="text" class="form-control" name="mail_reminder_subject_teacher"
+                     value="{{ settings.get('mail_reminder_subject_teacher', '') }}">
+            </div>
+            <div class="mb-0">
+              <label class="form-label fw-bold">本文</label>
+              <textarea class="form-control font-monospace auto-resize" name="mail_reminder_body_teacher">{{ settings.get('mail_reminder_body_teacher', '') }}</textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- 最終リマインド -->
       <div id="section_final_reminder" class="mail-section d-none">
         <div class="card mb-4">
@@ -172,6 +224,26 @@
             <div class="mb-0">
               <label class="form-label fw-bold">本文</label>
               <textarea class="form-control font-monospace auto-resize" name="mail_final_reminder_body">{{ settings.get('mail_final_reminder_body', '') }}</textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 最終リマインド（先生用） -->
+      <div id="section_final_reminder_teacher" class="mail-section d-none">
+        <div class="card mb-4">
+          <div class="card-header fw-bold bg-light">
+            <i class="bi bi-envelope-fill me-1"></i>最終リマインドメール（先生用）
+          </div>
+          <div class="card-body">
+            <div class="mb-3">
+              <label class="form-label fw-bold">件名</label>
+              <input type="text" class="form-control" name="mail_final_reminder_subject_teacher"
+                     value="{{ settings.get('mail_final_reminder_subject_teacher', '') }}">
+            </div>
+            <div class="mb-0">
+              <label class="form-label fw-bold">本文</label>
+              <textarea class="form-control font-monospace auto-resize" name="mail_final_reminder_body_teacher">{{ settings.get('mail_final_reminder_body_teacher', '') }}</textarea>
             </div>
           </div>
         </div>

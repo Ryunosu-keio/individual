@@ -328,14 +328,15 @@
       document.getElementById('autoSendLoading').classList.add('d-none');
       document.getElementById('autoSendContent').classList.remove('d-none');
 
-      if (!d.phase) {
+      if (!d.has_targets) {
         document.getElementById('autoPhaseLabel').textContent = '完了';
         document.getElementById('autoPhaseLabel').className = 'badge bg-success';
         document.getElementById('autoSendDone').classList.remove('d-none');
         return;
       }
 
-      document.getElementById('autoPhaseLabel').textContent = d.phase_label;
+      var phaseLabels = d.phases.map(function(ph){ return ph.label; });
+      document.getElementById('autoPhaseLabel').textContent = phaseLabels.join(' + ');
       document.getElementById('autoPhaseLabel').className = 'badge bg-primary';
 
       if (d.remaining_today <= 0) {
@@ -353,14 +354,15 @@
       document.getElementById('autoTargetNames').textContent = names.join('、');
 
       document.getElementById('autoSendButtonText').textContent =
-        d.phase_label + '（' + d.batch_size + '件）';
+        '送信する（' + d.batch_size + '件）';
 
       document.getElementById('autoSendForm').onsubmit = function(e) {
+        var detail = d.phases.map(function(ph){
+          return '  ' + ph.label + ': ' + ph.batch + '件（全' + ph.total + '件中）';
+        }).join('\n');
         return confirm(
-          '【' + d.phase_label + '】を実行します。\n\n' +
-          '送信対象: ' + d.total_targets + '件\n' +
-          '今回送信: ' + d.batch_size + '件\n\n' +
-          'よろしいですか？'
+          '送信を実行します。\n\n' + detail +
+          '\n\n今回送信: ' + d.batch_size + '件\n\nよろしいですか？'
         );
       };
     })

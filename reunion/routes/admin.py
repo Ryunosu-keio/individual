@@ -53,6 +53,7 @@ def index():
     provisional_undecided = 0
     final_attending = 0
     final_not_attending = 0
+    final_cancelled = 0
     final_no_response = 0
     no_response = 0
     paid_count = 0
@@ -77,6 +78,8 @@ def index():
         if final:
             if final.status == "attending":
                 final_attending += 1
+            elif final.status == "cancelled":
+                final_cancelled += 1
             else:
                 final_not_attending += 1
         else:
@@ -113,6 +116,7 @@ def index():
         "provisional_undecided": provisional_undecided,
         "final_attending": final_attending,
         "final_not_attending": final_not_attending,
+        "final_cancelled": final_cancelled,
         "final_no_response": final_no_response,
         "no_provisional_response": no_response,
         "paid": paid_count,
@@ -286,7 +290,7 @@ def set_final_status(participant_id):
         flash("参加者が見つかりません。", "danger")
         return redirect(url_for("admin.participants"))
     status = request.form.get("status", "").strip()
-    if status not in ("attending", "not_attending"):
+    if status not in ("attending", "not_attending", "cancelled"):
         flash("無効なステータスです。", "danger")
         return redirect(url_for("admin.participant_detail", participant_id=participant_id))
     from models import FinalResponse
@@ -330,76 +334,113 @@ PHASE_LABELS = {
 }
 
 
-def _detect_phase_and_targets():
-    """現在のフェーズを自動判定し、対象者リストを返す"""
+def _get_final_deadline_passed() -> bool:
+    """本出欠の回答期限を過ぎているか判定する。期限未設定の場合は True を返す。"""
+    from datetime import date as _date
+    s = AppSetting.query.filter_by(key="final_deadline").first()
+    if not (s and s.value):
+        return True
+    try:
+        return _date.today() > _date.fromisoformat(s.value)
+    except ValueError:
+        return True
+
+
+def _get_final_reminder_date_passed() -> bool:
+    """最終リマインド送信日を過ぎているか判定する。未設定の場合は False（自動判定に含まれない）。"""
+    from datetime import date as _date
+    s = AppSetting.query.filter_by(key="final_reminder_date").first()
+    if not (s and s.value):
+        return False
+    try:
+        return _date.today() >= _date.fromisoformat(s.value)
+    except ValueError:
+        return False
+
+
+def _collect_pending_jobs(base_url: str) -> list:
+    """
+    全フェーズの未送信ジョブをフェーズ間ブロッキングなしで収集する。
+    各要素: {"phase": str, "pid": int, "final_url": str|None}
+
+    Phase 1 (final_url):      常時 — 仮出欠回答済み & URL未送信
+    Phase 2 (reminder):       final_deadline 超過 & URL送信済み & 本出欠未回答
+    Phase 3 (final_reminder): final_reminder_date 以降 & 本参加確定 & 最終リマインド未送信
+    """
     participants = Participant.query.filter(
         ~Participant.email.like("%@placeholder.local"),
     ).all()
 
-    # Phase 1: 仮参加 & 本出欠URL未送信
-    targets = []
+    jobs = []
+
     for p in participants:
-        prov = p.latest_provisional
-        if prov and prov.status == "attending":
+        if p.latest_provisional:
             if not any(ml.mail_type == "final_url" and ml.status in ("sent", "simulated") for ml in p.mail_logs):
-                targets.append(p)
-    if targets:
-        return "final_url", targets
+                jobs.append({"phase": "final_url", "pid": p.id, "final_url": generate_final_url(p, base_url)})
 
-    # Phase 2: 本出欠URL送信済み & 本出欠未回答
-    targets = []
-    for p in participants:
-        if any(ml.mail_type == "final_url" and ml.status in ("sent", "simulated") for ml in p.mail_logs):
-            if p.latest_final is None:
-                targets.append(p)
-    if targets:
-        return "reminder", targets
+    if _get_final_deadline_passed():
+        for p in participants:
+            if any(ml.mail_type == "final_url" and ml.status in ("sent", "simulated") for ml in p.mail_logs):
+                if p.latest_final is None:
+                    jobs.append({"phase": "reminder", "pid": p.id, "final_url": generate_final_url(p, base_url)})
 
-    # Phase 3: 本参加 & 最終リマインド未送信
-    targets = []
-    for p in participants:
-        final = p.latest_final
-        if final and final.status == "attending":
-            if not any(ml.mail_type == "final_reminder" and ml.status in ("sent", "simulated") for ml in p.mail_logs):
-                targets.append(p)
-    if targets:
-        return "final_reminder", targets
+    if _get_final_reminder_date_passed():
+        for p in participants:
+            final = p.latest_final
+            if final and final.status == "attending":
+                if not any(ml.mail_type == "final_reminder" and ml.status in ("sent", "simulated") for ml in p.mail_logs):
+                    jobs.append({"phase": "final_reminder", "pid": p.id, "final_url": None})
 
-    return None, []
+    return jobs
 
 
 @admin_bp.route("/api/auto-send-preview")
 def api_auto_send_preview():
     """自動送信のプレビュー情報をJSON返却"""
-    phase, targets = _detect_phase_and_targets()
+    from collections import Counter
+    base_url = current_app.config.get("APP_BASE_URL", "http://localhost:5000")
+    all_jobs = _collect_pending_jobs(base_url)
     remaining = get_remaining_today()
-    batch_size = min(BATCH_SIZE, remaining, len(targets))
+    batch = all_jobs[:min(BATCH_SIZE, remaining)]
+
+    total_by_phase = Counter(j["phase"] for j in all_jobs)
+    batch_by_phase = Counter(j["phase"] for j in batch)
+
+    phases = [
+        {"key": ph, "label": PHASE_LABELS[ph],
+         "total": total_by_phase[ph], "batch": batch_by_phase[ph]}
+        for ph in PHASE_LABELS
+        if total_by_phase[ph] > 0
+    ]
 
     return jsonify({
-        "phase": phase,
-        "phase_label": PHASE_LABELS.get(phase, "送信完了"),
-        "total_targets": len(targets),
-        "batch_size": batch_size,
+        "has_targets": len(all_jobs) > 0,
+        "total_targets": len(all_jobs),
+        "batch_size": len(batch),
         "remaining_today": remaining,
         "daily_limit": get_daily_send_limit(),
         "today_sent": get_today_sent_count(),
+        "phases": phases,
         "targets": [
-            {"id": p.id, "name": p.name, "email": p.email}
-            for p in targets[:batch_size]
+            {"id": j["pid"], "name": next((p.name for p in Participant.query.filter_by(id=j["pid"]).limit(1)), ""),
+             "phase": j["phase"]}
+            for j in batch
         ],
     })
 
 
 @admin_bp.route("/auto-send", methods=["POST"])
 def auto_send():
-    """フェーズ自動判定 → 次の100人に送信"""
+    """全フェーズ並行判定 → 次の最大100件に送信"""
     import threading
     import time as _time
     import os
+    from collections import Counter
 
-    phase, targets = _detect_phase_and_targets()
+    base_url = current_app.config.get("APP_BASE_URL", "http://localhost:5000")
+    all_jobs = _collect_pending_jobs(base_url)
 
-    if not phase or not targets:
+    if not all_jobs:
         flash("送信対象者がいません。全フェーズ完了済みです。", "info")
         return redirect(url_for("admin.index"))
 
@@ -408,19 +449,11 @@ def auto_send():
         flash("本日の送信上限に達しています。", "warning")
         return redirect(url_for("admin.index"))
 
-    batch = targets[:min(BATCH_SIZE, remaining)]
-    base_url = current_app.config.get("APP_BASE_URL", "http://localhost:5000")
+    batch = all_jobs[:min(BATCH_SIZE, remaining)]
     app = current_app._get_current_object()
 
-    if phase == "final_url":
-        jobs = [(p.id, generate_final_url(p, base_url)) for p in batch]
-    elif phase == "reminder":
-        jobs = [(p.id, generate_final_url(p, base_url)) for p in batch]
-    else:
-        jobs = [p.id for p in batch]
-
     pdf_path = None
-    if phase == "final_reminder":
+    if any(j["phase"] == "final_reminder" for j in batch):
         pdf_setting = AppSetting.query.filter_by(key="reunion_guide_pdf").first()
         if pdf_setting and pdf_setting.value:
             pdf_path = pdf_setting.value
@@ -429,41 +462,39 @@ def auto_send():
             if os.path.isfile(default_pdf):
                 pdf_path = default_pdf
 
-    phase_label = PHASE_LABELS[phase]
-
     def bulk_send():
         with app.app_context():
             sent = failed = 0
-            for job in jobs:
+            counts = {ph: 0 for ph in PHASE_LABELS}
+            for job in batch:
+                p = db.session.get(Participant, job["pid"])
+                if not p:
+                    continue
                 try:
-                    if phase == "final_url":
-                        pid, final_url = job
-                        p = db.session.get(Participant, pid)
-                        if p:
-                            send_final_url(p, final_url)
-                            sent += 1
-                    elif phase == "reminder":
-                        pid, final_url = job
-                        p = db.session.get(Participant, pid)
-                        if p:
-                            send_reminder(p, final_url)
-                            sent += 1
-                    elif phase == "final_reminder":
-                        p = db.session.get(Participant, job)
-                        if p:
-                            send_final_reminder(p, attachment_path=pdf_path)
-                            sent += 1
+                    if job["phase"] == "final_url":
+                        send_final_url(p, job["final_url"])
+                    elif job["phase"] == "reminder":
+                        send_reminder(p, job["final_url"])
+                    elif job["phase"] == "final_reminder":
+                        send_final_reminder(p, attachment_path=pdf_path)
+                    sent += 1
+                    counts[job["phase"]] += 1
                 except Exception as e:
                     failed += 1
                     logger.error(f"自動送信失敗: {e}", exc_info=True)
                 _time.sleep(0.5)
-            logger.info(f"自動送信完了 [{phase_label}]: {sent}件成功 / {failed}件失敗")
+            summary = " / ".join(
+                f"{PHASE_LABELS[ph]}: {cnt}件" for ph, cnt in counts.items() if cnt > 0
+            )
+            logger.info(f"自動送信完了: {summary} | 成功{sent}件 / 失敗{failed}件")
 
     thread = threading.Thread(target=bulk_send, daemon=True)
     thread.start()
 
-    remaining_after = len(targets) - len(batch)
-    msg = f"【{phase_label}】{len(batch)}件の送信を開始しました。"
+    phase_counter = Counter(j["phase"] for j in batch)
+    parts = [f"{PHASE_LABELS[ph]} {cnt}件" for ph, cnt in phase_counter.items() if ph in PHASE_LABELS]
+    remaining_after = len(all_jobs) - len(batch)
+    msg = "送信開始: " + "、".join(parts)
     if remaining_after > 0:
         msg += f"（残り{remaining_after}件は次回送信してください）"
     flash(msg, "info")
@@ -537,7 +568,7 @@ def api_mail_preview(mail_type):
     if mail_type == "final_url":
         for p in participants:
             prov = p.latest_provisional
-            if prov and prov.status == "attending":
+            if prov:
                 has_sent = any(
                     ml.mail_type == "final_url" and ml.status in ("sent", "simulated")
                     for ml in p.mail_logs
@@ -545,13 +576,14 @@ def api_mail_preview(mail_type):
                 if not has_sent:
                     targets.append(p)
     elif mail_type == "reminder":
-        for p in participants:
-            has_sent = any(
-                ml.mail_type == "final_url" and ml.status in ("sent", "simulated")
-                for ml in p.mail_logs
-            )
-            if has_sent and p.latest_final is None:
-                targets.append(p)
+        if _get_final_deadline_passed():
+            for p in participants:
+                has_sent = any(
+                    ml.mail_type == "final_url" and ml.status in ("sent", "simulated")
+                    for ml in p.mail_logs
+                )
+                if has_sent and p.latest_final is None:
+                    targets.append(p)
     elif mail_type == "final_reminder":
         for p in participants:
             final = p.latest_final
@@ -604,19 +636,20 @@ def send_final_url_single(participant_id):
 
 @admin_bp.route("/send-final-url-bulk", methods=["POST"])
 def send_final_url_bulk():
-    """本出欠URLを一括送信（仮出欠ステータス関係なく全員対象・段階送信）"""
+    """本出欠URLを一括送信（仮出欠回答済み＆URL未送信の全員・段階送信）"""
     import threading
     import time
 
     base_url = current_app.config.get("APP_BASE_URL", "http://localhost:5000")
 
-    # 対象: メール登録済み＆本出欠URL未送信の全員（仮出欠ステータス不問）
     participants = Participant.query.filter(
         ~Participant.email.like("%@placeholder.local"),
     ).all()
 
     targets = []
     for p in participants:
+        if not p.latest_provisional:
+            continue
         has_final_url_mail = any(
             ml.mail_type == "final_url" and ml.status in ("sent", "simulated")
             for ml in p.mail_logs
@@ -725,10 +758,13 @@ def send_reminder_bulk():
     base_url = current_app.config.get("APP_BASE_URL", "http://localhost:5000")
 
     participants = Participant.query.filter(
-        Participant.token.isnot(None),
         ~Participant.email.like("%@placeholder.local"),
     ).all()
-    targets = [p for p in participants if p.latest_final is None]
+    targets = [
+        p for p in participants
+        if any(ml.mail_type == "final_url" and ml.status in ("sent", "simulated") for ml in p.mail_logs)
+        and p.latest_final is None
+    ]
 
     if not targets:
         flash("リマインド送信対象の参加者がいません。", "info")
@@ -1098,11 +1134,14 @@ def settings_pdf_upload():
 def settings_mail_template():
     """メール文章編集画面"""
     KEYS = [
-        "mail_provisional_confirm_subject",   "mail_provisional_confirm_body",
-        "mail_final_url_subject",             "mail_final_url_body",
-        "mail_reminder_subject",              "mail_reminder_body",
-        "mail_final_confirm_subject",         "mail_final_confirm_body",
-        "mail_final_reminder_subject",        "mail_final_reminder_body",
+        "mail_provisional_confirm_subject",       "mail_provisional_confirm_body",
+        "mail_final_url_subject",                 "mail_final_url_body",
+        "mail_final_url_subject_teacher",         "mail_final_url_body_teacher",
+        "mail_reminder_subject",                  "mail_reminder_body",
+        "mail_reminder_subject_teacher",          "mail_reminder_body_teacher",
+        "mail_final_confirm_subject",             "mail_final_confirm_body",
+        "mail_final_reminder_subject",            "mail_final_reminder_body",
+        "mail_final_reminder_subject_teacher",    "mail_final_reminder_body_teacher",
     ]
     if request.method == "POST":
         for key in KEYS:
@@ -1159,7 +1198,7 @@ def settings_reunion():
     """同窓会情報設定画面"""
     KEYS = [
         "reunion_name", "reunion_date", "reunion_time", "reunion_venue", "reunion_fee",
-        "dress_code", "belongings", "provisional_deadline",
+        "dress_code", "belongings", "provisional_deadline", "final_deadline", "final_reminder_date",
         "transfer_bank", "transfer_branch", "transfer_branch_number",
         "transfer_account_type", "transfer_account_number", "transfer_account_name", "transfer_deadline",
     ]
@@ -1344,8 +1383,8 @@ def roster_import():
 
     PROV_STATUS_MAP  = {"参加": "attending", "不参加": "not_attending", "未定": "undecided",
                         "attending": "attending", "not_attending": "not_attending", "undecided": "undecided"}
-    FINAL_STATUS_MAP = {"参加": "attending", "不参加": "not_attending",
-                        "attending": "attending", "not_attending": "not_attending"}
+    FINAL_STATUS_MAP = {"参加": "attending", "不参加": "not_attending", "直前キャンセル": "cancelled",
+                        "attending": "attending", "not_attending": "not_attending", "cancelled": "cancelled"}
     PAY_STATUS_MAP   = {"未払い": "unpaid", "支払済み": "paid", "一部支払い": "partial",
                         "unpaid": "unpaid", "paid": "paid", "partial": "partial"}
 
@@ -1536,7 +1575,7 @@ def roster_export():
     ])
 
     PROV_LABELS  = {"attending": "参加", "not_attending": "不参加", "undecided": "未定"}
-    FINAL_LABELS = {"attending": "参加", "not_attending": "不参加"}
+    FINAL_LABELS = {"attending": "参加", "not_attending": "不参加", "cancelled": "直前キャンセル"}
     PAY_LABELS   = {"unpaid": "未払い", "paid": "支払済み", "partial": "一部支払い"}
 
     for p in participants:

@@ -132,11 +132,46 @@
                 <strong>{{ participant.display_name }}</strong>
                 様、こちらはあなた専用のフォームです。
               </p>
-              {% if existing %}
-              <div class="alert alert-info py-2 mb-3">
-                ※ すでに回答済みです。内容を変更する場合は再度送信してください。
-              </div>
-              {% endif %}
+
+              {% if locked %}
+                {% if can_cancel %}
+                  {# 参加確定済み・ロック後 → キャンセルのみ可 #}
+                  <div class="alert alert-warning py-2 mb-3">
+                    <i class="bi bi-lock-fill me-1"></i>
+                    回答の変更受付は終了しています。急な欠席の場合は下記よりご連絡ください。
+                  </div>
+                  <div class="card border-danger mb-3">
+                    <div class="card-body text-center py-4">
+                      <p class="mb-1">現在の回答: <strong class="text-success">参加</strong></p>
+                      <p class="text-muted small mb-3">欠席される場合は、下のボタンで連絡してください。</p>
+                      <form method="POST" action="{{ url_for('forms.final', token=token) }}"
+                            onsubmit="return confirm('欠席のご連絡をします。よろしいですか？');">
+                        <input type="hidden" name="status" value="cancelled">
+                        <button type="submit" class="btn btn-danger btn-lg px-5">
+                          <i class="bi bi-x-circle me-2"></i>欠席の連絡をする
+                        </button>
+                      </form>
+                    </div>
+                  </div>
+                {% elif existing and existing.status == 'cancelled' %}
+                  <div class="alert alert-secondary py-2 mb-3">
+                    <i class="bi bi-check-circle me-1"></i>
+                    欠席のご連絡を受け付けました。
+                  </div>
+                {% else %}
+                  {# 不参加 or 未回答・ロック後 → 読み取り専用 #}
+                  <div class="alert alert-secondary py-2 mb-3">
+                    <i class="bi bi-lock-fill me-1"></i>
+                    回答の変更受付は終了しています。
+                    {% if existing %}<br>現在の回答: <strong>{{ existing.status_label }}</strong>{% endif %}
+                  </div>
+                {% endif %}
+              {% else %}
+                {% if existing %}
+                <div class="alert alert-info py-2 mb-3">
+                  ※ すでに回答済みです。内容を変更する場合は再度送信してください。
+                </div>
+                {% endif %}
 
               <form
                 method="POST"
@@ -401,6 +436,7 @@
                   </button>
                 </div>
               </form>
+              {% endif %}{# /locked #}
             </div>
           </div>
         </div>
