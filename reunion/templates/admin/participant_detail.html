@@ -179,7 +179,7 @@
       <div class="card-body">
         <div class="d-flex gap-2 flex-wrap">
 
-          {% if prov and prov.status == 'attending' %}
+          {% if prov and not participant.email.endswith('@placeholder.local') %}
           <form method="POST" action="{{ url_for('admin.send_final_url_single', participant_id=participant.id) }}"
                 onsubmit="return confirm('本出欠URLを送信しますか？')">
             <button type="submit" class="btn btn-success btn-sm">
@@ -207,7 +207,7 @@
           {% endif %}
 
         </div>
-        {% if (not prov or prov.status != 'attending') and not participant.token and not final %}
+        {% if (not prov or participant.email.endswith('@placeholder.local')) and not participant.token and (not final or final.status != 'attending') %}
         <p class="text-muted small mb-0 mt-1">送信可能なメールはありません。</p>
         {% endif %}
       </div>
