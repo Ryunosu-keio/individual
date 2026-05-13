@@ -1197,7 +1197,7 @@ def settings_mail_test():
 def settings_reunion():
     """同窓会情報設定画面"""
     KEYS = [
-        "reunion_name", "reunion_date", "reunion_time", "reunion_venue", "reunion_fee",
+        "reunion_name", "organizer_name", "reunion_date", "reunion_time", "reunion_venue", "reunion_fee",
         "dress_code", "belongings", "provisional_deadline", "final_deadline", "final_reminder_date",
         "transfer_bank", "transfer_branch", "transfer_branch_number",
         "transfer_account_type", "transfer_account_number", "transfer_account_name", "transfer_deadline",

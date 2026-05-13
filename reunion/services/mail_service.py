@@ -304,6 +304,7 @@ def _get_reunion_info() -> dict:
         "transfer_account_number": get("transfer_account_number", cfg.get("TRANSFER_ACCOUNT_NUMBER", "")),
         "transfer_account_name":   get("transfer_account_name",   cfg.get("TRANSFER_ACCOUNT_NAME", "")),
         "transfer_deadline":       get("transfer_deadline",       cfg.get("TRANSFER_DEADLINE", "")),
+        "organizer_name":          get("organizer_name",          cfg.get("ORGANIZER_NAME", "")),
     }
 
 
@@ -321,6 +322,7 @@ def _build_final_url_mail_body(participant_name: str, final_url: str, role: str 
         reunion_fee=reunion["reunion_fee"],
         dress_code=reunion["dress_code"],
         belongings=reunion["belongings"],
+        organizer_name=reunion["organizer_name"],
     )
     s_key = 'mail_final_url_subject_teacher' if teacher else 'mail_final_url_subject'
     b_key = 'mail_final_url_body_teacher'    if teacher else 'mail_final_url_body'
@@ -343,6 +345,7 @@ def _build_reminder_mail_body(participant_name: str, final_url: str, role: str =
         reunion_fee=reunion["reunion_fee"],
         dress_code=reunion["dress_code"],
         belongings=reunion["belongings"],
+        organizer_name=reunion["organizer_name"],
     )
     s_key = 'mail_reminder_subject_teacher' if teacher else 'mail_reminder_subject'
     b_key = 'mail_reminder_body_teacher'    if teacher else 'mail_reminder_body'
@@ -526,6 +529,7 @@ def _build_provisional_confirm_body(participant_name: str, status_label: str, pr
         reunion_fee=reunion["reunion_fee"],
         dress_code=reunion["dress_code"],
         belongings=reunion["belongings"],
+        organizer_name=reunion["organizer_name"],
     )
     subject = _render_template(
         _get_template('mail_provisional_confirm_subject',
@@ -554,6 +558,7 @@ def _build_final_confirm_body(participant_name: str, status_label: str, final_ur
         reunion_fee=reunion["reunion_fee"],
         dress_code=reunion["dress_code"],
         belongings=reunion["belongings"],
+        organizer_name=reunion["organizer_name"],
         transfer_bank=reunion["transfer_bank"],
         transfer_branch=reunion["transfer_branch"],
         transfer_branch_number=reunion["transfer_branch_number"],
@@ -591,6 +596,7 @@ def _build_provisional_reminder_body(participant_name: str, provisional_url: str
         reunion_fee=reunion["reunion_fee"],
         dress_code=reunion["dress_code"],
         belongings=reunion["belongings"],
+        organizer_name=reunion["organizer_name"],
     )
     subject = _render_template(
         _get_template('mail_provisional_reminder_subject',
@@ -728,6 +734,7 @@ def _build_final_reminder_body(participant_name: str, role: str = "") -> tuple:
         reunion_fee=reunion["reunion_fee"],
         dress_code=reunion["dress_code"],
         belongings=reunion["belongings"],
+        organizer_name=reunion["organizer_name"],
     )
     s_key = 'mail_final_reminder_subject_teacher' if teacher else 'mail_final_reminder_subject'
     b_key = 'mail_final_reminder_body_teacher'    if teacher else 'mail_final_reminder_body'
