@@ -114,7 +114,8 @@
       <div class="card-header fw-bold bg-light">入金状況</div>
       <div class="card-body">
         {% set payment = participant.payment %}
-        {% if payment %}
+        {% set final = participant.latest_final %}
+        {% if payment and not (final and final.status in ('not_attending', 'cancelled')) %}
           <dl class="row mb-2">
             <dt class="col-5">ステータス</dt>
             <dd class="col-7">
