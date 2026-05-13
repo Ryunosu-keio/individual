@@ -35,6 +35,7 @@ from services.mail_service import (send_final_url, send_reminder, send_final_rem
                                     get_today_sent_count, get_remaining_today)
 from services.csv_service import parse_bank_csv, save_bank_imports
 from services.matching_service import run_auto_matching, confirm_match, unmatch
+from utils import normalize_transfer_name
 
 logger = logging.getLogger(__name__)
 
@@ -513,8 +514,9 @@ def mail_hub():
 @admin_bp.route("/api/mail-preview/<mail_type>")
 def api_mail_preview(mail_type):
     """メール種別ごとのプレビュー・対象者リストをJSON返却"""
-    from services.mail_service import MAIL_DEFAULTS, _get_template, _get_reunion_info
+    from services.mail_service import MAIL_DEFAULTS, _get_template, _get_reunion_info, _deadline_prefix
 
+    is_teacher = request.args.get("teacher", "0") == "1"
     reunion = _get_reunion_info()
     base_url = current_app.config.get("APP_BASE_URL", "http://localhost:5000")
 
@@ -523,16 +525,22 @@ def api_mail_preview(mail_type):
             "label": "本出欠URL送信",
             "subject_key": "mail_final_url_subject",
             "body_key": "mail_final_url_body",
+            "subject_key_teacher": "mail_final_url_subject_teacher",
+            "body_key_teacher": "mail_final_url_body_teacher",
         },
         "reminder": {
             "label": "リマインド送信",
             "subject_key": "mail_reminder_subject",
             "body_key": "mail_reminder_body",
+            "subject_key_teacher": "mail_reminder_subject_teacher",
+            "body_key_teacher": "mail_reminder_body_teacher",
         },
         "final_reminder": {
             "label": "最終リマインド送信",
             "subject_key": "mail_final_reminder_subject",
             "body_key": "mail_final_reminder_body",
+            "subject_key_teacher": "mail_final_reminder_subject_teacher",
+            "body_key_teacher": "mail_final_reminder_body_teacher",
         },
     }
 
@@ -540,11 +548,14 @@ def api_mail_preview(mail_type):
         return jsonify({"error": "不正なメール種別です"}), 400
 
     info = VALID_TYPES[mail_type]
-    subject_tmpl = _get_template(info["subject_key"], MAIL_DEFAULTS[info["subject_key"]])
-    body_tmpl = _get_template(info["body_key"], MAIL_DEFAULTS[info["body_key"]])
+    s_key = info["subject_key_teacher"] if is_teacher else info["subject_key"]
+    b_key = info["body_key_teacher"]    if is_teacher else info["body_key"]
+    subject_tmpl = _get_template(s_key, MAIL_DEFAULTS[s_key])
+    body_tmpl    = _get_template(b_key, MAIL_DEFAULTS[b_key])
 
+    preview_name = "（先生名）" if is_teacher else "（参加者名）"
     preview_vars = {
-        "name": "（参加者名）",
+        "name": preview_name,
         "reunion_name": reunion["reunion_name"],
         "reunion_date": reunion["reunion_date"],
         "reunion_time": reunion["reunion_time"],
@@ -552,13 +563,26 @@ def api_mail_preview(mail_type):
         "reunion_fee": reunion["reunion_fee"],
         "dress_code": reunion["dress_code"],
         "belongings": reunion["belongings"],
+        "organizer_name": reunion["organizer_name"],
+        "final_deadline": reunion["final_deadline"],
         "final_url": f"{base_url}/form/final/（トークン）",
         "provisional_url": f"{base_url}/form/provisional",
         "status": "参加",
+        "transfer_bank": reunion["transfer_bank"],
+        "transfer_branch": reunion["transfer_branch"],
+        "transfer_branch_number": reunion["transfer_branch_number"],
+        "transfer_account_type": reunion["transfer_account_type"],
+        "transfer_account_number": reunion["transfer_account_number"],
+        "transfer_account_name": reunion["transfer_account_name"],
+        "transfer_deadline": reunion["transfer_deadline"],
     }
     for k, v in preview_vars.items():
         subject_tmpl = subject_tmpl.replace("{" + k + "}", str(v))
-        body_tmpl = body_tmpl.replace("{" + k + "}", str(v))
+        body_tmpl    = body_tmpl.replace("{" + k + "}", str(v))
+
+    # 締め切りプレフィックスをプレビュー件名にも付与
+    if mail_type in ("final_url", "reminder"):
+        subject_tmpl = _deadline_prefix(reunion["final_deadline"]) + subject_tmpl
 
     participants = Participant.query.filter(
         ~Participant.email.like("%@placeholder.local"),
@@ -567,8 +591,7 @@ def api_mail_preview(mail_type):
     targets = []
     if mail_type == "final_url":
         for p in participants:
-            prov = p.latest_provisional
-            if prov:
+            if p.latest_provisional:
                 has_sent = any(
                     ml.mail_type == "final_url" and ml.status in ("sent", "simulated")
                     for ml in p.mail_logs
@@ -585,10 +608,12 @@ def api_mail_preview(mail_type):
                 if has_sent and p.latest_final is None:
                     targets.append(p)
     elif mail_type == "final_reminder":
-        for p in participants:
-            final = p.latest_final
-            if final and final.status == "attending":
-                targets.append(p)
+        if _get_final_reminder_date_passed():
+            for p in participants:
+                final = p.latest_final
+                if final and final.status == "attending":
+                    if not any(ml.mail_type == "final_reminder" and ml.status in ("sent", "simulated") for ml in p.mail_logs):
+                        targets.append(p)
 
     remaining = get_remaining_today()
 
@@ -597,7 +622,7 @@ def api_mail_preview(mail_type):
         "subject": subject_tmpl,
         "body": body_tmpl,
         "targets": [
-            {"id": p.id, "name": p.name, "email": p.email}
+            {"id": p.id, "name": p.name, "email": p.email, "role": p.role or ""}
             for p in targets
         ],
         "target_count": len(targets),
@@ -926,7 +951,7 @@ def update_payment(payment_id):
     paid_amount_str = request.form.get("paid_amount", "").strip()
     payment_date_str = request.form.get("payment_date", "").strip()
     payment.payment_method = request.form.get("payment_method", payment.payment_method)
-    payment.transfer_name = request.form.get("transfer_name", payment.transfer_name)
+    payment.transfer_name = normalize_transfer_name(request.form.get("transfer_name", payment.transfer_name))
 
     if paid_amount_str:
         try:
@@ -1412,7 +1437,7 @@ def roster_import():
         final_status  = FINAL_STATUS_MAP.get(get_col(row, idx_final_status), "")
         companions_raw = get_col(row, idx_companions)
         companions    = int(companions_raw) if companions_raw.isdigit() else 0
-        transfer_name = get_col(row, idx_transfer_name)
+        transfer_name = normalize_transfer_name(get_col(row, idx_transfer_name))
         pay_status    = PAY_STATUS_MAP.get(get_col(row, idx_pay_status), "")
         paid_raw      = get_col(row, idx_paid_amount)
         paid_amount   = int(paid_raw) if paid_raw.isdigit() else 0

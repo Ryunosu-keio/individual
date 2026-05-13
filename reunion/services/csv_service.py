@@ -11,6 +11,7 @@ services/csv_service.py - 銀行CSVの取込・パース処理
 import csv
 import io
 import logging
+import unicodedata
 from datetime import datetime, date
 from typing import Optional
 
@@ -134,7 +135,7 @@ def parse_bank_csv(file_content: bytes, filename: str = "") -> list:
             continue  # 空行はスキップ
 
         try:
-            raw_name = row[name_idx].strip() if name_idx < len(row) else ""
+            raw_name = unicodedata.normalize("NFKC", row[name_idx].strip()) if name_idx < len(row) else ""
             raw_amount = _parse_amount(row[amount_idx]) if amount_idx < len(row) else 0
             raw_date = None
             if date_idx is not None and date_idx < len(row):

@@ -32,12 +32,27 @@
         <label class="form-label fw-bold">メールの種類</label>
         <select id="mailType" class="form-select form-select-lg">
           <option value="">-- 選択してください --</option>
-          <option value="final_url">1. 本出欠URL送信（仮出欠「参加」で未送信の方へ）</option>
+          <option value="final_url">1. 本出欠URL送信（仮出欠回答済み・未送信の方へ）</option>
           <option value="reminder">2. リマインド送信（本出欠URL送信済み・未回答の方へ）</option>
           <option value="final_reminder">3. 最終リマインド送信（本出欠「参加」の方へ）</option>
         </select>
       </div>
-      <div class="col-md-6">
+      <div class="col-md-3">
+        <div id="teacherToggleArea" class="d-none">
+          <label class="form-label fw-bold">プレビュー対象</label>
+          <div class="d-flex gap-3">
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="teacherToggle" id="toggleStudent" value="0" checked>
+              <label class="form-check-label" for="toggleStudent">生徒用</label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="teacherToggle" id="toggleTeacher" value="1">
+              <label class="form-check-label" for="toggleTeacher">先生用</label>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
         <div id="sendStatus" class="d-none">
           <div class="d-flex gap-3">
             <span class="badge bg-primary fs-6 px-3 py-2">
@@ -48,6 +63,7 @@
             </span>
           </div>
         </div>
+      </div>
       </div>
     </div>
   </div>
@@ -146,6 +162,10 @@ document.addEventListener('DOMContentLoaded', function() {
   const sendButtonArea = document.getElementById('sendButtonArea');
   const noTargets = document.getElementById('noTargets');
   const targetList = document.getElementById('targetList');
+  const teacherToggleArea = document.getElementById('teacherToggleArea');
+
+  // 先生用テンプレートが存在するメール種別
+  const HAS_TEACHER = ['final_url', 'reminder', 'final_reminder'];
 
   const SEND_URLS = {
     'final_url': '{{ url_for("admin.send_final_url_bulk") }}',
@@ -159,11 +179,16 @@ document.addEventListener('DOMContentLoaded', function() {
     'final_reminder': '最終リマインドメールを一括送信',
   };
 
-  mailTypeSelect.addEventListener('change', function() {
-    const mailType = this.value;
+  function getTeacher() {
+    const el = document.querySelector('input[name="teacherToggle"]:checked');
+    return el ? el.value : '0';
+  }
+
+  function loadPreview(mailType) {
     if (!mailType) {
       previewArea.classList.add('d-none');
       sendStatus.classList.add('d-none');
+      teacherToggleArea.classList.add('d-none');
       return;
     }
 
@@ -171,7 +196,16 @@ document.addEventListener('DOMContentLoaded', function() {
     loading.classList.remove('d-none');
     sendStatus.classList.add('d-none');
 
-    fetch(`{{ url_for("admin.api_mail_preview", mail_type="__TYPE__") }}`.replace('__TYPE__', mailType))
+    if (HAS_TEACHER.includes(mailType)) {
+      teacherToggleArea.classList.remove('d-none');
+    } else {
+      teacherToggleArea.classList.add('d-none');
+    }
+
+    const teacher = getTeacher();
+    const url = `{{ url_for("admin.api_mail_preview", mail_type="__TYPE__") }}`.replace('__TYPE__', mailType) + `?teacher=${teacher}`;
+
+    fetch(url)
       .then(res => res.json())
       .then(data => {
         loading.classList.add('d-none');
@@ -195,9 +229,10 @@ document.addEventListener('DOMContentLoaded', function() {
           targetList.classList.remove('d-none');
 
           data.targets.forEach(function(t, i) {
+            const roleLabel = t.role && t.role !== '生徒' ? `<span class="badge bg-secondary ms-1">${t.role}</span>` : '';
             const tr = document.createElement('tr');
             tr.innerHTML = `<td class="text-muted small">${i + 1}</td>` +
-              `<td>${t.name}</td>` +
+              `<td>${t.name}${roleLabel}</td>` +
               `<td class="small text-muted">${t.email}</td>`;
             tbody.appendChild(tr);
           });
@@ -243,6 +278,18 @@ document.addEventListener('DOMContentLoaded', function() {
         loading.classList.add('d-none');
         alert('データの取得に失敗しました: ' + err);
       });
+  }
+
+  mailTypeSelect.addEventListener('change', function() {
+    // 先生トグルをリセット
+    document.getElementById('toggleStudent').checked = true;
+    loadPreview(this.value);
+  });
+
+  document.querySelectorAll('input[name="teacherToggle"]').forEach(function(radio) {
+    radio.addEventListener('change', function() {
+      loadPreview(mailTypeSelect.value);
+    });
   });
 });
 </script>
