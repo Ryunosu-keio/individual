@@ -335,16 +335,16 @@ PHASE_LABELS = {
 }
 
 
-def _get_final_deadline_passed() -> bool:
-    """本出欠の回答期限を過ぎているか判定する。期限未設定の場合は True を返す。"""
+def _get_reminder_send_date_passed() -> bool:
+    """リマインドメール送信日を過ぎているか判定する。未設定の場合は False（自動判定に含まれない）。"""
     from datetime import date as _date
-    s = AppSetting.query.filter_by(key="final_deadline").first()
+    s = AppSetting.query.filter_by(key="reminder_send_date").first()
     if not (s and s.value):
-        return True
+        return False
     try:
-        return _date.today() > _date.fromisoformat(s.value)
+        return _date.today() >= _date.fromisoformat(s.value)
     except ValueError:
-        return True
+        return False
 
 
 def _get_final_reminder_date_passed() -> bool:
@@ -365,7 +365,7 @@ def _collect_pending_jobs(base_url: str) -> list:
     各要素: {"phase": str, "pid": int, "final_url": str|None}
 
     Phase 1 (final_url):      常時 — 仮出欠回答済み & URL未送信
-    Phase 2 (reminder):       final_deadline 超過 & URL送信済み & 本出欠未回答
+    Phase 2 (reminder):       reminder_send_date 以降 & URL送信済み & 本出欠未回答
     Phase 3 (final_reminder): final_reminder_date 以降 & 本参加確定 & 最終リマインド未送信
     """
     participants = Participant.query.filter(
@@ -379,7 +379,7 @@ def _collect_pending_jobs(base_url: str) -> list:
             if not any(ml.mail_type == "final_url" and ml.status in ("sent", "simulated") for ml in p.mail_logs):
                 jobs.append({"phase": "final_url", "pid": p.id, "final_url": generate_final_url(p, base_url)})
 
-    if _get_final_deadline_passed():
+    if _get_reminder_send_date_passed():
         for p in participants:
             has_url = any(ml.mail_type == "final_url" and ml.status in ("sent", "simulated") for ml in p.mail_logs)
             has_reminded = any(ml.mail_type == "reminder" and ml.status in ("sent", "simulated") for ml in p.mail_logs)
@@ -567,8 +567,6 @@ def api_mail_preview(mail_type):
         "organizer_name": reunion["organizer_name"],
         "final_deadline": reunion["final_deadline"],
         "final_deadline_short": reunion["final_deadline_short"],
-        "reminder_deadline": reunion["reminder_deadline"],
-        "reminder_deadline_short": reunion["reminder_deadline_short"],
         "final_reminder_deadline": reunion["final_reminder_deadline"],
         "final_reminder_deadline_short": reunion["final_reminder_deadline_short"],
         "final_url": f"{base_url}/form/final/（トークン）",
@@ -601,7 +599,7 @@ def api_mail_preview(mail_type):
                 if not has_sent:
                     targets.append(p)
     elif mail_type == "reminder":
-        if _get_final_deadline_passed():
+        if _get_reminder_send_date_passed():
             for p in participants:
                 has_url = any(ml.mail_type == "final_url" and ml.status in ("sent", "simulated") for ml in p.mail_logs)
                 has_reminded = any(ml.mail_type == "reminder" and ml.status in ("sent", "simulated") for ml in p.mail_logs)
@@ -1224,7 +1222,7 @@ def settings_reunion():
     KEYS = [
         "reunion_name", "organizer_name", "reunion_date", "reunion_time", "reunion_venue", "reunion_fee",
         "dress_code", "belongings", "provisional_deadline",
-        "final_deadline", "reminder_deadline", "final_reminder_deadline", "final_reminder_date",
+        "final_deadline", "reminder_send_date", "final_reminder_deadline", "final_reminder_date",
         "transfer_bank", "transfer_branch", "transfer_branch_number",
         "transfer_account_type", "transfer_account_number", "transfer_account_name", "transfer_deadline",
     ]

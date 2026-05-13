@@ -30,7 +30,7 @@ MAIL_DEFAULTS = {
     "mail_final_url_body": (
         "{name} 様\n\n"
         "ご無沙汰しております。\n"
-        "{reunion_name}幹事代表の{organizer_name} です。\n\n"
+        "{reunion_name}幹事代表の{organizer_name}です。\n\n"
         "先日は仮出欠にご回答いただき、ありがとうございました。\n"
         "つきましては、本出欠フォームのURLをお送りします。\n\n"
         "━━━━━━━━━━━━━━━━━━━━\n"
@@ -51,14 +51,14 @@ MAIL_DEFAULTS = {
         "ご不明な点がございましたら、お気軽にご連絡ください。\n\n"
         "──────────────────\n"
         "{reunion_name} 幹事代表 {organizer_name}\n"
-        "E-mail: {organizer_email}"
+        "E-mail: {mail_from}"
     ),
     # ── 本出欠リマインド（生徒用） ───────────────────────────
-    "mail_reminder_subject": "【{reminder_deadline_short} 23:59締切】【{reunion_name}】本出欠のご回答をお願いします（リマインド）",
+    "mail_reminder_subject": "【{final_deadline_short} 23:59締切】【{reunion_name}】本出欠のご回答をお願いします（リマインド）",
     "mail_reminder_body": (
         "{name} 様\n\n"
         "ご無沙汰しております。\n"
-        "{reunion_name}幹事代表の{organizer_name} です。\n\n"
+        "{reunion_name}幹事代表の{organizer_name}です。\n\n"
         "先日お送りした本出欠フォームについて、改めてご連絡いたします。\n"
         "ご回答済みの方はご放念ください。\n\n"
         "━━━━━━━━━━━━━━━━━━━━\n"
@@ -73,17 +73,17 @@ MAIL_DEFAULTS = {
         "■ 本出欠フォーム\n"
         "━━━━━━━━━━━━━━━━━━━━\n"
         "{final_url}\n\n"
-        "※回答期限（{reminder_deadline_short} 23:59）まで何度でも変更できます。\n\n"
+        "※回答期限（{final_deadline_short} 23:59）まで何度でも変更できます。\n\n"
         "お忙しいところ恐れ入りますが、よろしくお願いいたします。\n\n"
         "──────────────────\n"
         "{reunion_name} 幹事代表 {organizer_name}\n"
-        "E-mail: {organizer_email}"
+        "E-mail: {mail_from}"
     ),
     # ── 仮出欠 送信完了 ──────────────────────────────────
     "mail_provisional_confirm_subject": "【{reunion_name}】仮出欠を受け付けました",
     "mail_provisional_confirm_body": (
         "{name} 様\n\n"
-        "{reunion_name}幹事代表の{organizer_name} です。\n"
+        "{reunion_name}幹事代表の{organizer_name}です。\n"
         "仮出欠のご回答ありがとうございます。\n"
         "以下の内容で受け付けました。\n\n"
         "━━━━━━━━━━━━━━━━━━━━\n"
@@ -105,14 +105,14 @@ MAIL_DEFAULTS = {
         "引き続きよろしくお願いいたします。\n\n"
         "──────────────────\n"
         "{reunion_name} 幹事代表 {organizer_name}\n"
-        "E-mail: {organizer_email}"
+        "E-mail: {mail_from}"
     ),
     # ── 最終リマインド（生徒用） ─────────────────────────────
     "mail_final_reminder_subject": "【{final_reminder_deadline_short} 23:59までに】【{reunion_name}】開催のご案内（最終リマインド）",
     "mail_final_reminder_body": (
         "{name} 様\n\n"
         "ご無沙汰しております。\n"
-        "{reunion_name}幹事代表の{organizer_name} です。\n\n"
+        "{reunion_name}幹事代表の{organizer_name}です。\n\n"
         "本出欠にてご参加のご回答をいただき、ありがとうございます。\n"
         "開催が近づいてまいりましたので、最終のご案内をお送りいたします。\n\n"
         "━━━━━━━━━━━━━━━━━━━━\n"
@@ -128,13 +128,13 @@ MAIL_DEFAULTS = {
         "当日お会いできることを楽しみにしております。\n\n"
         "──────────────────\n"
         "{reunion_name} 幹事代表 {organizer_name}\n"
-        "E-mail: {organizer_email}"
+        "E-mail: {mail_from}"
     ),
     # ── 仮出欠リマインド ─────────────────────────────────
     "mail_provisional_reminder_subject": "【{reunion_name}】仮出欠のご回答をお願いします（リマインド）",
     "mail_provisional_reminder_body": (
         "{name} 様\n\n"
-        "{reunion_name}幹事代表の{organizer_name} です。\n\n"
+        "{reunion_name}幹事代表の{organizer_name}です。\n\n"
         "先日ご案内しました仮出欠フォームへのご回答がまだのようでしたので、\n"
         "リマインドのご連絡を差し上げました。\n\n"
         "━━━━━━━━━━━━━━━━━━━━\n"
@@ -153,14 +153,14 @@ MAIL_DEFAULTS = {
         "お忙しいところ恐れ入りますが、ご確認のほどよろしくお願いいたします。\n\n"
         "──────────────────\n"
         "{reunion_name} 幹事代表 {organizer_name}\n"
-        "E-mail: {organizer_email}"
+        "E-mail: {mail_from}"
     ),
     # ── 先生向けテンプレート ──────────────────────────────
     "mail_final_url_subject_teacher": "【{final_deadline_short} 23:59締切】【{reunion_name}】ご出席のご確認をお願いいたします",
     "mail_final_url_body_teacher": (
         "{name} 先生\n\n"
         "ご無沙汰しております。\n"
-        "{reunion_name}幹事代表の{organizer_name} です。\n\n"
+        "{reunion_name}幹事代表の{organizer_name}です。\n\n"
         "このたびは{reunion_name}を開催する運びとなりました。\n"
         "先生にもぜひご出席いただければ、生徒一同大変嬉しく思います。\n\n"
         "ご多用の中大変恐れ入りますが、ご都合がよろしければ\n"
@@ -182,13 +182,13 @@ MAIL_DEFAULTS = {
         "先生のご出席を心よりお待ちしております。\n\n"
         "──────────────────\n"
         "{reunion_name} 幹事代表 {organizer_name}\n"
-        "E-mail: {organizer_email}"
+        "E-mail: {mail_from}"
     ),
-    "mail_reminder_subject_teacher": "【{reminder_deadline_short} 23:59締切】【{reunion_name}】ご出席のご確認（リマインド）",
+    "mail_reminder_subject_teacher": "【{final_deadline_short} 23:59締切】【{reunion_name}】ご出席のご確認（リマインド）",
     "mail_reminder_body_teacher": (
         "{name} 先生\n\n"
         "ご無沙汰しております。\n"
-        "{reunion_name}幹事代表の{organizer_name} です。\n\n"
+        "{reunion_name}幹事代表の{organizer_name}です。\n\n"
         "先日お送りした出欠フォームについて、改めてご連絡いたします。\n"
         "ご回答済みの場合はご放念ください。\n\n"
         "ご多用の中お手数をおかけして恐れ入りますが、\n"
@@ -205,16 +205,16 @@ MAIL_DEFAULTS = {
         "■ 出欠フォーム\n"
         "━━━━━━━━━━━━━━━━━━━━\n"
         "{final_url}\n\n"
-        "※ご回答期限（{reminder_deadline_short} 23:59）まで何度でも変更いただけます。\n\n"
+        "※ご回答期限（{final_deadline_short} 23:59）まで何度でも変更いただけます。\n\n"
         "──────────────────\n"
         "{reunion_name} 幹事代表 {organizer_name}\n"
-        "E-mail: {organizer_email}"
+        "E-mail: {mail_from}"
     ),
     "mail_final_reminder_subject_teacher": "【{final_reminder_deadline_short} 23:59までに】【{reunion_name}】開催のご案内（最終リマインド）",
     "mail_final_reminder_body_teacher": (
         "{name} 先生\n\n"
         "ご無沙汰しております。\n"
-        "{reunion_name}幹事代表の{organizer_name} です。\n\n"
+        "{reunion_name}幹事代表の{organizer_name}です。\n\n"
         "ご出席のご回答をいただき、誠にありがとうございます。\n"
         "開催が近づいてまいりましたので、最終のご案内をお送りいたします。\n\n"
         "━━━━━━━━━━━━━━━━━━━━\n"
@@ -230,14 +230,14 @@ MAIL_DEFAULTS = {
         "先生にお会いできることを楽しみにしております。\n\n"
         "──────────────────\n"
         "{reunion_name} 幹事代表 {organizer_name}\n"
-        "E-mail: {organizer_email}"
+        "E-mail: {mail_from}"
     ),
     # ── ここまで先生向けテンプレート ─────────────────────────
 
     "mail_final_confirm_subject": "【{reunion_name}】本出欠を受け付けました",
     "mail_final_confirm_body": (
         "{name} 様\n\n"
-        "{reunion_name}幹事代表の{organizer_name} です。\n"
+        "{reunion_name}幹事代表の{organizer_name}です。\n"
         "本出欠のご回答ありがとうございます。\n"
         "以下の内容で受け付けました。\n\n"
         "━━━━━━━━━━━━━━━━━━━━\n"
@@ -257,7 +257,7 @@ MAIL_DEFAULTS = {
         "ご不明な点がございましたら、お気軽にご連絡ください。\n\n"
         "──────────────────\n"
         "{reunion_name} 幹事代表 {organizer_name}\n"
-        "E-mail: {organizer_email}"
+        "E-mail: {mail_from}"
     ),
 }
 
@@ -324,13 +324,12 @@ def _get_reunion_info() -> dict:
         "transfer_account_name":   get("transfer_account_name",   cfg.get("TRANSFER_ACCOUNT_NAME", "")),
         "transfer_deadline":       get("transfer_deadline",       cfg.get("TRANSFER_DEADLINE", "")),
         "organizer_name":          get("organizer_name",          cfg.get("ORGANIZER_NAME", "")),
-        "organizer_email":         get("mail_from",               cfg.get("MAIL_FROM", "")),
+        "mail_from":               get("mail_from",               cfg.get("MAIL_FROM", "")),
         "final_deadline":          get("final_deadline",          cfg.get("FINAL_DEADLINE", "")),
-        "reminder_deadline":       get("reminder_deadline",       cfg.get("REMINDER_DEADLINE", "")),
+        "reminder_send_date":      get("reminder_send_date",      cfg.get("REMINDER_SEND_DATE", "")),
         "final_reminder_deadline": get("final_reminder_deadline", cfg.get("FINAL_REMINDER_DEADLINE", "")),
     }
     info["final_deadline_short"]          = _format_deadline_short(info["final_deadline"])
-    info["reminder_deadline_short"]       = _format_deadline_short(info["reminder_deadline"])
     info["final_reminder_deadline_short"] = _format_deadline_short(info["final_reminder_deadline"])
     return info
 
@@ -350,11 +349,9 @@ def _build_final_url_mail_body(participant_name: str, final_url: str, role: str 
         dress_code=reunion["dress_code"],
         belongings=reunion["belongings"],
         organizer_name=reunion["organizer_name"],
-        organizer_email=reunion["organizer_email"],
+        mail_from=reunion["mail_from"],
         final_deadline=reunion["final_deadline"],
         final_deadline_short=reunion["final_deadline_short"],
-        reminder_deadline=reunion["reminder_deadline"],
-        reminder_deadline_short=reunion["reminder_deadline_short"],
         final_reminder_deadline=reunion["final_reminder_deadline"],
         final_reminder_deadline_short=reunion["final_reminder_deadline_short"],
     )
@@ -380,11 +377,9 @@ def _build_reminder_mail_body(participant_name: str, final_url: str, role: str =
         dress_code=reunion["dress_code"],
         belongings=reunion["belongings"],
         organizer_name=reunion["organizer_name"],
-        organizer_email=reunion["organizer_email"],
+        mail_from=reunion["mail_from"],
         final_deadline=reunion["final_deadline"],
         final_deadline_short=reunion["final_deadline_short"],
-        reminder_deadline=reunion["reminder_deadline"],
-        reminder_deadline_short=reunion["reminder_deadline_short"],
         final_reminder_deadline=reunion["final_reminder_deadline"],
         final_reminder_deadline_short=reunion["final_reminder_deadline_short"],
     )
@@ -573,11 +568,9 @@ def _build_provisional_confirm_body(participant_name: str, status_label: str, pr
         dress_code=reunion["dress_code"],
         belongings=reunion["belongings"],
         organizer_name=reunion["organizer_name"],
-        organizer_email=reunion["organizer_email"],
+        mail_from=reunion["mail_from"],
         final_deadline=reunion["final_deadline"],
         final_deadline_short=reunion["final_deadline_short"],
-        reminder_deadline=reunion["reminder_deadline"],
-        reminder_deadline_short=reunion["reminder_deadline_short"],
         final_reminder_deadline=reunion["final_reminder_deadline"],
         final_reminder_deadline_short=reunion["final_reminder_deadline_short"],
     )
@@ -627,7 +620,7 @@ def _build_final_confirm_body(participant_name: str, status_label: str, final_ur
         dress_code=reunion["dress_code"],
         belongings=reunion["belongings"],
         organizer_name=reunion["organizer_name"],
-        organizer_email=reunion["organizer_email"],
+        mail_from=reunion["mail_from"],
         transfer_bank=reunion["transfer_bank"],
         transfer_branch=reunion["transfer_branch"],
         transfer_branch_number=reunion["transfer_branch_number"],
@@ -637,8 +630,6 @@ def _build_final_confirm_body(participant_name: str, status_label: str, final_ur
         transfer_deadline=reunion["transfer_deadline"],
         final_deadline=reunion["final_deadline"],
         final_deadline_short=reunion["final_deadline_short"],
-        reminder_deadline=reunion["reminder_deadline"],
-        reminder_deadline_short=reunion["reminder_deadline_short"],
         final_reminder_deadline=reunion["final_reminder_deadline"],
         final_reminder_deadline_short=reunion["final_reminder_deadline_short"],
     )
@@ -672,11 +663,9 @@ def _build_provisional_reminder_body(participant_name: str, provisional_url: str
         dress_code=reunion["dress_code"],
         belongings=reunion["belongings"],
         organizer_name=reunion["organizer_name"],
-        organizer_email=reunion["organizer_email"],
+        mail_from=reunion["mail_from"],
         final_deadline=reunion["final_deadline"],
         final_deadline_short=reunion["final_deadline_short"],
-        reminder_deadline=reunion["reminder_deadline"],
-        reminder_deadline_short=reunion["reminder_deadline_short"],
         final_reminder_deadline=reunion["final_reminder_deadline"],
         final_reminder_deadline_short=reunion["final_reminder_deadline_short"],
     )
@@ -817,11 +806,9 @@ def _build_final_reminder_body(participant_name: str, role: str = "") -> tuple:
         dress_code=reunion["dress_code"],
         belongings=reunion["belongings"],
         organizer_name=reunion["organizer_name"],
-        organizer_email=reunion["organizer_email"],
+        mail_from=reunion["mail_from"],
         final_deadline=reunion["final_deadline"],
         final_deadline_short=reunion["final_deadline_short"],
-        reminder_deadline=reunion["reminder_deadline"],
-        reminder_deadline_short=reunion["reminder_deadline_short"],
         final_reminder_deadline=reunion["final_reminder_deadline"],
         final_reminder_deadline_short=reunion["final_reminder_deadline_short"],
     )
