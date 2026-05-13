@@ -35,6 +35,7 @@ from services.mail_service import (send_final_url, send_reminder, send_final_rem
                                     get_today_sent_count, get_remaining_today)
 from services.csv_service import parse_bank_csv, save_bank_imports
 from services.matching_service import run_auto_matching, confirm_match, unmatch
+from utils import normalize_transfer_name
 
 logger = logging.getLogger(__name__)
 
@@ -950,7 +951,7 @@ def update_payment(payment_id):
     paid_amount_str = request.form.get("paid_amount", "").strip()
     payment_date_str = request.form.get("payment_date", "").strip()
     payment.payment_method = request.form.get("payment_method", payment.payment_method)
-    payment.transfer_name = request.form.get("transfer_name", payment.transfer_name)
+    payment.transfer_name = normalize_transfer_name(request.form.get("transfer_name", payment.transfer_name))
 
     if paid_amount_str:
         try:
@@ -1436,7 +1437,7 @@ def roster_import():
         final_status  = FINAL_STATUS_MAP.get(get_col(row, idx_final_status), "")
         companions_raw = get_col(row, idx_companions)
         companions    = int(companions_raw) if companions_raw.isdigit() else 0
-        transfer_name = get_col(row, idx_transfer_name)
+        transfer_name = normalize_transfer_name(get_col(row, idx_transfer_name))
         pay_status    = PAY_STATUS_MAP.get(get_col(row, idx_pay_status), "")
         paid_raw      = get_col(row, idx_paid_amount)
         paid_amount   = int(paid_raw) if paid_raw.isdigit() else 0

@@ -25,6 +25,7 @@ from models import Participant, ProvisionalResponse, FinalResponse, Payment
 from models import AppSetting
 from services.token_service import get_participant_by_token, ensure_token, generate_final_url
 from services.mail_service import send_provisional_confirmation, send_final_confirmation
+from utils import normalize_transfer_name
 
 logger = logging.getLogger(__name__)
 
@@ -281,7 +282,7 @@ def final(token):
             return redirect(url_for("forms.final", token=token))
 
     status        = request.form.get("status", "").strip()
-    transfer_name = request.form.get("transfer_name", "").strip()
+    transfer_name = normalize_transfer_name(request.form.get("transfer_name", "").strip())
     remarks       = request.form.get("remarks", "").strip()
 
     errors = []
