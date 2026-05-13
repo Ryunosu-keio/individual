@@ -98,9 +98,8 @@
 
           <div class="mb-3">
             <label class="form-label fw-bold">仮出欠 回答期限</label>
-            <input type="text" class="form-control" name="provisional_deadline"
-                   value="{{ settings.get('provisional_deadline', '') }}"
-                   placeholder="〇月〇日">
+            <input type="date" class="form-control" name="provisional_deadline"
+                   value="{{ settings.get('provisional_deadline', '') }}">
             <div class="form-text">仮出欠フォームに表示され、リマインドメールにも使われます。</div>
           </div>
 
