@@ -77,9 +77,62 @@ MAIL_DEFAULTS = {
         "──────────────────\n"
         "{reunion_name} 幹事代表 {organizer_name}"
     ),
-    # ── 仮出欠 送信完了 ──────────────────────────────────
-    "mail_provisional_confirm_subject": "【{reunion_name}】仮出欠を受け付けました",
-    "mail_provisional_confirm_body": (
+    # ── 仮出欠 送信完了（参加予定） ──────────────────────────
+    "mail_provisional_confirm_attending_subject": "【{reunion_name}】仮出欠を受け付けました",
+    "mail_provisional_confirm_attending_body": (
+        "{name} 様\n\n"
+        "{reunion_name}幹事代表の{organizer_name}です。\n"
+        "仮出欠のご回答ありがとうございます。\n"
+        "以下の内容で受け付けました。\n\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        "■ ご回答内容\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        "回答: {status}\n\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        "■ 同窓会の詳細\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        "日時: {reunion_date} {reunion_time}\n"
+        "会場: {reunion_venue}\n"
+        "服装: {dress_code}\n"
+        "持ち物: {belongings}\n"
+        "会費: {reunion_fee}\n\n"
+        "内容を変更する場合は、下記URLから再度ご回答ください。\n"
+        "{provisional_url}\n\n"
+        "※同じメールアドレスで再送信すると回答が更新されます。\n\n"
+        "後日、本出欠フォームのURLを別途お送りいたします。\n"
+        "引き続きよろしくお願いいたします。\n\n"
+        "──────────────────\n"
+        "{reunion_name} 幹事代表 {organizer_name}"
+    ),
+    # ── 仮出欠 送信完了（不参加） ────────────────────────────
+    "mail_provisional_confirm_not_attending_subject": "【{reunion_name}】仮出欠を受け付けました",
+    "mail_provisional_confirm_not_attending_body": (
+        "{name} 様\n\n"
+        "{reunion_name}幹事代表の{organizer_name}です。\n"
+        "仮出欠のご回答ありがとうございます。\n"
+        "以下の内容で受け付けました。\n\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        "■ ご回答内容\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        "回答: {status}\n\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        "■ 同窓会の詳細\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        "日時: {reunion_date} {reunion_time}\n"
+        "会場: {reunion_venue}\n"
+        "服装: {dress_code}\n"
+        "持ち物: {belongings}\n"
+        "会費: {reunion_fee}\n\n"
+        "内容を変更する場合は、下記URLから再度ご回答ください。\n"
+        "{provisional_url}\n\n"
+        "※同じメールアドレスで再送信すると回答が更新されます。\n\n"
+        "引き続きよろしくお願いいたします。\n\n"
+        "──────────────────\n"
+        "{reunion_name} 幹事代表 {organizer_name}"
+    ),
+    # ── 仮出欠 送信完了（未定） ──────────────────────────────
+    "mail_provisional_confirm_undecided_subject": "【{reunion_name}】仮出欠を受け付けました",
+    "mail_provisional_confirm_undecided_body": (
         "{name} 様\n\n"
         "{reunion_name}幹事代表の{organizer_name}です。\n"
         "仮出欠のご回答ありがとうございます。\n"
@@ -224,8 +277,9 @@ MAIL_DEFAULTS = {
     ),
     # ── ここまで先生向けテンプレート ─────────────────────────
 
-    "mail_final_confirm_subject": "【{reunion_name}】本出欠を受け付けました",
-    "mail_final_confirm_body": (
+    # ── 本出欠 送信完了（参加） ──────────────────────────────
+    "mail_final_confirm_attending_subject": "【{reunion_name}】本出欠を受け付けました",
+    "mail_final_confirm_attending_body": (
         "{name} 様\n\n"
         "{reunion_name}幹事代表の{organizer_name}です。\n"
         "本出欠のご回答ありがとうございます。\n"
@@ -241,7 +295,38 @@ MAIL_DEFAULTS = {
         "会場: {reunion_venue}\n"
         "服装: {dress_code}\n"
         "持ち物: {belongings}\n\n"
-        "{transfer_section}"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        "■ 振込のご案内\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        "会費: {reunion_fee}\n"
+        "振込先: {transfer_bank} {transfer_branch}（支店番号: {transfer_branch_number}）\n"
+        "口座: {transfer_account_type}口座 {transfer_account_number}\n"
+        "口座名義: {transfer_account_name}\n"
+        "振込期限: {transfer_deadline}\n\n"
+        "内容を変更する場合は、下記URLから再度ご回答ください。\n"
+        "{final_url}\n\n"
+        "ご不明な点がございましたら、このメールへのご返信にてお気軽にご連絡ください。\n（連絡先は本メール末尾に記載しています）\n\n"
+        "──────────────────\n"
+        "{reunion_name} 幹事代表 {organizer_name}"
+    ),
+    # ── 本出欠 送信完了（不参加） ────────────────────────────
+    "mail_final_confirm_not_attending_subject": "【{reunion_name}】本出欠を受け付けました",
+    "mail_final_confirm_not_attending_body": (
+        "{name} 様\n\n"
+        "{reunion_name}幹事代表の{organizer_name}です。\n"
+        "本出欠のご回答ありがとうございます。\n"
+        "以下の内容で受け付けました。\n\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        "■ ご回答内容\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        "回答: {status}\n\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        "■ 同窓会の詳細\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        "日時: {reunion_date} {reunion_time}\n"
+        "会場: {reunion_venue}\n"
+        "服装: {dress_code}\n"
+        "持ち物: {belongings}\n\n"
         "内容を変更する場合は、下記URLから再度ご回答ください。\n"
         "{final_url}\n\n"
         "ご不明な点がございましたら、このメールへのご返信にてお気軽にご連絡ください。\n（連絡先は本メール末尾に記載しています）\n\n"
@@ -556,8 +641,11 @@ def send_final_url(participant, final_url: str) -> MailLog:
     return log
 
 
-def _build_provisional_confirm_body(participant_name: str, status_label: str, provisional_url: str) -> tuple:
-    """仮出欠送信完了メールの件名・本文を生成する"""
+def _build_provisional_confirm_body(participant_name: str, status_label: str, provisional_url: str, status: str = "attending") -> tuple:
+    """仮出欠送信完了メールの件名・本文を生成する（statusキーでテンプレートを切り替え）"""
+    key_suffix = {"attending": "attending", "not_attending": "not_attending"}.get(status, "undecided")
+    s_key = f"mail_provisional_confirm_{key_suffix}_subject"
+    b_key = f"mail_provisional_confirm_{key_suffix}_body"
     reunion = _get_reunion_info()
     vars = dict(
         name=participant_name,
@@ -571,50 +659,26 @@ def _build_provisional_confirm_body(participant_name: str, status_label: str, pr
         dress_code=reunion["dress_code"],
         belongings=reunion["belongings"],
         organizer_name=reunion["organizer_name"],
-
         final_deadline=reunion["final_deadline"],
         final_deadline_short=reunion["final_deadline_short"],
         final_reminder_deadline=reunion["final_reminder_deadline"],
         final_reminder_deadline_short=reunion["final_reminder_deadline_short"],
     )
-    subject = _render_template(
-        _get_template('mail_provisional_confirm_subject',
-                      MAIL_DEFAULTS['mail_provisional_confirm_subject']),
-        **vars
-    )
-    body = _render_template(
-        _get_template('mail_provisional_confirm_body',
-                      MAIL_DEFAULTS['mail_provisional_confirm_body']),
-        **vars
-    )
+    subject = _render_template(_get_template(s_key, MAIL_DEFAULTS[s_key]), **vars)
+    body    = _render_template(_get_template(b_key, MAIL_DEFAULTS[b_key]), **vars)
     return subject, body
 
 
-def _build_final_confirm_body(participant_name: str, status_label: str, final_url: str) -> tuple:
-    """本出欠送信完了メールの件名・本文を生成する"""
+def _build_final_confirm_body(participant_name: str, status_label: str, final_url: str, status: str = "attending") -> tuple:
+    """本出欠送信完了メールの件名・本文を生成する（statusキーでテンプレートを切り替え）"""
+    key_suffix = "attending" if status == "attending" else "not_attending"
+    s_key = f"mail_final_confirm_{key_suffix}_subject"
+    b_key = f"mail_final_confirm_{key_suffix}_body"
     reunion = _get_reunion_info()
-    is_attending = "不参加" not in status_label and "欠席" not in status_label
-    if is_attending:
-        transfer_section = (
-            "━━━━━━━━━━━━━━━━━━━━\n"
-            "■ 振込のご案内\n"
-            "━━━━━━━━━━━━━━━━━━━━\n"
-            f"会費: {reunion['reunion_fee']}\n"
-            f"振込先: {reunion['transfer_bank']} {reunion['transfer_branch']}（支店番号: {reunion['transfer_branch_number']}）\n"
-            f"口座: {reunion['transfer_account_type']}口座 {reunion['transfer_account_number']}\n"
-            f"口座名義: {reunion['transfer_account_name']}\n"
-            f"振込期限: {reunion['transfer_deadline']}\n\n"
-            "※振込名義は本出欠フォームでご入力いただいた名義と\n"
-            "  一致するようお願いいたします。\n"
-            "※振込手数料はご負担をお願いいたします。\n\n"
-        )
-    else:
-        transfer_section = ""
     vars = dict(
         name=participant_name,
         status=status_label,
         final_url=final_url,
-        transfer_section=transfer_section,
         reunion_name=reunion["reunion_name"],
         reunion_date=reunion["reunion_date"],
         reunion_time=reunion["reunion_time"],
@@ -623,7 +687,6 @@ def _build_final_confirm_body(participant_name: str, status_label: str, final_ur
         dress_code=reunion["dress_code"],
         belongings=reunion["belongings"],
         organizer_name=reunion["organizer_name"],
-
         transfer_bank=reunion["transfer_bank"],
         transfer_branch=reunion["transfer_branch"],
         transfer_branch_number=reunion["transfer_branch_number"],
@@ -636,16 +699,8 @@ def _build_final_confirm_body(participant_name: str, status_label: str, final_ur
         final_reminder_deadline=reunion["final_reminder_deadline"],
         final_reminder_deadline_short=reunion["final_reminder_deadline_short"],
     )
-    subject = _render_template(
-        _get_template('mail_final_confirm_subject',
-                      MAIL_DEFAULTS['mail_final_confirm_subject']),
-        **vars
-    )
-    body = _render_template(
-        _get_template('mail_final_confirm_body',
-                      MAIL_DEFAULTS['mail_final_confirm_body']),
-        **vars
-    )
+    subject = _render_template(_get_template(s_key, MAIL_DEFAULTS[s_key]), **vars)
+    body    = _render_template(_get_template(b_key, MAIL_DEFAULTS[b_key]), **vars)
     return subject, body
 
 
@@ -713,10 +768,10 @@ def send_provisional_reminder(participant, provisional_url: str) -> MailLog:
     return log
 
 
-def send_provisional_confirmation(participant, status_label: str, provisional_url: str) -> MailLog:
+def send_provisional_confirmation(participant, status_label: str, provisional_url: str, status: str = "attending") -> MailLog:
     """仮出欠フォーム送信完了メールを送信する。"""
     mail_cfg = _get_mail_config()
-    subject, body = _build_provisional_confirm_body(participant.name, status_label, provisional_url)
+    subject, body = _build_provisional_confirm_body(participant.name, status_label, provisional_url, status)
 
     log = MailLog(
         participant_id=participant.id,
@@ -740,10 +795,10 @@ def send_provisional_confirmation(participant, status_label: str, provisional_ur
     return log
 
 
-def send_final_confirmation(participant, status_label: str, final_url: str) -> MailLog:
+def send_final_confirmation(participant, status_label: str, final_url: str, status: str = "attending") -> MailLog:
     """本出欠フォーム送信完了メールを送信する。"""
     mail_cfg = _get_mail_config()
-    subject, body = _build_final_confirm_body(participant.display_name, status_label, final_url)
+    subject, body = _build_final_confirm_body(participant.display_name, status_label, final_url, status)
 
     log = MailLog(
         participant_id=participant.id,
