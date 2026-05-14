@@ -103,6 +103,27 @@
   <div class="col-lg-8">
     <form method="POST" action="{{ url_for('admin.settings_mail_template') }}">
 
+      <!-- 仮出欠送信完了（未定・先生用） -->
+      <div id="section_provisional_confirm_undecided_teacher" class="mail-section d-none">
+        <div class="card mb-4">
+          <div class="card-header fw-bold bg-light">
+            <i class="bi bi-check-circle me-1"></i>仮出欠 送信完了メール（未定・先生用）
+          </div>
+          <div class="card-body">
+            <div class="mb-3">
+              <label class="form-label fw-bold">件名</label>
+              <input type="text" class="form-control" name="mail_provisional_confirm_undecided_subject_teacher"
+                     value="{{ settings.get('mail_provisional_confirm_undecided_subject_teacher', '') }}">
+            </div>
+            <div class="mb-0">
+              <label class="form-label fw-bold">本文</label>
+              <textarea class="form-control font-monospace auto-resize" name="mail_provisional_confirm_undecided_body_teacher">{{ settings.get('mail_provisional_confirm_undecided_body_teacher', '') }}</textarea>
+              <div class="form-text">追加変数: <code>{status}</code> 回答内容、<code>{provisional_url}</code> 変更用URL</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- 本出欠URL送信 -->
       <div id="section_final_url" class="mail-section d-none">
         <div class="card mb-4">
@@ -144,6 +165,27 @@
         </div>
       </div>
 
+      <!-- 仮出欠送信完了（参加予定・先生用） -->
+      <div id="section_provisional_confirm_attending_teacher" class="mail-section d-none">
+        <div class="card mb-4">
+          <div class="card-header fw-bold bg-light">
+            <i class="bi bi-check-circle me-1"></i>仮出欠 送信完了メール（参加予定・先生用）
+          </div>
+          <div class="card-body">
+            <div class="mb-3">
+              <label class="form-label fw-bold">件名</label>
+              <input type="text" class="form-control" name="mail_provisional_confirm_attending_subject_teacher"
+                     value="{{ settings.get('mail_provisional_confirm_attending_subject_teacher', '') }}">
+            </div>
+            <div class="mb-0">
+              <label class="form-label fw-bold">本文</label>
+              <textarea class="form-control font-monospace auto-resize" name="mail_provisional_confirm_attending_body_teacher">{{ settings.get('mail_provisional_confirm_attending_body_teacher', '') }}</textarea>
+              <div class="form-text">追加変数: <code>{status}</code> 回答内容、<code>{provisional_url}</code> 変更用URL</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- 仮出欠送信完了（不参加） -->
       <div id="section_provisional_confirm_not_attending" class="mail-section d-none">
         <div class="card mb-4">
@@ -159,6 +201,27 @@
             <div class="mb-0">
               <label class="form-label fw-bold">本文</label>
               <textarea class="form-control font-monospace auto-resize" name="mail_provisional_confirm_not_attending_body">{{ settings.get('mail_provisional_confirm_not_attending_body', '') }}</textarea>
+              <div class="form-text">追加変数: <code>{status}</code> 回答内容、<code>{provisional_url}</code> 変更用URL</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 仮出欠送信完了（不参加・先生用） -->
+      <div id="section_provisional_confirm_not_attending_teacher" class="mail-section d-none">
+        <div class="card mb-4">
+          <div class="card-header fw-bold bg-light">
+            <i class="bi bi-check-circle me-1"></i>仮出欠 送信完了メール（不参加・先生用）
+          </div>
+          <div class="card-body">
+            <div class="mb-3">
+              <label class="form-label fw-bold">件名</label>
+              <input type="text" class="form-control" name="mail_provisional_confirm_not_attending_subject_teacher"
+                     value="{{ settings.get('mail_provisional_confirm_not_attending_subject_teacher', '') }}">
+            </div>
+            <div class="mb-0">
+              <label class="form-label fw-bold">本文</label>
+              <textarea class="form-control font-monospace auto-resize" name="mail_provisional_confirm_not_attending_body_teacher">{{ settings.get('mail_provisional_confirm_not_attending_body_teacher', '') }}</textarea>
               <div class="form-text">追加変数: <code>{status}</code> 回答内容、<code>{provisional_url}</code> 変更用URL</div>
             </div>
           </div>
@@ -201,6 +264,27 @@
             <div class="mb-0">
               <label class="form-label fw-bold">本文</label>
               <textarea class="form-control font-monospace auto-resize" name="mail_final_confirm_attending_body">{{ settings.get('mail_final_confirm_attending_body', '') }}</textarea>
+              <div class="form-text">追加変数: <code>{status}</code> 回答内容、<code>{final_url}</code> 変更用URL、振込情報各変数</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 本出欠送信完了（参加・先生用） -->
+      <div id="section_final_confirm_attending_teacher" class="mail-section d-none">
+        <div class="card mb-4">
+          <div class="card-header fw-bold bg-light">
+            <i class="bi bi-check-circle me-1"></i>本出欠 送信完了メール（参加・先生用）
+          </div>
+          <div class="card-body">
+            <div class="mb-3">
+              <label class="form-label fw-bold">件名</label>
+              <input type="text" class="form-control" name="mail_final_confirm_attending_subject_teacher"
+                     value="{{ settings.get('mail_final_confirm_attending_subject_teacher', '') }}">
+            </div>
+            <div class="mb-0">
+              <label class="form-label fw-bold">本文</label>
+              <textarea class="form-control font-monospace auto-resize" name="mail_final_confirm_attending_body_teacher">{{ settings.get('mail_final_confirm_attending_body_teacher', '') }}</textarea>
               <div class="form-text">追加変数: <code>{status}</code> 回答内容、<code>{final_url}</code> 変更用URL、振込情報各変数</div>
             </div>
           </div>
@@ -288,6 +372,27 @@
         </div>
       </div>
 
+      <!-- 本出欠送信完了（不参加・先生用） -->
+      <div id="section_final_confirm_not_attending_teacher" class="mail-section d-none">
+        <div class="card mb-4">
+          <div class="card-header fw-bold bg-light">
+            <i class="bi bi-check-circle me-1"></i>本出欠 送信完了メール（不参加・先生用）
+          </div>
+          <div class="card-body">
+            <div class="mb-3">
+              <label class="form-label fw-bold">件名</label>
+              <input type="text" class="form-control" name="mail_final_confirm_not_attending_subject_teacher"
+                     value="{{ settings.get('mail_final_confirm_not_attending_subject_teacher', '') }}">
+            </div>
+            <div class="mb-0">
+              <label class="form-label fw-bold">本文</label>
+              <textarea class="form-control font-monospace auto-resize" name="mail_final_confirm_not_attending_body_teacher">{{ settings.get('mail_final_confirm_not_attending_body_teacher', '') }}</textarea>
+              <div class="form-text">追加変数: <code>{status}</code> 回答内容、<code>{final_url}</code> 変更用URL</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- 最終リマインド -->
       <div id="section_final_reminder" class="mail-section d-none">
         <div class="card mb-4">
@@ -338,8 +443,12 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-  const HAS_TEACHER = ['final_url', 'reminder', 'final_reminder'];
-  const NO_SECTION_PREFIX = ['provisional_confirm_attending', 'provisional_confirm_not_attending', 'provisional_confirm_undecided', 'final_confirm_attending', 'final_confirm_not_attending'];
+  const HAS_TEACHER = [
+    'provisional_confirm_attending', 'provisional_confirm_not_attending', 'provisional_confirm_undecided',
+    'final_url', 'reminder',
+    'final_confirm_attending', 'final_confirm_not_attending',
+    'final_reminder',
+  ];
 
   function autoResize(ta) {
     ta.style.height = 'auto';
