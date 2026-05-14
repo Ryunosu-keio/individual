@@ -1163,14 +1163,17 @@ def settings_pdf_upload():
 def settings_mail_template():
     """メール文章編集画面"""
     KEYS = [
-        "mail_provisional_confirm_subject",       "mail_provisional_confirm_body",
-        "mail_final_url_subject",                 "mail_final_url_body",
-        "mail_final_url_subject_teacher",         "mail_final_url_body_teacher",
-        "mail_reminder_subject",                  "mail_reminder_body",
-        "mail_reminder_subject_teacher",          "mail_reminder_body_teacher",
-        "mail_final_confirm_subject",             "mail_final_confirm_body",
-        "mail_final_reminder_subject",            "mail_final_reminder_body",
-        "mail_final_reminder_subject_teacher",    "mail_final_reminder_body_teacher",
+        "mail_provisional_confirm_attending_subject",     "mail_provisional_confirm_attending_body",
+        "mail_provisional_confirm_not_attending_subject", "mail_provisional_confirm_not_attending_body",
+        "mail_provisional_confirm_undecided_subject",     "mail_provisional_confirm_undecided_body",
+        "mail_final_url_subject",                         "mail_final_url_body",
+        "mail_final_url_subject_teacher",                 "mail_final_url_body_teacher",
+        "mail_reminder_subject",                          "mail_reminder_body",
+        "mail_reminder_subject_teacher",                  "mail_reminder_body_teacher",
+        "mail_final_confirm_attending_subject",           "mail_final_confirm_attending_body",
+        "mail_final_confirm_not_attending_subject",       "mail_final_confirm_not_attending_body",
+        "mail_final_reminder_subject",                    "mail_final_reminder_body",
+        "mail_final_reminder_subject_teacher",            "mail_final_reminder_body_teacher",
     ]
     if request.method == "POST":
         for key in KEYS:

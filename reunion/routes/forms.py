@@ -203,7 +203,7 @@ def provisional():
         status_label = ProvisionalResponse.STATUS_LABELS.get(status, status)
         base_url = current_app.config.get("APP_BASE_URL", request.host_url.rstrip("/"))
         provisional_url = f"{base_url}/form/provisional"
-        send_provisional_confirmation(participant, status_label, provisional_url)
+        send_provisional_confirmation(participant, status_label, provisional_url, status)
     except Exception as e:
         logger.error(f"仮出欠確認メール送信エラー: {e}", exc_info=True)
 
@@ -343,7 +343,7 @@ def final(token):
         status_label = FinalResponse.STATUS_LABELS.get(status, status)
         base_url = current_app.config.get("APP_BASE_URL", request.host_url.rstrip("/"))
         final_url = f"{base_url}/form/final/{token}"
-        send_final_confirmation(participant, status_label, final_url)
+        send_final_confirmation(participant, status_label, final_url, status)
     except Exception as e:
         logger.error(f"本出欠確認メール送信エラー: {e}", exc_info=True)
 

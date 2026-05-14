@@ -66,10 +66,17 @@
         <label class="form-label fw-bold">メールの種類</label>
         <select id="mailType" class="form-select form-select-lg">
           <option value="">-- 選択してください --</option>
-          <option value="provisional_confirm">仮出欠 送信完了</option>
+          <optgroup label="仮出欠 送信完了">
+            <option value="provisional_confirm_attending">仮出欠 送信完了（参加予定）</option>
+            <option value="provisional_confirm_not_attending">仮出欠 送信完了（不参加）</option>
+            <option value="provisional_confirm_undecided">仮出欠 送信完了（未定）</option>
+          </optgroup>
           <option value="final_url">本出欠URL送信</option>
           <option value="reminder">本出欠リマインド</option>
-          <option value="final_confirm">本出欠 送信完了</option>
+          <optgroup label="本出欠 送信完了">
+            <option value="final_confirm_attending">本出欠 送信完了（参加）</option>
+            <option value="final_confirm_not_attending">本出欠 送信完了（不参加）</option>
+          </optgroup>
           <option value="final_reminder">最終リマインド</option>
         </select>
       </div>
@@ -116,42 +123,105 @@
         </div>
       </div>
 
-      <!-- 仮出欠送信完了 -->
-      <div id="section_provisional_confirm" class="mail-section">
+      <!-- 仮出欠送信完了（参加予定） -->
+      <div id="section_provisional_confirm_attending" class="mail-section d-none">
         <div class="card mb-4">
           <div class="card-header fw-bold bg-light">
-            <i class="bi bi-check-circle me-1"></i>仮出欠 送信完了メール
+            <i class="bi bi-check-circle me-1"></i>仮出欠 送信完了メール（参加予定）
           </div>
           <div class="card-body">
             <div class="mb-3">
               <label class="form-label fw-bold">件名</label>
-              <input type="text" class="form-control" name="mail_provisional_confirm_subject"
-                     value="{{ settings.get('mail_provisional_confirm_subject', '') }}">
+              <input type="text" class="form-control" name="mail_provisional_confirm_attending_subject"
+                     value="{{ settings.get('mail_provisional_confirm_attending_subject', '') }}">
             </div>
             <div class="mb-0">
               <label class="form-label fw-bold">本文</label>
-              <textarea class="form-control font-monospace auto-resize" name="mail_provisional_confirm_body">{{ settings.get('mail_provisional_confirm_body', '') }}</textarea>
+              <textarea class="form-control font-monospace auto-resize" name="mail_provisional_confirm_attending_body">{{ settings.get('mail_provisional_confirm_attending_body', '') }}</textarea>
               <div class="form-text">追加変数: <code>{status}</code> 回答内容、<code>{provisional_url}</code> 変更用URL</div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- 本出欠送信完了 -->
-      <div id="section_final_confirm" class="mail-section d-none">
+      <!-- 仮出欠送信完了（不参加） -->
+      <div id="section_provisional_confirm_not_attending" class="mail-section d-none">
         <div class="card mb-4">
           <div class="card-header fw-bold bg-light">
-            <i class="bi bi-check-circle me-1"></i>本出欠 送信完了メール
+            <i class="bi bi-check-circle me-1"></i>仮出欠 送信完了メール（不参加）
           </div>
           <div class="card-body">
             <div class="mb-3">
               <label class="form-label fw-bold">件名</label>
-              <input type="text" class="form-control" name="mail_final_confirm_subject"
-                     value="{{ settings.get('mail_final_confirm_subject', '') }}">
+              <input type="text" class="form-control" name="mail_provisional_confirm_not_attending_subject"
+                     value="{{ settings.get('mail_provisional_confirm_not_attending_subject', '') }}">
             </div>
             <div class="mb-0">
               <label class="form-label fw-bold">本文</label>
-              <textarea class="form-control font-monospace auto-resize" name="mail_final_confirm_body">{{ settings.get('mail_final_confirm_body', '') }}</textarea>
+              <textarea class="form-control font-monospace auto-resize" name="mail_provisional_confirm_not_attending_body">{{ settings.get('mail_provisional_confirm_not_attending_body', '') }}</textarea>
+              <div class="form-text">追加変数: <code>{status}</code> 回答内容、<code>{provisional_url}</code> 変更用URL</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 仮出欠送信完了（未定） -->
+      <div id="section_provisional_confirm_undecided" class="mail-section d-none">
+        <div class="card mb-4">
+          <div class="card-header fw-bold bg-light">
+            <i class="bi bi-check-circle me-1"></i>仮出欠 送信完了メール（未定）
+          </div>
+          <div class="card-body">
+            <div class="mb-3">
+              <label class="form-label fw-bold">件名</label>
+              <input type="text" class="form-control" name="mail_provisional_confirm_undecided_subject"
+                     value="{{ settings.get('mail_provisional_confirm_undecided_subject', '') }}">
+            </div>
+            <div class="mb-0">
+              <label class="form-label fw-bold">本文</label>
+              <textarea class="form-control font-monospace auto-resize" name="mail_provisional_confirm_undecided_body">{{ settings.get('mail_provisional_confirm_undecided_body', '') }}</textarea>
+              <div class="form-text">追加変数: <code>{status}</code> 回答内容、<code>{provisional_url}</code> 変更用URL</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 本出欠送信完了（参加） -->
+      <div id="section_final_confirm_attending" class="mail-section d-none">
+        <div class="card mb-4">
+          <div class="card-header fw-bold bg-light">
+            <i class="bi bi-check-circle me-1"></i>本出欠 送信完了メール（参加）
+          </div>
+          <div class="card-body">
+            <div class="mb-3">
+              <label class="form-label fw-bold">件名</label>
+              <input type="text" class="form-control" name="mail_final_confirm_attending_subject"
+                     value="{{ settings.get('mail_final_confirm_attending_subject', '') }}">
+            </div>
+            <div class="mb-0">
+              <label class="form-label fw-bold">本文</label>
+              <textarea class="form-control font-monospace auto-resize" name="mail_final_confirm_attending_body">{{ settings.get('mail_final_confirm_attending_body', '') }}</textarea>
+              <div class="form-text">追加変数: <code>{status}</code> 回答内容、<code>{final_url}</code> 変更用URL、振込情報各変数</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 本出欠送信完了（不参加） -->
+      <div id="section_final_confirm_not_attending" class="mail-section d-none">
+        <div class="card mb-4">
+          <div class="card-header fw-bold bg-light">
+            <i class="bi bi-check-circle me-1"></i>本出欠 送信完了メール（不参加）
+          </div>
+          <div class="card-body">
+            <div class="mb-3">
+              <label class="form-label fw-bold">件名</label>
+              <input type="text" class="form-control" name="mail_final_confirm_not_attending_subject"
+                     value="{{ settings.get('mail_final_confirm_not_attending_subject', '') }}">
+            </div>
+            <div class="mb-0">
+              <label class="form-label fw-bold">本文</label>
+              <textarea class="form-control font-monospace auto-resize" name="mail_final_confirm_not_attending_body">{{ settings.get('mail_final_confirm_not_attending_body', '') }}</textarea>
               <div class="form-text">追加変数: <code>{status}</code> 回答内容、<code>{final_url}</code> 変更用URL</div>
             </div>
           </div>
@@ -269,6 +339,7 @@
 <script>
 document.addEventListener('DOMContentLoaded', function () {
   const HAS_TEACHER = ['final_url', 'reminder', 'final_reminder'];
+  const NO_SECTION_PREFIX = ['provisional_confirm_attending', 'provisional_confirm_not_attending', 'provisional_confirm_undecided', 'final_confirm_attending', 'final_confirm_not_attending'];
 
   function autoResize(ta) {
     ta.style.height = 'auto';
@@ -297,7 +368,7 @@ document.addEventListener('DOMContentLoaded', function () {
       document.getElementById('toggleStudent').checked = true;
     }
 
-    const key = isTeacher && HAS_TEACHER.includes(mailType) ? mailType + '_teacher' : mailType;
+    const key = (isTeacher && HAS_TEACHER.includes(mailType)) ? mailType + '_teacher' : mailType;
     const target = document.getElementById('section_' + key);
     if (target) {
       target.classList.remove('d-none');
