@@ -293,9 +293,16 @@ def final(token):
     transfer_name = normalize_transfer_name(request.form.get("transfer_name", "").strip())
     remarks       = request.form.get("remarks", "").strip()
 
+    transfer_name_confirmed = request.form.get("transfer_name_confirm") == "on"
+    transfer_done           = request.form.get("transfer_done") == "on"
+
     errors = []
     if status not in ("attending", "not_attending"):
         errors.append("参加・不参加を選択してください。")
+    if status == "attending" and not transfer_name_confirmed:
+        errors.append("振込名義に学籍番号を含めましたのチェックを入れてください。")
+    if status == "attending" and not transfer_done:
+        errors.append("振込完了のチェックを入れてください。")
 
     if errors:
         for e in errors:
