@@ -52,9 +52,12 @@
                    placeholder="山田太郎" required>
           </div>
           <div class="mb-2">
-            <label class="form-label form-label-sm fw-bold">氏名（カナ）</label>
+            <label class="form-label form-label-sm fw-bold">
+              氏名（カナ）<span id="kanaRequired" class="text-danger d-none"> *</span>
+            </label>
             <input type="text" class="form-control form-control-sm" name="name_kana"
-                   placeholder="ヤマダタロウ">
+                   id="nameKanaInput" placeholder="ヤマダタロウ">
+            <div class="form-text d-none" id="kanaHint">クラス未入力の場合は必須です</div>
           </div>
           <div class="mb-2">
             <label class="form-label form-label-sm fw-bold">メールアドレス <span class="text-danger">*</span></label>
@@ -73,7 +76,7 @@
             <div class="col">
               <label class="form-label form-label-sm fw-bold">クラス <span class="text-muted small">（2桁: 31=3年1組）</span></label>
               <input type="text" class="form-control form-control-sm" name="class_name"
-                     placeholder="31">
+                     id="classNameInput" placeholder="31">
             </div>
             <div class="col">
               <label class="form-label form-label-sm fw-bold">出席番号</label>
@@ -174,4 +177,23 @@
     </tbody>
   </table>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  var classInput = document.getElementById('classNameInput');
+  var kanaInput  = document.getElementById('nameKanaInput');
+  var kanaReq    = document.getElementById('kanaRequired');
+  var kanaHint   = document.getElementById('kanaHint');
+
+  function updateKanaRequired() {
+    var needKana = classInput.value.trim() === '';
+    kanaInput.required = needKana;
+    kanaReq.classList.toggle('d-none', !needKana);
+    kanaHint.classList.toggle('d-none', !needKana);
+  }
+
+  classInput.addEventListener('input', updateKanaRequired);
+  updateKanaRequired();
+</script>
 {% endblock %}
