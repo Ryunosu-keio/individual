@@ -670,10 +670,11 @@ def send_final_url_single(participant_id):
 
     base_url = current_app.config.get("APP_BASE_URL", "http://localhost:5000")
     final_url = generate_final_url(participant, base_url)
+    use_html = request.form.get("mail_format", "html") != "text"
 
     try:
         # current_app.config_obj はapp.pyで設定する簡易オブジェクト
-        log = send_final_url(participant, final_url)
+        log = send_final_url(participant, final_url, use_html=use_html)
         if log.status == "simulated":
             flash(f"[開発モード] {participant.name} へのメール内容をコンソールに出力しました。", "info")
         else:
@@ -720,6 +721,7 @@ def send_final_url_bulk():
     daily_limit = get_daily_send_limit()
     stage = (get_today_sent_count() // daily_limit) + 1 if daily_limit > 0 else 1
 
+    use_html = request.form.get("mail_format", "html") != "text"
     app = current_app._get_current_object()
     jobs = [(p.id, generate_final_url(p, base_url)) for p in batch]
 
@@ -732,7 +734,7 @@ def send_final_url_bulk():
                 if p is None:
                     continue
                 try:
-                    send_final_url(p, final_url)
+                    send_final_url(p, final_url, use_html=use_html)
                     sent += 1
                 except Exception as e:
                     logger.error(f"一括送信失敗: {p.email} - {e}", exc_info=True)
@@ -761,9 +763,10 @@ def send_reminder_single(participant_id):
 
     base_url = current_app.config.get("APP_BASE_URL", "http://localhost:5000")
     final_url = generate_final_url(participant, base_url)
+    use_html = request.form.get("mail_format", "html") != "text"
 
     try:
-        log = send_reminder(participant, final_url)
+        log = send_reminder(participant, final_url, use_html=use_html)
         if log.status == "simulated":
             flash(f"[開発モード] {participant.name} へのリマインド内容をコンソールに出力しました。", "info")
         else:
@@ -786,9 +789,10 @@ def send_final_reminder_single(participant_id):
     s = AppSetting.query.filter_by(key="reunion_guide_pdf").first()
     if s and s.value and os.path.isfile(s.value):
         pdf_path = s.value
+    use_html = request.form.get("mail_format", "html") != "text"
 
     try:
-        log = send_final_reminder(participant, attachment_path=pdf_path)
+        log = send_final_reminder(participant, attachment_path=pdf_path, use_html=use_html)
         if log.status == "simulated":
             flash(f"[開発モード] {participant.name} への最終リマインド内容をコンソールに出力しました。", "info")
         else:
@@ -826,6 +830,7 @@ def send_reminder_bulk():
         return redirect(url_for("admin.participants"))
 
     batch = targets[:remaining]
+    use_html = request.form.get("mail_format", "html") != "text"
     app = current_app._get_current_object()
     jobs = [(p.id, generate_final_url(p, base_url)) for p in batch]
 
@@ -838,7 +843,7 @@ def send_reminder_bulk():
                 if p is None:
                     continue
                 try:
-                    send_reminder(p, final_url)
+                    send_reminder(p, final_url, use_html=use_html)
                     sent += 1
                 except Exception as e:
                     logger.error(f"リマインド一括送信失敗: {p.email} - {e}", exc_info=True)
@@ -900,6 +905,7 @@ def send_final_reminder_bulk():
         if os.path.isfile(default_pdf):
             pdf_path = default_pdf
 
+    use_html = request.form.get("mail_format", "html") != "text"
     app = current_app._get_current_object()
     jobs = [p.id for p in batch]
 
@@ -912,7 +918,7 @@ def send_final_reminder_bulk():
                 if p is None:
                     continue
                 try:
-                    send_final_reminder(p, attachment_path=pdf_path)
+                    send_final_reminder(p, attachment_path=pdf_path, use_html=use_html)
                     sent += 1
                 except Exception as e:
                     logger.error(f"最終リマインド一括送信失敗: {p.email} - {e}", exc_info=True)
