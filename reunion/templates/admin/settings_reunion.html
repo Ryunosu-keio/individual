@@ -144,17 +144,17 @@
           </div>
 
           <div class="mb-3">
-            <label class="form-label fw-bold">最終リマインド キャンセル期限</label>
-            <input type="date" class="form-control" name="final_reminder_deadline"
-                   value="{{ settings.get('final_reminder_deadline', '') }}">
-            <div class="form-text">最終リマインドメールに表示されるキャンセル期限。</div>
-          </div>
-
-          <div class="mb-0">
             <label class="form-label fw-bold">最終リマインド 送信日</label>
             <input type="date" class="form-control" name="final_reminder_date"
                    value="{{ settings.get('final_reminder_date', '') }}">
             <div class="form-text">この日以降、本出欠参加確定者が最終リマインド送信の対象になります。未設定の場合は自動判定に含まれません。</div>
+          </div>
+
+          <div class="mb-0">
+            <label class="form-label fw-bold">最終リマインド キャンセル期限</label>
+            <input type="date" class="form-control" name="final_reminder_deadline"
+                   value="{{ settings.get('final_reminder_deadline', '') }}">
+            <div class="form-text">最終リマインドメールに表示されるキャンセル期限。</div>
           </div>
 
         </div>
