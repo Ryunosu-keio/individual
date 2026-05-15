@@ -1650,30 +1650,41 @@ def roster_export():
     )
 
 
-@admin_bp.route("/final-forms")
-def final_forms():
-    """\u672c\u51fa\u6b20\u56de\u7b54\u4e00\u89a7\uff08\u95b2\u89a7\u306e\u307f\uff09"""
-    from models import FinalResponse
-    responses = (
-        FinalResponse.query
-        .join(FinalResponse.participant)
-        .order_by(Participant.class_name, Participant.student_number, FinalResponse.submitted_at.desc())
-        .all()
-    )
-    # \u6700\u65b0\u56de\u7b54\u306e\u307f\uff08participant_id \u3067\u91cd\u8907\u9664\u53bb\u3001\u6700\u65b0\u3092\u512a\u5148\uff09
-    seen = set()
-    latest = []
-    for r in responses:
-        if r.participant_id not in seen:
-            seen.add(r.participant_id)
-            latest.append(r)
+@admin_bp.route("/final-form-preview")
+def final_form_preview():
+    """\u672c\u51fa\u6b20\u30d5\u30a9\u30fc\u30e0\u306e\u30ec\u30a4\u30a2\u30a6\u30c8\u30d7\u30ec\u30d3\u30e5\u30fc\uff08DB\u4e0a\u306e\u6700\u521d\u306e\u53c2\u52a0\u8005\u30c7\u30fc\u30bf\u3067\u8868\u793a\uff09"""
+    from utils import normalize_transfer_name
 
-    status_counts = {}
-    for r in latest:
-        status_counts[r.status] = status_counts.get(r.status, 0) + 1
+    participant = Participant.query.order_by(Participant.class_name, Participant.student_number).first()
+    if not participant:
+        flash("\u53c2\u52a0\u8005\u304c\u767b\u9332\u3055\u308c\u3066\u3044\u306a\u3044\u305f\u3081\u30d7\u30ec\u30d3\u30e5\u30fc\u3067\u304d\u307e\u305b\u3093\u3002", "warning")
+        return redirect(url_for("admin.index"))
+
+    transfer_keys = [
+        "transfer_bank", "transfer_branch", "transfer_branch_number",
+        "transfer_account_type", "transfer_account_name", "transfer_account_number",
+        "transfer_deadline", "reunion_fee",
+    ]
+    transfer_info = {}
+    for s in AppSetting.query.filter(AppSetting.key.in_(transfer_keys)).all():
+        transfer_info[s.key] = s.value
+
+    if participant.class_name and participant.student_number:
+        student_id = f"{participant.class_name}{participant.student_number.zfill(2)}"
+    else:
+        student_id = "3000"
+    kana = participant.display_name_kana
+    default_transfer_name = normalize_transfer_name(
+        f"{student_id}{kana}" if kana else student_id
+    )
 
     return render_template(
-        "admin/final_forms.html",
-        responses=latest,
-        status_counts=status_counts,
+        "final_form.html",
+        participant=participant,
+        existing=None,
+        token=participant.token or "preview",
+        transfer_info=transfer_info,
+        default_transfer_name=default_transfer_name,
+        locked=False,
+        can_cancel=False,
     )
