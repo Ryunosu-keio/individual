@@ -378,6 +378,9 @@ MAIL_DEFAULTS = {
         "口座: {transfer_account_type}口座 {transfer_account_number}\n"
         "口座名義: {transfer_account_name}\n"
         "振込期限: {transfer_deadline}\n\n"
+        "▼ 振込先URL（スマホ版）\n"
+        "{transfer_url}\n\n"
+        "※リンク先からログインできない方は、ご自身のスマホの銀行アプリから送金してください。\n\n"
         "内容を変更する場合は、下記URLから再度ご回答ください。\n"
         "{final_url}\n\n"
         "ご不明な点がございましたら、このメールへのご返信にてお気軽にご連絡ください。\n\n"
@@ -436,6 +439,9 @@ MAIL_DEFAULTS = {
         "口座: {transfer_account_type}口座 {transfer_account_number}\n"
         "口座名義: {transfer_account_name}\n"
         "振込期限: {transfer_deadline}\n\n"
+        "▼ 振込先URL（スマホ版）\n"
+        "{transfer_url}\n\n"
+        "※リンク先からログインできない方は、ご自身のスマホの銀行アプリから送金してください。\n\n"
         "内容を変更する場合は、下記URLから再度ご回答ください。\n"
         "{final_url}\n\n"
         "ご不明な点がございましたら、このメールへのご返信にてお気軽にご連絡ください。\n（連絡先は本メール末尾に記載しています）\n\n"
@@ -510,6 +516,8 @@ def _render_template(template: str, **kwargs) -> str:
     template = re.sub(r'※やむを得ず[^\n]*23:59まで[^\n]*ご連絡ください。\n', lambda m: m.group() if '/' in m.group() else '', template)
     # 署名末尾スペース除去
     template = re.sub(r' +\n', '\n', template)
+    # 3行以上の連続空行を2行に整理（空のURL変数などで生じる余白を防ぐ）
+    template = re.sub(r'\n{3,}', '\n\n', template)
     template = template.rstrip() + '\n' if template.strip() else template
     return template
 
@@ -542,6 +550,7 @@ def _get_reunion_info() -> dict:
         "transfer_account_number": get("transfer_account_number", cfg.get("TRANSFER_ACCOUNT_NUMBER", "")),
         "transfer_account_name":   get("transfer_account_name",   cfg.get("TRANSFER_ACCOUNT_NAME", "")),
         "transfer_deadline":       get("transfer_deadline",       cfg.get("TRANSFER_DEADLINE", "")),
+        "transfer_url":            get("transfer_url",            cfg.get("TRANSFER_URL", "")),
         "organizer_name":          get("organizer_name",          cfg.get("ORGANIZER_NAME", "")),
         "final_deadline":          get("final_deadline",          cfg.get("FINAL_DEADLINE", "")),
         "reminder_send_date":      get("reminder_send_date",      cfg.get("REMINDER_SEND_DATE", "")),
@@ -829,6 +838,7 @@ def _build_final_confirm_body(participant_name: str, status_label: str, final_ur
         transfer_account_number=reunion["transfer_account_number"],
         transfer_account_name=reunion["transfer_account_name"],
         transfer_deadline=reunion["transfer_deadline"],
+        transfer_url=reunion["transfer_url"],
         final_deadline=reunion["final_deadline"],
         final_deadline_short=reunion["final_deadline_short"],
         final_reminder_deadline=reunion["final_reminder_deadline"],
