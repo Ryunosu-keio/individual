@@ -158,13 +158,7 @@
                 </div>
                 <div class="text-muted small" id="autoTargetNames"></div>
               </div>
-              <div class="col-md-5 text-end">
-                <form method="POST" action="{{ url_for('admin.auto_send') }}" id="autoSendForm">
-                  <button type="submit" class="btn btn-success btn-lg px-4" id="autoSendButton">
-                    <i class="bi bi-send-fill me-2"></i><span id="autoSendButtonText">送信する</span>
-                  </button>
-                </form>
-              </div>
+              <div class="col-md-5 text-end" id="autoSendButtons"></div>
             </div>
           </div>
           <div id="autoSendLimitReached" class="text-center py-3 d-none">
@@ -353,18 +347,16 @@
       if (d.batch_size > 5) names.push('ほか' + (d.batch_size - 5) + '名');
       document.getElementById('autoTargetNames').textContent = names.join('、');
 
-      document.getElementById('autoSendButtonText').textContent =
-        '送信する（' + d.batch_size + '件）';
-
-      document.getElementById('autoSendForm').onsubmit = function(e) {
-        var detail = d.phases.map(function(ph){
-          return '  ' + ph.label + ': ' + ph.batch + '件（全' + ph.total + '件中）';
-        }).join('\n');
-        return confirm(
-          '送信を実行します。\n\n' + detail +
-          '\n\n今回送信: ' + d.batch_size + '件\n\nよろしいですか？'
-        );
-      };
+      var mailHubBase = "{{ url_for('admin.mail_hub') }}";
+      var btns = document.getElementById('autoSendButtons');
+      btns.innerHTML = '';
+      d.phases.forEach(function(ph) {
+        var a = document.createElement('a');
+        a.href = mailHubBase + '?type=' + ph.key;
+        a.className = 'btn btn-success btn-lg px-4 ms-2';
+        a.innerHTML = '<i class="bi bi-send-fill me-2"></i>' + ph.label + '（' + ph.total + '件）';
+        btns.appendChild(a);
+      });
     })
     .catch(function(){
       document.getElementById('autoSendLoading').innerHTML =
