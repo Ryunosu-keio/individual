@@ -640,10 +640,12 @@ def api_mail_preview(mail_type):
 
     remaining = get_remaining_today()
 
+    from services.mail_service import _text_to_html
     return jsonify({
         "label": info["label"],
         "subject": subject_tmpl,
         "body": body_tmpl,
+        "html_body": _text_to_html(body_tmpl),
         "targets": [
             {"id": p.id, "name": p.name, "email": p.email, "role": p.role or ""}
             for p in targets
