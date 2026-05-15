@@ -346,6 +346,10 @@ def final(token):
         payment.expected_amount = payment_expected
         payment.payment_method  = "bank_transfer"
         payment.transfer_name   = transfer_name
+    elif status == "not_attending":
+        payment = participant.payment
+        if payment and payment.payment_status != "paid":
+            db.session.delete(payment)
 
     participant.updated_at = datetime.utcnow()
     db.session.commit()
