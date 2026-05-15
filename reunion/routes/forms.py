@@ -348,7 +348,7 @@ def final(token):
         payment.transfer_name   = transfer_name
     elif status == "not_attending":
         payment = participant.payment
-        if payment and payment.payment_status == "unpaid" and not payment.bank_csv_matched:
+        if payment and payment.payment_status != "paid":
             db.session.delete(payment)
 
     participant.updated_at = datetime.utcnow()
