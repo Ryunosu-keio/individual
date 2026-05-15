@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block title %}本出欠一覧 | 同窓会管理{% endblock %}
+
+{% block content %}
+<h4 class="mb-3"><i class="bi bi-check2-square me-2"></i>本出欠一覧</h4>
+
+<!-- 集計 -->
+<div class="row g-2 mb-3">
+  <div class="col-6 col-md-2">
+    <div class="card text-center border-0 shadow-sm">
+      <div class="card-body py-2">
+        <div class="fw-bold text-primary fs-5">{{ responses | length }}</div>
+        <div class="small text-muted">回答数</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-2">
+    <div class="card text-center border-0 shadow-sm">
+      <div class="card-body py-2">
+        <div class="fw-bold text-success fs-5">{{ status_counts.get('attending', 0) }}</div>
+        <div class="small text-muted">参加</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-2">
+    <div class="card text-center border-0 shadow-sm">
+      <div class="card-body py-2">
+        <div class="fw-bold text-secondary fs-5">{{ status_counts.get('not_attending', 0) }}</div>
+        <div class="small text-muted">不参加</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-2">
+    <div class="card text-center border-0 shadow-sm">
+      <div class="card-body py-2">
+        <div class="fw-bold text-danger fs-5">{{ status_counts.get('cancelled', 0) }}</div>
+        <div class="small text-muted">直前キャンセル</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- テーブル -->
+<div class="table-responsive">
+  <table class="table table-hover table-sm align-middle">
+    <thead class="table-light">
+      <tr>
+        <th>クラス</th>
+        <th>出席番号</th>
+        <th>氏名</th>
+        <th>役割</th>
+        <th>回答</th>
+        <th>振込名義</th>
+        <th>備考</th>
+        <th>回答日時</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in responses %}
+      <tr>
+        <td>{{ r.participant.class_name or '—' }}</td>
+        <td>{{ r.participant.student_number or '—' }}</td>
+        <td>
+          <a href="{{ url_for('admin.participant_detail', participant_id=r.participant_id) }}">
+            {{ r.participant.display_name }}
+          </a>
+        </td>
+        <td><span class="badge bg-secondary">{{ r.participant.role or '生徒' }}</span></td>
+        <td>
+          {% if r.status == 'attending' %}
+            <span class="badge bg-success">参加</span>
+          {% elif r.status == 'not_attending' %}
+            <span class="badge bg-secondary">不参加</span>
+          {% elif r.status == 'cancelled' %}
+            <span class="badge bg-danger">直前キャンセル</span>
+          {% else %}
+            <span class="badge bg-light text-dark">{{ r.status }}</span>
+          {% endif %}
+        </td>
+        <td class="font-monospace small">{{ r.transfer_name or '—' }}</td>
+        <td class="small text-muted">{{ r.remarks or '' }}</td>
+        <td class="small text-muted text-nowrap">
+          {{ r.submitted_at.strftime('%m/%d %H:%M') if r.submitted_at else '—' }}
+        </td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="8" class="text-center text-muted py-4">まだ回答がありません</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

@@ -244,12 +244,14 @@ def final(token):
         transfer_info[s.key] = s.value
 
     # 振込名義を自動生成: 学籍番号(クラス+出席番号) + カナ氏名
-    student_id = ""
+    # 学籍番号がない場合は "3000" をプレフィックスとして使用
     if participant.class_name and participant.student_number:
         student_id = f"{participant.class_name}{participant.student_number.zfill(2)}"
+    else:
+        student_id = "3000"
     kana = participant.display_name_kana
     default_transfer_name = normalize_transfer_name(
-        f"{student_id}{kana}" if student_id and kana else kana or ""
+        f"{student_id}{kana}" if kana else student_id
     )
 
     locked = _is_final_form_locked()

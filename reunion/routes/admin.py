@@ -1648,3 +1648,32 @@ def roster_export():
         mimetype="text/csv",
         headers={"Content-Disposition": "attachment; filename=roster_export.csv"}
     )
+
+
+@admin_bp.route("/final-forms")
+def final_forms():
+    """\u672c\u51fa\u6b20\u56de\u7b54\u4e00\u89a7\uff08\u95b2\u89a7\u306e\u307f\uff09"""
+    from models import FinalResponse
+    responses = (
+        FinalResponse.query
+        .join(FinalResponse.participant)
+        .order_by(Participant.class_name, Participant.student_number, FinalResponse.submitted_at.desc())
+        .all()
+    )
+    # \u6700\u65b0\u56de\u7b54\u306e\u307f\uff08participant_id \u3067\u91cd\u8907\u9664\u53bb\u3001\u6700\u65b0\u3092\u512a\u5148\uff09
+    seen = set()
+    latest = []
+    for r in responses:
+        if r.participant_id not in seen:
+            seen.add(r.participant_id)
+            latest.append(r)
+
+    status_counts = {}
+    for r in latest:
+        status_counts[r.status] = status_counts.get(r.status, 0) + 1
+
+    return render_template(
+        "admin/final_forms.html",
+        responses=latest,
+        status_counts=status_counts,
+    )
