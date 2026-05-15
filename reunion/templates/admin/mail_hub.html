@@ -291,6 +291,14 @@ document.addEventListener('DOMContentLoaded', function() {
     loadPreview(this.value);
   });
 
+  // URLパラメータ ?type=XXX があれば自動選択
+  var params = new URLSearchParams(window.location.search);
+  var typeParam = params.get('type');
+  if (typeParam && mailTypeSelect.querySelector('option[value="' + typeParam + '"]')) {
+    mailTypeSelect.value = typeParam;
+    loadPreview(typeParam);
+  }
+
   document.querySelectorAll('input[name="teacherToggle"]').forEach(function(radio) {
     radio.addEventListener('change', function() {
       loadPreview(mailTypeSelect.value);
