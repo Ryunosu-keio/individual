@@ -469,6 +469,41 @@ def _is_teacher(role: str) -> bool:
     return role in ("教師", "学年主任", "副担任")
 
 
+def _text_to_html(body: str) -> str:
+    """プレーンテキストのメール本文をHTML形式に変換する"""
+    import html as _html
+    lines = body.split('\n')
+    parts = []
+    for line in lines:
+        e = _html.escape(line)
+        if not e:
+            parts.append('<br>')
+        elif '━' in e:
+            parts.append('<hr style="border:none;border-top:1px solid #ddd;margin:10px 0;">')
+        elif e.startswith('■ '):
+            parts.append(f'<p style="font-weight:bold;margin:14px 0 4px;color:#333;">{e[2:]}</p>')
+        elif e.startswith('──'):
+            parts.append('<hr style="border:none;border-top:1px solid #eee;margin:12px 0;">')
+        elif e.startswith('【') and '】' in e:
+            parts.append(
+                f'<p style="background:#fff3cd;border-left:4px solid #ffc107;'
+                f'padding:8px 12px;margin:8px 0;font-weight:bold;border-radius:3px;">'
+                f'⚠ {e}</p>'
+            )
+        elif e.startswith('※'):
+            parts.append(f'<p style="color:#666;font-size:0.88em;margin:4px 0;">{e}</p>')
+        else:
+            parts.append(f'<p style="margin:4px 0;">{e}</p>')
+    html_body = '\n'.join(parts)
+    return (
+        '<!DOCTYPE html><html><head><meta charset="utf-8"></head>'
+        '<body style="font-family:sans-serif;line-height:1.7;max-width:600px;'
+        'margin:0 auto;padding:20px;color:#333;">'
+        f'{html_body}'
+        '</body></html>'
+    )
+
+
 def _format_deadline_short(deadline: str) -> str:
     """ISO日付を m/d 形式に変換する。未設定なら空文字。"""
     if not deadline:
@@ -641,8 +676,10 @@ def _send_smtp_cfg(to_email: str, subject: str, body: str, cfg: dict, attachment
     msg["To"] = to_email
     msg["Reply-To"] = cfg["from_addr"]
 
-    part = MIMEText(body, "plain", "utf-8")
-    msg.attach(part)
+    alt = MIMEMultipart("alternative")
+    alt.attach(MIMEText(body, "plain", "utf-8"))
+    alt.attach(MIMEText(_text_to_html(body), "html", "utf-8"))
+    msg.attach(alt)
 
     if attachment_path and os.path.isfile(attachment_path):
         with open(attachment_path, "rb") as f:
@@ -667,10 +704,11 @@ def _send_brevo(to_email: str, subject: str, body: str, cfg: dict) -> None:
         raise ValueError("BREVO_API_KEY が設定されていません")
 
     payload = json.dumps({
-        "sender":   {"name": cfg["from_name"], "email": cfg["from_addr"]},
-        "to":       [{"email": to_email}],
-        "replyTo":  {"email": cfg["from_addr"]},
-        "subject":  subject,
+        "sender":      {"name": cfg["from_name"], "email": cfg["from_addr"]},
+        "to":          [{"email": to_email}],
+        "replyTo":     {"email": cfg["from_addr"]},
+        "subject":     subject,
+        "htmlContent": _text_to_html(body),
         "textContent": body,
     }).encode("utf-8")
 
