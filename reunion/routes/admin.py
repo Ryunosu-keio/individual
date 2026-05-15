@@ -1239,7 +1239,6 @@ def settings_reunion():
         "final_deadline", "reminder_send_date", "final_reminder_deadline", "final_reminder_date",
         "transfer_bank", "transfer_branch", "transfer_branch_number",
         "transfer_account_type", "transfer_account_number", "transfer_account_name", "transfer_deadline",
-        "transfer_url",
     ]
 
     if request.method == "POST":

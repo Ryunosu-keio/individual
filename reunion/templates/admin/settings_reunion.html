@@ -188,19 +188,11 @@
                    placeholder="ドウソウカイ タロウ">
           </div>
 
-          <div class="mb-3">
+          <div class="mb-0">
             <label class="form-label fw-bold">振込期限</label>
             <input type="text" class="form-control" name="transfer_deadline"
                    value="{{ settings.get('transfer_deadline', '') }}"
                    placeholder="2025年〇月〇日">
-          </div>
-
-          <div class="mb-0">
-            <label class="form-label fw-bold">振込先URL（スマホ版）</label>
-            <input type="url" class="form-control" name="transfer_url"
-                   value="{{ settings.get('transfer_url', '') }}"
-                   placeholder="https://...">
-            <div class="form-text">銀行のスマートフォン向けインターネットバンキングのURLを入力してください。</div>
           </div>
 
         </div>
