@@ -179,38 +179,25 @@
       <div class="card-header fw-bold bg-light"><i class="bi bi-envelope me-1"></i>メール送信</div>
       <div class="card-body">
         <div class="d-flex gap-2 flex-wrap">
-
-          {% if prov and not participant.email.endswith('@placeholder.local') %}
           <form method="POST" action="{{ url_for('admin.send_final_url_single', participant_id=participant.id) }}"
                 onsubmit="return confirm('本出欠URLを送信しますか？')">
             <button type="submit" class="btn btn-success btn-sm">
               <i class="bi bi-envelope me-1"></i>本出欠URL送信
             </button>
           </form>
-          {% endif %}
-
-          {% if participant.token and not final %}
           <form method="POST" action="{{ url_for('admin.send_reminder_single', participant_id=participant.id) }}"
                 onsubmit="return confirm('本出欠リマインドを送信しますか？')">
             <button type="submit" class="btn btn-primary btn-sm">
               <i class="bi bi-bell me-1"></i>本出欠リマインド
             </button>
           </form>
-          {% endif %}
-
-          {% if final and final.status == 'attending' %}
           <form method="POST" action="{{ url_for('admin.send_final_reminder_single', participant_id=participant.id) }}"
                 onsubmit="return confirm('最終リマインドを送信しますか？')">
             <button type="submit" class="btn btn-danger btn-sm">
               <i class="bi bi-envelope-fill me-1"></i>最終リマインド
             </button>
           </form>
-          {% endif %}
-
         </div>
-        {% if (not prov or participant.email.endswith('@placeholder.local')) and not participant.token and (not final or final.status != 'attending') %}
-        <p class="text-muted small mb-0 mt-1">送信可能なメールはありません。</p>
-        {% endif %}
       </div>
     </div>
   </div>
