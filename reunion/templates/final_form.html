@@ -214,7 +214,8 @@
                   </div>
                 </div>
 
-                <!-- ===== 振込案内セクション（参加時のみ表示） ===== -->
+                <!-- ===== 振込案内セクション（参加時のみ表示・先生は非表示） ===== -->
+                {% if not is_teacher %}
                 <div id="transferSection" class="transfer-section mb-4">
                   <h6 class="fw-bold mb-3">
                     <i class="bi bi-bank me-1"></i>振込のご案内
@@ -456,6 +457,7 @@
                   </div>
                 </div>
                 <!-- ===== /振込案内セクション ===== -->
+                {% endif %}
 
                 <!-- 備考 -->
                 <div class="mb-4">
@@ -536,9 +538,10 @@
         .addEventListener("change", toggleTransferSection);
       toggleTransferSection();
 
+      var isTeacher = '{{ "1" if is_teacher else "0" }}' === '1';
       function validateForm() {
         var attending = document.getElementById("attending").checked;
-        if (attending) {
+        if (attending && !isTeacher) {
           if (!document.getElementById("transferNameConfirm").checked) {
             alert("振込名義に学籍番号を含めてから送信してください。");
             return false;

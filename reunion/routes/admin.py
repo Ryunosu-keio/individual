@@ -295,7 +295,7 @@ def set_final_status(participant_id):
     if status not in ("attending", "not_attending", "cancelled"):
         flash("無効なステータスです。", "danger")
         return redirect(url_for("admin.participant_detail", participant_id=participant_id))
-    from models import FinalResponse
+    from models import FinalResponse, Payment, AppSetting
     response = FinalResponse(
         participant_id=participant.id,
         status=status,
@@ -303,6 +303,25 @@ def set_final_status(participant_id):
         ip_address="admin",
     )
     db.session.add(response)
+
+    if status == "attending":
+        fee_setting = AppSetting.query.filter_by(key="reunion_fee").first()
+        reunion_fee_str = fee_setting.value if fee_setting else "0"
+        try:
+            payment_expected = int(reunion_fee_str.replace(",", "").replace("円", "").strip())
+        except ValueError:
+            payment_expected = 0
+        payment = participant.payment
+        if payment is None:
+            payment = Payment(participant_id=participant.id)
+            db.session.add(payment)
+        payment.expected_amount = payment_expected
+        payment.payment_method = "bank_transfer"
+    elif status in ("not_attending", "cancelled"):
+        payment = participant.payment
+        if payment and payment.payment_status != "paid":
+            db.session.delete(payment)
+
     participant.updated_at = datetime.utcnow()
     db.session.commit()
     flash(f"本出欠を「{response.status_label}」に変更しました。", "success")
