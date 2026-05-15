@@ -2,7 +2,33 @@
 {% block title %}同窓会情報設定 | 同窓会管理{% endblock %}
 
 {% block content %}
-<h4 class="mb-3"><i class="bi bi-calendar-event me-2"></i>同窓会情報設定</h4>
+<h4 class="mb-3"><i class="bi bi-envelope-fill me-2"></i>メール管理</h4>
+
+<!-- タブナビ -->
+<ul class="nav nav-tabs mb-4">
+  <li class="nav-item">
+    <a class="nav-link" href="{{ url_for('admin.mail_hub') }}">
+      <i class="bi bi-send me-1"></i>メール送信
+    </a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link" href="{{ url_for('admin.settings_mail_template') }}">
+      <i class="bi bi-envelope-paper me-1"></i>メール文章編集
+    </a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link" href="{{ url_for('admin.settings_mail') }}">
+      <i class="bi bi-envelope-gear me-1"></i>メール設定
+    </a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link active" href="{{ url_for('admin.settings_reunion') }}">
+      <i class="bi bi-sliders me-1"></i>メール変数設定
+    </a>
+  </li>
+</ul>
+
+<h5 class="mb-3"><i class="bi bi-calendar-event me-2"></i>同窓会情報設定</h5>
 
 <p class="text-muted small mb-4">
   ここで設定した値がメール文章の変数として使われます。<br>
