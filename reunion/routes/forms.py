@@ -259,6 +259,10 @@ def final(token):
     locked = _is_final_form_locked()
     can_cancel = locked and existing and existing.status == "attending"
 
+    from services.mail_service import _format_deadline_jp
+    fd = AppSetting.query.filter_by(key="final_deadline").first()
+    final_deadline_jp = _format_deadline_jp(fd.value) if fd and fd.value else ""
+
     if request.method == "GET":
         return render_template("final_form.html",
                                participant=participant,
@@ -269,7 +273,8 @@ def final(token):
                                default_transfer_name_alt=default_transfer_name_alt,
                                locked=locked,
                                can_cancel=can_cancel,
-                               is_teacher=is_teacher)
+                               is_teacher=is_teacher,
+                               final_deadline_jp=final_deadline_jp)
 
     # ロック中の制御
     if locked:
