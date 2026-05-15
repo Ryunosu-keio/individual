@@ -1557,7 +1557,11 @@ def roster_add():
 
     if not name or not email or "@" not in email:
         flash("氏名と正しいメールアドレスを入力してください。", "danger")
-        return redirect(url_for("admin.participants") + "#csv")
+        return redirect(url_for("admin.roster"))
+
+    if not class_ and not name_kana:
+        flash("クラス未入力の場合は氏名（カナ）が必須です。", "danger")
+        return redirect(url_for("admin.roster"))
 
     if role == "学年主任":
         class_ = ""
@@ -1565,7 +1569,7 @@ def roster_add():
     existing = Participant.query.filter_by(email=email).first()
     if existing:
         flash(f"メールアドレス {email} はすでに登録されています（{existing.name}）。", "warning")
-        return redirect(url_for("admin.participants") + "#csv")
+        return redirect(url_for("admin.roster"))
 
     p = Participant(
         name=name, name_kana=name_kana, email=email,
@@ -1575,7 +1579,7 @@ def roster_add():
     db.session.add(p)
     db.session.commit()
     flash(f"{name} を追加しました。", "success")
-    return redirect(url_for("admin.participants") + "#csv")
+    return redirect(url_for("admin.roster"))
 
 
 @admin_bp.route("/roster/delete/<int:participant_id>", methods=["POST"])
@@ -1653,7 +1657,7 @@ def roster_export():
 @admin_bp.route("/final-form-preview")
 def final_form_preview():
     """\u672c\u51fa\u6b20\u30d5\u30a9\u30fc\u30e0\u306e\u30ec\u30a4\u30a2\u30a6\u30c8\u30d7\u30ec\u30d3\u30e5\u30fc\uff08DB\u4e0a\u306e\u6700\u521d\u306e\u53c2\u52a0\u8005\u30c7\u30fc\u30bf\u3067\u8868\u793a\uff09"""
-    from utils import normalize_transfer_name
+    from utils import normalize_transfer_name, decompose_voiced
 
     participant = Participant.query.order_by(Participant.class_name, Participant.student_number).first()
     if not participant:
@@ -1677,6 +1681,7 @@ def final_form_preview():
     default_transfer_name = normalize_transfer_name(
         f"{student_id}{kana}" if kana else student_id
     )
+    default_transfer_name_alt = decompose_voiced(default_transfer_name)
 
     return render_template(
         "final_form.html",
@@ -1685,6 +1690,7 @@ def final_form_preview():
         token=participant.token or "preview",
         transfer_info=transfer_info,
         default_transfer_name=default_transfer_name,
+        default_transfer_name_alt=default_transfer_name_alt,
         locked=False,
         can_cancel=False,
     )

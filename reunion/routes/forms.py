@@ -25,7 +25,7 @@ from models import Participant, ProvisionalResponse, FinalResponse, Payment
 from models import AppSetting
 from services.token_service import get_participant_by_token, ensure_token, generate_final_url
 from services.mail_service import send_provisional_confirmation, send_final_confirmation
-from utils import normalize_transfer_name
+from utils import normalize_transfer_name, decompose_voiced
 
 logger = logging.getLogger(__name__)
 
@@ -253,6 +253,7 @@ def final(token):
     default_transfer_name = normalize_transfer_name(
         f"{student_id}{kana}" if kana else student_id
     )
+    default_transfer_name_alt = decompose_voiced(default_transfer_name)
 
     locked = _is_final_form_locked()
     can_cancel = locked and existing and existing.status == "attending"
@@ -264,6 +265,7 @@ def final(token):
                                token=token,
                                transfer_info=transfer_info,
                                default_transfer_name=default_transfer_name,
+                               default_transfer_name_alt=default_transfer_name_alt,
                                locked=locked,
                                can_cancel=can_cancel)
 
@@ -291,9 +293,16 @@ def final(token):
     transfer_name = normalize_transfer_name(request.form.get("transfer_name", "").strip())
     remarks       = request.form.get("remarks", "").strip()
 
+    transfer_name_confirmed = request.form.get("transfer_name_confirm") == "on"
+    transfer_done           = request.form.get("transfer_done") == "on"
+
     errors = []
     if status not in ("attending", "not_attending"):
         errors.append("参加・不参加を選択してください。")
+    if status == "attending" and not transfer_name_confirmed:
+        errors.append("振込名義に学籍番号を含めましたのチェックを入れてください。")
+    if status == "attending" and not transfer_done:
+        errors.append("振込完了のチェックを入れてください。")
 
     if errors:
         for e in errors:
@@ -303,7 +312,10 @@ def final(token):
                                existing=existing,
                                token=token,
                                transfer_info=transfer_info,
-                               default_transfer_name=default_transfer_name)
+                               default_transfer_name=default_transfer_name,
+                               default_transfer_name_alt=default_transfer_name_alt,
+                               locked=False,
+                               can_cancel=False)
 
     # 会費を取得（AppSettingから）
     fee_setting = AppSetting.query.filter_by(key="reunion_fee").first()
