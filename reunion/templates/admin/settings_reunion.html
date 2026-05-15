@@ -130,17 +130,17 @@
           </div>
 
           <div class="mb-3">
-            <label class="form-label fw-bold">本出欠 回答期限</label>
-            <input type="date" class="form-control" name="final_deadline"
-                   value="{{ settings.get('final_deadline', '') }}">
-            <div class="form-text">本出欠URL送信メールに表示される期限。この日を過ぎると未回答者がリマインド対象になります。</div>
-          </div>
-
-          <div class="mb-3">
             <label class="form-label fw-bold">リマインドメール 送信日</label>
             <input type="date" class="form-control" name="reminder_send_date"
                    value="{{ settings.get('reminder_send_date', '') }}">
             <div class="form-text">この日以降、本出欠未回答者がリマインド送信の対象になります。</div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-bold">本出欠 回答期限</label>
+            <input type="date" class="form-control" name="final_deadline"
+                   value="{{ settings.get('final_deadline', '') }}">
+            <div class="form-text">本出欠URL送信メールに表示される期限。この日を過ぎると未回答者がリマインド対象になります。</div>
           </div>
 
           <div class="mb-3">
