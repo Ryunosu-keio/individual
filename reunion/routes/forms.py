@@ -280,6 +280,9 @@ def final(token):
                 ip_address=request.remote_addr or "",
             )
             db.session.add(response)
+            payment = participant.payment
+            if payment and payment.payment_status != "paid":
+                db.session.delete(payment)
             participant.updated_at = datetime.utcnow()
             db.session.commit()
             logger.info(f"直前キャンセル: {participant.name} ({participant.email})")
