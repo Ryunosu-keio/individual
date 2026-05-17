@@ -1733,3 +1733,12 @@ def final_form_preview():
         final_deadline_jp=final_deadline_jp,
         is_teacher=is_teacher,
     )
+
+
+@admin_bp.route("/reunion-guide")
+def reunion_guide():
+    """同窓会ご案内PDF用プレビュー（ブラウザからPDF保存）"""
+    settings = {}
+    for s in AppSetting.query.all():
+        settings[s.key] = s.value
+    return render_template("admin/reunion_guide.html", settings=settings)
