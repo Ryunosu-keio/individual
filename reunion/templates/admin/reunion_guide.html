@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>同窓会ご案内</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 18mm 20mm 15mm 20mm;
+    }
+
+    @media print {
+      .no-print { display: none !important; }
+      body { margin: 0; }
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Hiragino Mincho ProN', 'ヒラギノ明朝 ProN', 'Yu Mincho', '游明朝', 'MS Mincho', serif;
+      font-size: 10.5pt;
+      line-height: 1.85;
+      color: #1a1a1a;
+      background: #fff;
+      width: 170mm;
+      margin: 0 auto;
+      padding: 10mm 0;
+    }
+
+    /* ── 印刷ボタン ── */
+    .print-bar {
+      position: fixed;
+      top: 16px;
+      right: 20px;
+      z-index: 100;
+    }
+    .print-bar button {
+      background: #1a3a5c;
+      color: #fff;
+      border: none;
+      padding: 10px 22px;
+      font-size: 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+    .print-bar button:hover { background: #254e7a; }
+
+    /* ── ヘッダー装飾 ── */
+    .header-top {
+      border-top: 3px double #1a3a5c;
+      border-bottom: 1px solid #1a3a5c;
+      padding: 6px 0 5px;
+      text-align: center;
+      margin-bottom: 8px;
+    }
+    .header-top .label {
+      font-size: 9pt;
+      letter-spacing: 0.3em;
+      color: #1a3a5c;
+    }
+
+    .main-title {
+      text-align: center;
+      font-size: 18pt;
+      font-weight: bold;
+      letter-spacing: 0.15em;
+      color: #1a3a5c;
+      margin: 10px 0 4px;
+    }
+
+    .sub-title {
+      text-align: center;
+      font-size: 11pt;
+      letter-spacing: 0.2em;
+      color: #444;
+      margin-bottom: 14px;
+    }
+
+    .header-bottom {
+      border-top: 1px solid #1a3a5c;
+      border-bottom: 3px double #1a3a5c;
+      margin-bottom: 16px;
+    }
+
+    /* ── 挨拶文 ── */
+    .greeting {
+      font-size: 10pt;
+      line-height: 2;
+      margin-bottom: 16px;
+      text-indent: 1em;
+    }
+
+    /* ── セクション ── */
+    .section {
+      margin-bottom: 14px;
+    }
+
+    .section-title {
+      font-size: 10pt;
+      font-weight: bold;
+      color: #fff;
+      background: #1a3a5c;
+      padding: 3px 10px;
+      letter-spacing: 0.1em;
+      margin-bottom: 6px;
+    }
+
+    /* ── 基本情報テーブル ── */
+    .info-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 10.5pt;
+    }
+    .info-table td {
+      padding: 4px 8px;
+      vertical-align: top;
+    }
+    .info-table td.label {
+      white-space: nowrap;
+      color: #1a3a5c;
+      font-weight: bold;
+      width: 6em;
+    }
+    .info-table tr {
+      border-bottom: 1px solid #e8e8e8;
+    }
+
+    /* ── 2カラム ── */
+    .two-col {
+      display: flex;
+      gap: 16px;
+    }
+    .two-col .col {
+      flex: 1;
+    }
+
+    /* ── 式次第 ── */
+    .schedule {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 10pt;
+    }
+    .schedule td {
+      padding: 5px 10px;
+      border-bottom: 1px solid #e0e0e0;
+      vertical-align: middle;
+    }
+    .schedule td.time {
+      white-space: nowrap;
+      color: #1a3a5c;
+      font-weight: bold;
+      width: 5em;
+      text-align: center;
+    }
+    .schedule td.item {
+      font-size: 10.5pt;
+    }
+    .schedule td.note {
+      font-size: 9pt;
+      color: #555;
+    }
+    .schedule tr:last-child td { border-bottom: none; }
+
+    /* ── 地図エリア ── */
+    .map-area {
+      border: 1px solid #ccc;
+      padding: 8px 12px;
+      border-radius: 4px;
+      font-size: 9.5pt;
+    }
+    .map-area .map-label {
+      font-weight: bold;
+      color: #1a3a5c;
+      font-size: 9pt;
+      margin-bottom: 2px;
+    }
+    .map-area a {
+      color: #1a3a5c;
+      word-break: break-all;
+    }
+
+    /* ── イベント・二次会 ── */
+    .event-box {
+      border-left: 3px solid #1a3a5c;
+      padding: 6px 12px;
+      background: #f5f7fa;
+      font-size: 10pt;
+    }
+    .event-box p { margin-bottom: 4px; }
+
+    /* ── 備考 ── */
+    .notes {
+      font-size: 9pt;
+      color: #555;
+      margin-top: 14px;
+      border-top: 1px dashed #bbb;
+      padding-top: 8px;
+    }
+    .notes p { margin-bottom: 2px; }
+
+    /* ── フッター ── */
+    .footer {
+      text-align: right;
+      font-size: 9.5pt;
+      color: #444;
+      margin-top: 14px;
+      border-top: 1px solid #1a3a5c;
+      padding-top: 6px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="no-print print-bar">
+  <button onclick="window.print()">📄 PDFとして保存</button>
+</div>
+
+{% set reunion_name = settings.get('reunion_name', '水戸一高140期卒業生同窓会') %}
+{% set reunion_date = settings.get('reunion_date', '') %}
+{% set reunion_time = settings.get('reunion_time', '18:30') %}
+{% set reunion_venue = settings.get('reunion_venue', '水戸三の丸ホテル') %}
+{% set organizer_name = settings.get('organizer_name', '') %}
+
+<!-- ヘッダー -->
+<div class="header-top">
+  <span class="label">ご　案　内</span>
+</div>
+<div class="main-title">{{ reunion_name }}</div>
+<div class="sub-title">開　催　の　ご　案　内</div>
+<div class="header-bottom"></div>
+
+<!-- 挨拶文 -->
+<div class="greeting">
+  拝啓　時下ますますご清栄のこととお慶び申し上げます。<br>
+  このたび、皆様のご多忙にもかかわらず多数のご参加を賜り、誠にありがとうございます。<br>
+  懐かしい仲間と語らい、学生時代の思い出を振り返る素晴らしいひとときになりますよう、幹事一同心を込めてご用意いたしました。<br>
+  皆様のお越しを心よりお待ち申し上げております。<br>
+  <span style="display:block; text-align:right; margin-top:4px;">敬具</span>
+</div>
+
+<!-- 基本情報 + アクセス -->
+<div class="two-col section">
+  <div class="col">
+    <div class="section-title">■ 開催概要</div>
+    <table class="info-table">
+      <tr>
+        <td class="label">日　時</td>
+        <td>{{ reunion_date }}（{{ reunion_time }}〜21:00）</td>
+      </tr>
+      <tr>
+        <td class="label">受　付</td>
+        <td>18:00 より</td>
+      </tr>
+      <tr>
+        <td class="label">会　場</td>
+        <td>{{ reunion_venue }}</td>
+      </tr>
+      <tr>
+        <td class="label">住　所</td>
+        <td>茨城県水戸市三の丸2-1-1</td>
+      </tr>
+      <tr>
+        <td class="label">電　話</td>
+        <td>029-221-3011</td>
+      </tr>
+      <tr>
+        <td class="label">会　費</td>
+        <td>{{ settings.get('reunion_fee', '') }}円（当日徴収なし・振込済）</td>
+      </tr>
+    </table>
+  </div>
+  <div class="col">
+    <div class="section-title">■ アクセス</div>
+    <table class="info-table">
+      <tr>
+        <td class="label">最寄駅</td>
+        <td>JR 水戸駅 北口</td>
+      </tr>
+      <tr>
+        <td class="label">徒　歩</td>
+        <td>約 2 分</td>
+      </tr>
+      <tr>
+        <td class="label">駐車場</td>
+        <td>近隣有料駐車場をご利用ください</td>
+      </tr>
+    </table>
+    <div class="map-area" style="margin-top:8px;">
+      <div class="map-label">🗺 地図</div>
+      <a href="https://maps.google.com/?q=水戸三の丸ホテル,茨城県水戸市三の丸2-1-1">
+        https://maps.google.com/?q=水戸三の丸ホテル
+      </a>
+      <div style="margin-top:4px; font-size:9pt; color:#555;">
+        ホテル公式サイト:<br>
+        <a href="https://www.rio-hotels.co.jp/mito/">https://www.rio-hotels.co.jp/mito/</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 式次第 -->
+<div class="section">
+  <div class="section-title">■ 式次第</div>
+  <table class="schedule">
+    <tr>
+      <td class="time">18:00</td>
+      <td class="item">受　付　開　始</td>
+      <td class="note"></td>
+    </tr>
+    <tr>
+      <td class="time">18:30</td>
+      <td class="item">開　会</td>
+      <td class="note">開会の辞・幹事挨拶</td>
+    </tr>
+    <tr>
+      <td class="time"></td>
+      <td class="item">ご歓談・お食事</td>
+      <td class="note"></td>
+    </tr>
+    <tr>
+      <td class="time"></td>
+      <td class="item">レクリエーション</td>
+      <td class="note">景品付きビンゴ大会</td>
+    </tr>
+    <tr>
+      <td class="time"></td>
+      <td class="item">写真撮影</td>
+      <td class="note">集合写真・フリー撮影</td>
+    </tr>
+    <tr>
+      <td class="time">21:00</td>
+      <td class="item">閉　会</td>
+      <td class="note">閉会の辞</td>
+    </tr>
+  </table>
+</div>
+
+<!-- 予定イベント + 二次会 -->
+<div class="two-col section">
+  <div class="col">
+    <div class="section-title">■ 予定イベント</div>
+    <div class="event-box">
+      <p>🎯 <strong>景品付きビンゴ大会</strong></p>
+      <p style="font-size:9pt; color:#555;">豪華景品をご用意しています。お楽しみに！</p>
+    </div>
+  </div>
+  <div class="col">
+    <div class="section-title">■ 二次会のご案内</div>
+    <div class="event-box">
+      <p>🥂 <strong>3年次のクラスごとに開催予定です。</strong></p>
+      <p style="font-size:9pt; color:#555;">詳細は当日ご案内いたします。</p>
+    </div>
+  </div>
+</div>
+
+<!-- 備考 -->
+<div class="notes">
+  <p>※ 会場内は禁煙です。お荷物はクロークをご利用ください。</p>
+  <p>※ やむを得ずご欠席される場合は、事前にご連絡いただけますと幸いです。</p>
+  {% if settings.get('final_reminder_deadline') %}
+  <p>※ キャンセルのご連絡は {{ settings.get('final_reminder_deadline') }} 23:59 JST までにお願いいたします。</p>
+  {% endif %}
+</div>
+
+<!-- フッター -->
+<div class="footer">
+  {{ reunion_name }} 幹事代表　{{ organizer_name }}
+</div>
+
+</body>
+</html>
