@@ -30,13 +30,19 @@
               同窓会への参加意思をお知らせください。<br>
               後日、本出欠フォームのご案内をお送りします。
             </p>
-            {% if provisional_deadline %}
+            {% if locked %}
+            <div class="alert alert-danger text-center">
+              <i class="bi bi-lock-fill me-1"></i>
+              <strong>回答期限を過ぎているため、このフォームはロックされています。</strong>
+            </div>
+            {% elif provisional_deadline %}
             <div class="alert alert-warning py-2 small">
               <i class="bi bi-clock me-1"></i>回答期限: <strong>{{ provisional_deadline }} 23:59</strong>
             </div>
             {% endif %}
 
-            <form method="POST" action="{{ url_for('forms.provisional') }}" id="provForm">
+            <form method="POST" action="{{ url_for('forms.provisional') }}" id="provForm"
+                  {% if locked %}onsubmit="return false;"{% endif %}>
               <input type="hidden" name="participant_id" id="participant_id" value="">
               <input type="hidden" name="name" id="name_hidden" value="{{ name | default('') }}">
 
@@ -146,7 +152,10 @@
 
     var nameDataMap = {};
 
+    var formLocked = '{{ "1" if locked else "0" }}' === '1';
+
 function checkReady() {
+      if (formLocked) return;
       var hasName = participantId.value || nameText.value.trim();
       var hasEmail = emailInput.value.trim() && emailInput.value.includes('@');
       submitBtn.disabled = !(hasName && hasEmail);
