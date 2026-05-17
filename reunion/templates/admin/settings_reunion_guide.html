@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}案内状編集 | 同窓会管理{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4 class="mb-0"><i class="bi bi-file-earmark-text me-2"></i>案内状編集</h4>
+  <a href="{{ url_for('admin.reunion_guide') }}" target="_blank" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-eye me-1"></i>プレビューを開く
+  </a>
+</div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    {% for category, message in messages %}
+      <div class="alert alert-{{ category }} alert-dismissible fade show">{{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+    {% endfor %}
+  {% endif %}
+{% endwith %}
+
+<form method="POST">
+  <div class="card mb-3">
+    <div class="card-header fw-bold bg-light">挨拶文</div>
+    <div class="card-body">
+      <textarea class="form-control font-monospace" name="guide_greeting" rows="5">{{ settings.get('guide_greeting', '') }}</textarea>
+      <div class="form-text">「拝啓〜敬具」の本文部分。改行はそのまま反映されます。</div>
+    </div>
+  </div>
+
+  <div class="card mb-3">
+    <div class="card-header fw-bold bg-light">式次第</div>
+    <div class="card-body">
+      <textarea class="form-control font-monospace" name="guide_schedule" rows="8">{{ settings.get('guide_schedule', '') }}</textarea>
+      <div class="form-text">1行につき1項目。形式: <code>時刻|項目名|備考</code>（時刻・備考は空欄可）<br>
+        例: <code>18:30|開会|開会の辞・幹事挨拶</code> / <code>|ご歓談・お食事|</code></div>
+    </div>
+  </div>
+
+  <div class="card mb-3">
+    <div class="card-header fw-bold bg-light">予定イベント</div>
+    <div class="card-body">
+      <textarea class="form-control" name="guide_events" rows="3">{{ settings.get('guide_events', '') }}</textarea>
+      <div class="form-text">1行につき1項目として表示されます。</div>
+    </div>
+  </div>
+
+  <div class="card mb-3">
+    <div class="card-header fw-bold bg-light">二次会のご案内</div>
+    <div class="card-body">
+      <textarea class="form-control" name="guide_afterparty" rows="3">{{ settings.get('guide_afterparty', '') }}</textarea>
+    </div>
+  </div>
+
+  <div class="card mb-3">
+    <div class="card-header fw-bold bg-light">備考</div>
+    <div class="card-body">
+      <textarea class="form-control" name="guide_notes" rows="4">{{ settings.get('guide_notes', '') }}</textarea>
+      <div class="form-text">1行につき1項目。先頭に「※ 」が自動で付きます。</div>
+    </div>
+  </div>
+
+  <div class="d-flex gap-2">
+    <button type="submit" class="btn btn-primary">保存</button>
+    <a href="{{ url_for('admin.reunion_guide') }}" target="_blank" class="btn btn-outline-secondary">プレビュー確認</a>
+  </div>
+</form>
+{% endblock %}

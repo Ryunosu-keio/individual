@@ -7,214 +7,119 @@
   <style>
     @page {
       size: A4;
-      margin: 18mm 20mm 15mm 20mm;
+      margin: 12mm 18mm 10mm 18mm;
     }
 
     @media print {
       .no-print { display: none !important; }
-      body { margin: 0; }
+      body { padding: 0; }
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
       font-family: 'Hiragino Mincho ProN', 'ヒラギノ明朝 ProN', 'Yu Mincho', '游明朝', 'MS Mincho', serif;
-      font-size: 10.5pt;
-      line-height: 1.85;
+      font-size: 9pt;
+      line-height: 1.6;
       color: #1a1a1a;
       background: #fff;
-      width: 170mm;
+      width: 174mm;
       margin: 0 auto;
-      padding: 10mm 0;
+      padding: 6mm 0;
     }
 
-    /* ── 印刷ボタン ── */
     .print-bar {
       position: fixed;
-      top: 16px;
-      right: 20px;
+      top: 12px; right: 16px;
       z-index: 100;
     }
     .print-bar button {
-      background: #1a3a5c;
-      color: #fff;
-      border: none;
-      padding: 10px 22px;
-      font-size: 14px;
-      border-radius: 6px;
+      background: #1a3a5c; color: #fff; border: none;
+      padding: 8px 18px; font-size: 13px; border-radius: 5px;
       cursor: pointer;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
     }
     .print-bar button:hover { background: #254e7a; }
 
-    /* ── ヘッダー装飾 ── */
     .header-top {
       border-top: 3px double #1a3a5c;
       border-bottom: 1px solid #1a3a5c;
-      padding: 6px 0 5px;
+      padding: 4px 0;
       text-align: center;
-      margin-bottom: 8px;
+      margin-bottom: 5px;
     }
-    .header-top .label {
-      font-size: 9pt;
-      letter-spacing: 0.3em;
-      color: #1a3a5c;
-    }
+    .header-top .label { font-size: 8pt; letter-spacing: 0.3em; color: #1a3a5c; }
 
     .main-title {
-      text-align: center;
-      font-size: 18pt;
-      font-weight: bold;
-      letter-spacing: 0.15em;
-      color: #1a3a5c;
-      margin: 10px 0 4px;
+      text-align: center; font-size: 15pt; font-weight: bold;
+      letter-spacing: 0.12em; color: #1a3a5c; margin: 5px 0 2px;
     }
-
     .sub-title {
-      text-align: center;
-      font-size: 11pt;
-      letter-spacing: 0.2em;
-      color: #444;
-      margin-bottom: 14px;
+      text-align: center; font-size: 9.5pt; letter-spacing: 0.2em;
+      color: #444; margin-bottom: 6px;
     }
-
     .header-bottom {
       border-top: 1px solid #1a3a5c;
       border-bottom: 3px double #1a3a5c;
-      margin-bottom: 16px;
+      margin-bottom: 8px;
     }
 
-    /* ── 挨拶文 ── */
     .greeting {
-      font-size: 10pt;
-      line-height: 2;
-      margin-bottom: 16px;
-      text-indent: 1em;
+      font-size: 9pt; line-height: 1.75;
+      margin-bottom: 8px; text-indent: 1em;
     }
 
-    /* ── セクション ── */
-    .section {
-      margin-bottom: 14px;
-    }
+    .section { margin-bottom: 8px; }
 
     .section-title {
-      font-size: 10pt;
-      font-weight: bold;
-      color: #fff;
-      background: #1a3a5c;
-      padding: 3px 10px;
-      letter-spacing: 0.1em;
-      margin-bottom: 6px;
+      font-size: 8.5pt; font-weight: bold; color: #fff;
+      background: #1a3a5c; padding: 2px 8px;
+      letter-spacing: 0.1em; margin-bottom: 4px;
     }
 
-    /* ── 基本情報テーブル ── */
-    .info-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 10.5pt;
-    }
-    .info-table td {
-      padding: 4px 8px;
-      vertical-align: top;
-    }
-    .info-table td.label {
-      white-space: nowrap;
-      color: #1a3a5c;
-      font-weight: bold;
-      width: 6em;
-    }
-    .info-table tr {
-      border-bottom: 1px solid #e8e8e8;
-    }
+    .info-table { width: 100%; border-collapse: collapse; font-size: 9pt; }
+    .info-table td { padding: 2px 6px; vertical-align: top; }
+    .info-table td.label { white-space: nowrap; color: #1a3a5c; font-weight: bold; width: 5em; }
+    .info-table tr { border-bottom: 1px solid #ebebeb; }
 
-    /* ── 2カラム ── */
-    .two-col {
-      display: flex;
-      gap: 16px;
-    }
-    .two-col .col {
-      flex: 1;
-    }
+    .two-col { display: flex; gap: 12px; }
+    .two-col .col { flex: 1; }
 
-    /* ── 式次第 ── */
-    .schedule {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 10pt;
-    }
-    .schedule td {
-      padding: 5px 10px;
-      border-bottom: 1px solid #e0e0e0;
-      vertical-align: middle;
-    }
-    .schedule td.time {
-      white-space: nowrap;
-      color: #1a3a5c;
-      font-weight: bold;
-      width: 5em;
-      text-align: center;
-    }
-    .schedule td.item {
-      font-size: 10.5pt;
-    }
-    .schedule td.note {
-      font-size: 9pt;
-      color: #555;
-    }
+    .schedule { width: 100%; border-collapse: collapse; font-size: 9pt; }
+    .schedule td { padding: 3px 8px; border-bottom: 1px solid #e0e0e0; vertical-align: middle; }
+    .schedule td.time { white-space: nowrap; color: #1a3a5c; font-weight: bold; width: 4.5em; text-align: center; }
+    .schedule td.note { font-size: 8pt; color: #555; }
     .schedule tr:last-child td { border-bottom: none; }
 
-    /* ── 地図エリア ── */
     .map-area {
-      border: 1px solid #ccc;
-      padding: 8px 12px;
-      border-radius: 4px;
-      font-size: 9.5pt;
+      border: 1px solid #ccc; padding: 5px 10px;
+      border-radius: 3px; font-size: 8.5pt; margin-top: 6px;
     }
-    .map-area .map-label {
-      font-weight: bold;
-      color: #1a3a5c;
-      font-size: 9pt;
-      margin-bottom: 2px;
-    }
-    .map-area a {
-      color: #1a3a5c;
-      word-break: break-all;
-    }
+    .map-area .map-label { font-weight: bold; color: #1a3a5c; margin-bottom: 1px; }
+    .map-area a { color: #1a3a5c; word-break: break-all; }
 
-    /* ── イベント・二次会 ── */
     .event-box {
       border-left: 3px solid #1a3a5c;
-      padding: 6px 12px;
-      background: #f5f7fa;
-      font-size: 10pt;
+      padding: 4px 10px; background: #f5f7fa; font-size: 9pt;
     }
-    .event-box p { margin-bottom: 4px; }
+    .event-box p { margin-bottom: 2px; }
 
-    /* ── 備考 ── */
     .notes {
-      font-size: 9pt;
-      color: #555;
-      margin-top: 14px;
-      border-top: 1px dashed #bbb;
-      padding-top: 8px;
+      font-size: 8pt; color: #555;
+      margin-top: 8px; border-top: 1px dashed #bbb; padding-top: 5px;
     }
-    .notes p { margin-bottom: 2px; }
+    .notes p { margin-bottom: 1px; }
 
-    /* ── フッター ── */
     .footer {
-      text-align: right;
-      font-size: 9.5pt;
-      color: #444;
-      margin-top: 14px;
-      border-top: 1px solid #1a3a5c;
-      padding-top: 6px;
+      text-align: right; font-size: 8.5pt; color: #444;
+      margin-top: 8px; border-top: 1px solid #1a3a5c; padding-top: 4px;
     }
   </style>
 </head>
 <body>
 
 <div class="no-print print-bar">
-  <button onclick="window.print()">📄 PDFとして保存</button>
+  <a href="{{ url_for('admin.settings_reunion_guide') }}" style="margin-right:8px; color:#1a3a5c; font-size:13px; text-decoration:none;">&#9998; 内容を編集</a>
+  <button onclick="window.print()">PDFとして保存</button>
 </div>
 
 {% set reunion_name = settings.get('reunion_name', '水戸一高140期卒業生同窓会') %}
@@ -233,10 +138,9 @@
 
 <!-- 挨拶文 -->
 <div class="greeting">
-  拝啓　時下ますますご清栄のこととお慶び申し上げます。<br>
-  このたび、皆様のご多忙にもかかわらず多数のご参加を賜り、誠にありがとうございます。<br>
-  懐かしい仲間と語らい、学生時代の思い出を振り返る素晴らしいひとときになりますよう、幹事一同心を込めてご用意いたしました。<br>
-  皆様のお越しを心よりお待ち申し上げております。<br>
+  {% for line in settings.get('guide_greeting', '').splitlines() %}
+    {{ line }}<br>
+  {% endfor %}
   <span style="display:block; text-align:right; margin-top:4px;">敬具</span>
 </div>
 
@@ -247,7 +151,7 @@
     <table class="info-table">
       <tr>
         <td class="label">日　時</td>
-        <td>{{ reunion_date }}（{{ reunion_time }}〜21:00）</td>
+        <td>{{ reunion_date }}（{{ reunion_time }}）</td>
       </tr>
       <tr>
         <td class="label">受　付</td>
@@ -288,7 +192,7 @@
       </tr>
     </table>
     <div class="map-area" style="margin-top:8px;">
-      <div class="map-label">🗺 地図</div>
+      <div class="map-label">地図</div>
       <a href="https://maps.google.com/?q=水戸三の丸ホテル,茨城県水戸市三の丸2-1-1">
         https://maps.google.com/?q=水戸三の丸ホテル
       </a>
@@ -304,36 +208,13 @@
 <div class="section">
   <div class="section-title">■ 式次第</div>
   <table class="schedule">
+    {% for row in schedule_rows %}
     <tr>
-      <td class="time">18:00</td>
-      <td class="item">受　付　開　始</td>
-      <td class="note"></td>
+      <td class="time">{{ row.time }}</td>
+      <td class="item">{{ row.item }}</td>
+      <td class="note">{{ row.note }}</td>
     </tr>
-    <tr>
-      <td class="time">18:30</td>
-      <td class="item">開　会</td>
-      <td class="note">開会の辞・幹事挨拶</td>
-    </tr>
-    <tr>
-      <td class="time"></td>
-      <td class="item">ご歓談・お食事</td>
-      <td class="note"></td>
-    </tr>
-    <tr>
-      <td class="time"></td>
-      <td class="item">レクリエーション</td>
-      <td class="note">景品付きビンゴ大会</td>
-    </tr>
-    <tr>
-      <td class="time"></td>
-      <td class="item">写真撮影</td>
-      <td class="note">集合写真・フリー撮影</td>
-    </tr>
-    <tr>
-      <td class="time">21:00</td>
-      <td class="item">閉　会</td>
-      <td class="note">閉会の辞</td>
-    </tr>
+    {% endfor %}
   </table>
 </div>
 
@@ -342,23 +223,26 @@
   <div class="col">
     <div class="section-title">■ 予定イベント</div>
     <div class="event-box">
-      <p>🎯 <strong>景品付きビンゴ大会</strong></p>
-      <p style="font-size:9pt; color:#555;">豪華景品をご用意しています。お楽しみに！</p>
+      {% for line in settings.get('guide_events', '').splitlines() %}
+      <p>{{ line }}</p>
+      {% endfor %}
     </div>
   </div>
   <div class="col">
     <div class="section-title">■ 二次会のご案内</div>
     <div class="event-box">
-      <p>🥂 <strong>3年次のクラスごとに開催予定です。</strong></p>
-      <p style="font-size:9pt; color:#555;">詳細は当日ご案内いたします。</p>
+      {% for line in settings.get('guide_afterparty', '').splitlines() %}
+      <p>{{ line }}</p>
+      {% endfor %}
     </div>
   </div>
 </div>
 
 <!-- 備考 -->
 <div class="notes">
-  <p>※ 会場内は禁煙です。お荷物はクロークをご利用ください。</p>
-  <p>※ やむを得ずご欠席される場合は、事前にご連絡いただけますと幸いです。</p>
+  {% for line in settings.get('guide_notes', '').splitlines() %}
+  <p>※ {{ line }}</p>
+  {% endfor %}
   {% if settings.get('final_reminder_deadline') %}
   <p>※ キャンセルのご連絡は {{ settings.get('final_reminder_deadline') }} 23:59 JST までにお願いいたします。</p>
   {% endif %}
