@@ -355,26 +355,31 @@ PHASE_LABELS = {
 }
 
 
+def _today_jst():
+    from datetime import datetime, timezone, timedelta
+    return datetime.now(timezone(timedelta(hours=9))).date()
+
+
 def _get_reminder_send_date_passed() -> bool:
-    """リマインドメール送信日を過ぎているか判定する。未設定の場合は False（自動判定に含まれない）。"""
+    """リマインドメール送信日を過ぎているか判定する（JST基準）。未設定の場合は False。"""
     from datetime import date as _date
     s = AppSetting.query.filter_by(key="reminder_send_date").first()
     if not (s and s.value):
         return False
     try:
-        return _date.today() >= _date.fromisoformat(s.value)
+        return _today_jst() >= _date.fromisoformat(s.value)
     except ValueError:
         return False
 
 
 def _get_final_reminder_date_passed() -> bool:
-    """最終リマインド送信日を過ぎているか判定する。未設定の場合は False（自動判定に含まれない）。"""
+    """最終リマインド送信日を過ぎているか判定する（JST基準）。未設定の場合は False。"""
     from datetime import date as _date
     s = AppSetting.query.filter_by(key="final_reminder_date").first()
     if not (s and s.value):
         return False
     try:
-        return _date.today() >= _date.fromisoformat(s.value)
+        return _today_jst() >= _date.fromisoformat(s.value)
     except ValueError:
         return False
 
