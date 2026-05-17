@@ -172,10 +172,15 @@
       <div class="card-body">
         <p class="text-muted small">最終リマインドメールに添付する案内PDFを設定します。</p>
         <div class="mb-3">
-          <a href="{{ url_for('admin.reunion_guide') }}" target="_blank" class="btn btn-outline-secondary btn-sm">
-            <i class="bi bi-file-earmark-text me-1"></i>案内状プレビュー（PDF用）を開く
-          </a>
-          <div class="form-text">開いたページで「PDFとして保存」→ 下のフォームからアップロード</div>
+          <div class="d-flex gap-2 mb-1">
+            <a href="{{ url_for('admin.settings_reunion_guide') }}" class="btn btn-outline-primary btn-sm">
+              <i class="bi bi-pencil me-1"></i>案内状を編集
+            </a>
+            <a href="{{ url_for('admin.reunion_guide') }}" target="_blank" class="btn btn-outline-secondary btn-sm">
+              <i class="bi bi-eye me-1"></i>プレビュー（PDF用）
+            </a>
+          </div>
+          <div class="form-text">編集 → プレビューで確認 → 「PDFとして保存」→ 下のフォームからアップロード</div>
         </div>
         <form method="POST" action="{{ url_for('admin.settings_pdf_upload') }}" enctype="multipart/form-data">
           <div class="mb-2">

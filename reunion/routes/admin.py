@@ -1735,10 +1735,70 @@ def final_form_preview():
     )
 
 
+GUIDE_DEFAULTS = {
+    "guide_greeting": (
+        "拝啓　時下ますますご清栄のこととお慶び申し上げます。\n"
+        "このたび、皆様のご多忙にもかかわらず多数のご参加を賜り、誠にありがとうございます。\n"
+        "懐かしい仲間と語らい、学生時代の思い出を振り返る素晴らしいひとときになりますよう、幹事一同心を込めてご用意いたしました。\n"
+        "皆様のお越しを心よりお待ち申し上げております。"
+    ),
+    "guide_schedule": (
+        "18:00|受付開始|\n"
+        "18:30|開会|開会の辞・幹事挨拶\n"
+        "|ご歓談・お食事|\n"
+        "|レクリエーション|景品付きビンゴ大会\n"
+        "|写真撮影|集合写真・フリー撮影\n"
+        "21:00|閉会|閉会の辞"
+    ),
+    "guide_events": "景品付きビンゴ大会",
+    "guide_afterparty": "3年次のクラスごとに開催予定です。詳細は当日ご案内いたします。",
+    "guide_notes": (
+        "会場内は禁煙です。お荷物はクロークをご利用ください。\n"
+        "やむを得ずご欠席される場合は、事前にご連絡いただけますと幸いです。"
+    ),
+}
+
+
 @admin_bp.route("/reunion-guide")
 def reunion_guide():
     """同窓会ご案内PDF用プレビュー（ブラウザからPDF保存）"""
     settings = {}
     for s in AppSetting.query.all():
         settings[s.key] = s.value
-    return render_template("admin/reunion_guide.html", settings=settings)
+    for k, v in GUIDE_DEFAULTS.items():
+        settings.setdefault(k, v)
+
+    schedule_rows = []
+    for line in settings["guide_schedule"].splitlines():
+        parts = line.split("|")
+        schedule_rows.append({
+            "time": parts[0] if len(parts) > 0 else "",
+            "item": parts[1] if len(parts) > 1 else "",
+            "note": parts[2] if len(parts) > 2 else "",
+        })
+    return render_template("admin/reunion_guide.html", settings=settings, schedule_rows=schedule_rows)
+
+
+@admin_bp.route("/settings/reunion-guide", methods=["GET", "POST"])
+def settings_reunion_guide():
+    """同窓会ご案内の編集"""
+    keys = list(GUIDE_DEFAULTS.keys())
+    if request.method == "POST":
+        for k in keys:
+            val = request.form.get(k, "").strip()
+            s = AppSetting.query.filter_by(key=k).first()
+            if s:
+                s.value = val
+                s.updated_at = datetime.utcnow()
+            else:
+                db.session.add(AppSetting(key=k, value=val))
+        db.session.commit()
+        flash("案内状の内容を保存しました。", "success")
+        return redirect(url_for("admin.settings_reunion_guide"))
+
+    settings = {}
+    for s in AppSetting.query.filter(AppSetting.key.in_(keys)).all():
+        settings[s.key] = s.value
+    for k, v in GUIDE_DEFAULTS.items():
+        settings.setdefault(k, v)
+    return render_template("admin/settings_reunion_guide.html", settings=settings)

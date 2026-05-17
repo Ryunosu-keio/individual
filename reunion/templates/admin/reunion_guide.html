@@ -214,7 +214,8 @@
 <body>
 
 <div class="no-print print-bar">
-  <button onclick="window.print()">📄 PDFとして保存</button>
+  <a href="{{ url_for('admin.settings_reunion_guide') }}" style="margin-right:8px; color:#1a3a5c; font-size:13px; text-decoration:none;">&#9998; 内容を編集</a>
+  <button onclick="window.print()">PDFとして保存</button>
 </div>
 
 {% set reunion_name = settings.get('reunion_name', '水戸一高140期卒業生同窓会') %}
@@ -233,10 +234,9 @@
 
 <!-- 挨拶文 -->
 <div class="greeting">
-  拝啓　時下ますますご清栄のこととお慶び申し上げます。<br>
-  このたび、皆様のご多忙にもかかわらず多数のご参加を賜り、誠にありがとうございます。<br>
-  懐かしい仲間と語らい、学生時代の思い出を振り返る素晴らしいひとときになりますよう、幹事一同心を込めてご用意いたしました。<br>
-  皆様のお越しを心よりお待ち申し上げております。<br>
+  {% for line in settings.get('guide_greeting', '').splitlines() %}
+    {{ line }}<br>
+  {% endfor %}
   <span style="display:block; text-align:right; margin-top:4px;">敬具</span>
 </div>
 
@@ -304,36 +304,13 @@
 <div class="section">
   <div class="section-title">■ 式次第</div>
   <table class="schedule">
+    {% for row in schedule_rows %}
     <tr>
-      <td class="time">18:00</td>
-      <td class="item">受　付　開　始</td>
-      <td class="note"></td>
+      <td class="time">{{ row.time }}</td>
+      <td class="item">{{ row.item }}</td>
+      <td class="note">{{ row.note }}</td>
     </tr>
-    <tr>
-      <td class="time">18:30</td>
-      <td class="item">開　会</td>
-      <td class="note">開会の辞・幹事挨拶</td>
-    </tr>
-    <tr>
-      <td class="time"></td>
-      <td class="item">ご歓談・お食事</td>
-      <td class="note"></td>
-    </tr>
-    <tr>
-      <td class="time"></td>
-      <td class="item">レクリエーション</td>
-      <td class="note">景品付きビンゴ大会</td>
-    </tr>
-    <tr>
-      <td class="time"></td>
-      <td class="item">写真撮影</td>
-      <td class="note">集合写真・フリー撮影</td>
-    </tr>
-    <tr>
-      <td class="time">21:00</td>
-      <td class="item">閉　会</td>
-      <td class="note">閉会の辞</td>
-    </tr>
+    {% endfor %}
   </table>
 </div>
 
@@ -342,23 +319,26 @@
   <div class="col">
     <div class="section-title">■ 予定イベント</div>
     <div class="event-box">
-      <p><strong>景品付きビンゴ大会</strong></p>
-      <p style="font-size:9pt; color:#555;">豪華景品をご用意しています。お楽しみに！</p>
+      {% for line in settings.get('guide_events', '').splitlines() %}
+      <p>{{ line }}</p>
+      {% endfor %}
     </div>
   </div>
   <div class="col">
     <div class="section-title">■ 二次会のご案内</div>
     <div class="event-box">
-      <p><strong>3年次のクラスごとに開催予定です。</strong></p>
-      <p style="font-size:9pt; color:#555;">詳細は当日ご案内いたします。</p>
+      {% for line in settings.get('guide_afterparty', '').splitlines() %}
+      <p>{{ line }}</p>
+      {% endfor %}
     </div>
   </div>
 </div>
 
 <!-- 備考 -->
 <div class="notes">
-  <p>※ 会場内は禁煙です。お荷物はクロークをご利用ください。</p>
-  <p>※ やむを得ずご欠席される場合は、事前にご連絡いただけますと幸いです。</p>
+  {% for line in settings.get('guide_notes', '').splitlines() %}
+  <p>※ {{ line }}</p>
+  {% endfor %}
   {% if settings.get('final_reminder_deadline') %}
   <p>※ キャンセルのご連絡は {{ settings.get('final_reminder_deadline') }} 23:59 JST までにお願いいたします。</p>
   {% endif %}
