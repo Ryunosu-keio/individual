@@ -216,26 +216,31 @@ def provisional():
     return redirect(url_for("forms.done", type="provisional"))
 
 
+def _today_jst():
+    from datetime import datetime, timezone, timedelta
+    return datetime.now(timezone(timedelta(hours=9))).date()
+
+
 def _is_provisional_form_locked() -> bool:
-    """provisional_deadline の翌日以降はフォームをロックする。未設定ならロックしない。"""
-    from datetime import date as _date
+    """provisional_deadline の翌日以降（JST）はフォームをロックする。未設定ならロックしない。"""
     s = AppSetting.query.filter_by(key="provisional_deadline").first()
     if not (s and s.value):
         return False
     try:
-        return _date.today() > _date.fromisoformat(s.value)
+        from datetime import date as _date
+        return _today_jst() > _date.fromisoformat(s.value)
     except ValueError:
         return False
 
 
 def _is_final_form_locked() -> bool:
-    """final_deadline の翌日以降はフォームをロックする。未設定ならロックしない。"""
-    from datetime import date as _date
+    """final_deadline の翌日以降（JST）はフォームをロックする。未設定ならロックしない。"""
     s = AppSetting.query.filter_by(key="final_deadline").first()
     if not (s and s.value):
         return False
     try:
-        return _date.today() > _date.fromisoformat(s.value)
+        from datetime import date as _date
+        return _today_jst() > _date.fromisoformat(s.value)
     except ValueError:
         return False
 
