@@ -97,7 +97,12 @@ def provisional():
         s = AppSetting.query.filter_by(key="provisional_deadline").first()
         if s and s.value:
             deadline = _format_deadline_jp(s.value)
-        return render_template("provisional_form.html", provisional_deadline=deadline)
+        locked = _is_provisional_form_locked()
+        return render_template("provisional_form.html", provisional_deadline=deadline, locked=locked)
+
+    if _is_provisional_form_locked():
+        flash("回答期限を過ぎているため、フォームはロックされています。", "danger")
+        return redirect(url_for("forms.provisional"))
 
     # クラス選択→名前選択方式: participant_id が送ら��てくる場合はそれを優先
     participant_id  = request.form.get("participant_id", "").strip()
@@ -211,9 +216,21 @@ def provisional():
     return redirect(url_for("forms.done", type="provisional"))
 
 
+def _is_provisional_form_locked() -> bool:
+    """provisional_deadline の翌日以降はフォームをロックする。未設定ならロックしない。"""
+    from datetime import date as _date
+    s = AppSetting.query.filter_by(key="provisional_deadline").first()
+    if not (s and s.value):
+        return False
+    try:
+        return _date.today() > _date.fromisoformat(s.value)
+    except ValueError:
+        return False
+
+
 def _is_final_form_locked() -> bool:
     """final_deadline の翌日以降はフォームをロックする。未設定ならロックしない。"""
-    from datetime import date as _date, timedelta
+    from datetime import date as _date
     s = AppSetting.query.filter_by(key="final_deadline").first()
     if not (s and s.value):
         return False
