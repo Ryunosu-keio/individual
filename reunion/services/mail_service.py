@@ -44,7 +44,7 @@ MAIL_DEFAULTS = {
         "━━━━━━━━━━━━━━━━━━━━\n"
         "■ 本出欠フォーム\n"
         "━━━━━━━━━━━━━━━━━━━━\n"
-        "【回答期限: {final_deadline_short} 23:59】\n"
+        "【回答期限: {final_deadline_short} 23:59 JST】\n"
         "※この期限を過ぎるとフォームはロックされ、回答できなくなります。\n\n"
         "下記URLよりご回答をお願いいたします。\n"
         "ご参加の場合は会費のお振込もこちらからご確認ください。\n"
@@ -74,7 +74,7 @@ MAIL_DEFAULTS = {
         "━━━━━━━━━━━━━━━━━━━━\n"
         "■ 本出欠フォーム\n"
         "━━━━━━━━━━━━━━━━━━━━\n"
-        "【回答期限: {final_deadline_short} 23:59】\n"
+        "【回答期限: {final_deadline_short} 23:59 JST】\n"
         "※この期限を過ぎるとフォームはロックされ、回答できなくなります。\n\n"
         "{final_url}\n\n"
         "お忙しいところ恐れ入りますが、よろしくお願いいたします。\n\n"
@@ -178,7 +178,7 @@ MAIL_DEFAULTS = {
         "持ち物: {belongings}\n"
         "会費　: {reunion_fee}円\n\n"
         "※詳細は添付のご案内PDFをご確認ください。\n"
-        "※やむを得ずキャンセルされる場合は{final_reminder_deadline_short} 23:59までにこのメールへ返信してご連絡ください。\n\n"
+        "※やむを得ずキャンセルされる場合は{final_reminder_deadline_short} 23:59 JST までにこのメールへ返信してご連絡ください。\n\n"
         "当日お会いできることを楽しみにしております。\n\n"
         "──────────────────\n"
         "{reunion_name} 幹事代表 {organizer_name}"
@@ -227,7 +227,7 @@ MAIL_DEFAULTS = {
         "━━━━━━━━━━━━━━━━━━━━\n"
         "■ 出欠フォーム\n"
         "━━━━━━━━━━━━━━━━━━━━\n"
-        "【回答期限: {final_deadline_short} 23:59】\n"
+        "【回答期限: {final_deadline_short} 23:59 JST】\n"
         "※この期限を過ぎるとフォームはロックされ、回答できなくなります。\n\n"
         "{final_url}\n\n"
         "先生のご出席を心よりお待ちしております。\n\n"
@@ -253,7 +253,7 @@ MAIL_DEFAULTS = {
         "━━━━━━━━━━━━━━━━━━━━\n"
         "■ 出欠フォーム\n"
         "━━━━━━━━━━━━━━━━━━━━\n"
-        "【回答期限: {final_deadline_short} 23:59】\n"
+        "【回答期限: {final_deadline_short} 23:59 JST】\n"
         "※この期限を過ぎるとフォームはロックされ、回答できなくなります。\n\n"
         "{final_url}\n\n"
         "──────────────────\n"
@@ -274,7 +274,7 @@ MAIL_DEFAULTS = {
         "服装　: {dress_code}\n"
         "持ち物: {belongings}\n\n"
         "※詳細は添付のご案内PDFをご確認ください。\n"
-        "※やむを得ずご欠席される場合は{final_reminder_deadline_short} 23:59までにこのメールへ返信してご連絡ください。\n\n"
+        "※やむを得ずご欠席される場合は{final_reminder_deadline_short} 23:59 JST までにこのメールへ返信してご連絡ください。\n\n"
         "先生にお会いできることを楽しみにしております。\n\n"
         "──────────────────\n"
         "{reunion_name} 幹事代表 {organizer_name}"
@@ -535,7 +535,7 @@ def _render_template(template: str, **kwargs) -> str:
         template = template.replace("{" + key + "}", str(val))
     # 期限未設定時に残る空パターンを除去
     template = re.sub(r'【\s*23:59締切】', '', template)
-    template = re.sub(r'【\s*23:59までに】', '', template)
+    template = re.sub(r'【\s*23:59 JST までに】', '', template)
     template = re.sub(r'※回答期限（\s*23:59）まで[^\n]*\n', '', template)
     template = re.sub(r'※ご回答期限（\s*23:59）まで[^\n]*\n', '', template)
     template = re.sub(r'※やむを得ず[^\n]*23:59まで[^\n]*ご連絡ください。\n', lambda m: m.group() if '/' in m.group() else '', template)
