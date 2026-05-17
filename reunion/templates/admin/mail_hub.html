@@ -102,6 +102,16 @@
             <label class="form-label fw-bold text-muted small">件名</label>
             <div id="previewSubject" class="form-control bg-light"></div>
           </div>
+          <div id="attachmentInfo" class="d-none mb-2">
+            <span class="badge bg-success">
+              <i class="bi bi-paperclip me-1"></i>添付あり: <span id="attachmentName"></span>（<span id="attachmentSize"></span> KB）
+            </span>
+          </div>
+          <div id="attachmentMissing" class="d-none mb-2">
+            <span class="badge bg-warning text-dark">
+              <i class="bi bi-exclamation-triangle me-1"></i>PDFが未アップロードのため添付なしで送信されます
+            </span>
+          </div>
           <div class="mb-3">
             <label class="form-label fw-bold text-muted small">本文</label>
             <iframe id="previewBodyHtml" class="w-100 border rounded bg-light d-none" style="min-height: 400px; font-size: 0.9rem;"></iframe>
@@ -225,6 +235,24 @@ document.addEventListener('DOMContentLoaded', function() {
         loading.classList.add('d-none');
 
         document.getElementById('previewSubject').textContent = data.subject;
+
+        var attachmentInfo = document.getElementById('attachmentInfo');
+        var attachmentMissing = document.getElementById('attachmentMissing');
+        if (mailType === 'final_reminder') {
+          if (data.attachment) {
+            document.getElementById('attachmentName').textContent = data.attachment.filename;
+            document.getElementById('attachmentSize').textContent = data.attachment.size_kb;
+            attachmentInfo.classList.remove('d-none');
+            attachmentMissing.classList.add('d-none');
+          } else {
+            attachmentInfo.classList.add('d-none');
+            attachmentMissing.classList.remove('d-none');
+          }
+        } else {
+          attachmentInfo.classList.add('d-none');
+          attachmentMissing.classList.add('d-none');
+        }
+
         var iframe = document.getElementById('previewBodyHtml');
         var doc = iframe.contentDocument || iframe.contentWindow.document;
         doc.open(); doc.write(data.html_body); doc.close();

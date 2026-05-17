@@ -645,6 +645,19 @@ def api_mail_preview(mail_type):
 
     remaining = get_remaining_today()
 
+    pdf_setting = AppSetting.query.filter_by(key="reunion_guide_pdf").first()
+    pdf_path = pdf_setting.value if pdf_setting and pdf_setting.value else None
+    if not pdf_path:
+        default_pdf = os.path.join(current_app.root_path, "static", "uploads", "reunion_guide.pdf")
+        if os.path.isfile(default_pdf):
+            pdf_path = default_pdf
+    attachment_info = None
+    if mail_type == "final_reminder" and pdf_path and os.path.isfile(pdf_path):
+        attachment_info = {
+            "filename": os.path.basename(pdf_path),
+            "size_kb": round(os.path.getsize(pdf_path) / 1024, 1),
+        }
+
     from services.mail_service import _text_to_html
     return jsonify({
         "label": info["label"],
@@ -659,6 +672,7 @@ def api_mail_preview(mail_type):
         "remaining_today": remaining,
         "daily_limit": get_daily_send_limit(),
         "today_sent": get_today_sent_count(),
+        "attachment": attachment_info,
     })
 
 
