@@ -1710,6 +1710,11 @@ def final_form_preview():
     )
     default_transfer_name_alt = decompose_voiced(default_transfer_name)
 
+    from services.mail_service import _format_deadline_jp
+    fd = AppSetting.query.filter_by(key="final_deadline").first()
+    final_deadline_jp = _format_deadline_jp(fd.value) if fd and fd.value else ""
+    is_teacher = participant.role in ("教師", "学年主任", "副担任")
+
     return render_template(
         "final_form.html",
         participant=participant,
@@ -1720,4 +1725,6 @@ def final_form_preview():
         default_transfer_name_alt=default_transfer_name_alt,
         locked=False,
         can_cancel=False,
+        final_deadline_jp=final_deadline_jp,
+        is_teacher=is_teacher,
     )
