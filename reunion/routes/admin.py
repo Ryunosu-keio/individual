@@ -355,26 +355,31 @@ PHASE_LABELS = {
 }
 
 
+def _today_jst():
+    from datetime import datetime, timezone, timedelta
+    return datetime.now(timezone(timedelta(hours=9))).date()
+
+
 def _get_reminder_send_date_passed() -> bool:
-    """リマインドメール送信日を過ぎているか判定する。未設定の場合は False（自動判定に含まれない）。"""
+    """リマインドメール送信日を過ぎているか判定する（JST基準）。未設定の場合は False。"""
     from datetime import date as _date
     s = AppSetting.query.filter_by(key="reminder_send_date").first()
     if not (s and s.value):
         return False
     try:
-        return _date.today() >= _date.fromisoformat(s.value)
+        return _today_jst() >= _date.fromisoformat(s.value)
     except ValueError:
         return False
 
 
 def _get_final_reminder_date_passed() -> bool:
-    """最終リマインド送信日を過ぎているか判定する。未設定の場合は False（自動判定に含まれない）。"""
+    """最終リマインド送信日を過ぎているか判定する（JST基準）。未設定の場合は False。"""
     from datetime import date as _date
     s = AppSetting.query.filter_by(key="final_reminder_date").first()
     if not (s and s.value):
         return False
     try:
-        return _date.today() >= _date.fromisoformat(s.value)
+        return _today_jst() >= _date.fromisoformat(s.value)
     except ValueError:
         return False
 
@@ -1710,6 +1715,11 @@ def final_form_preview():
     )
     default_transfer_name_alt = decompose_voiced(default_transfer_name)
 
+    from services.mail_service import _format_deadline_jp
+    fd = AppSetting.query.filter_by(key="final_deadline").first()
+    final_deadline_jp = _format_deadline_jp(fd.value) if fd and fd.value else ""
+    is_teacher = participant.role in ("教師", "学年主任", "副担任")
+
     return render_template(
         "final_form.html",
         participant=participant,
@@ -1720,4 +1730,6 @@ def final_form_preview():
         default_transfer_name_alt=default_transfer_name_alt,
         locked=False,
         can_cancel=False,
+        final_deadline_jp=final_deadline_jp,
+        is_teacher=is_teacher,
     )

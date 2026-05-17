@@ -1113,10 +1113,14 @@ def get_daily_send_limit() -> int:
 
 
 def get_today_sent_count() -> int:
-    """今日送信済みのメール件数を取得する"""
-    today_start = datetime.combine(date.today(), datetime.min.time())
+    """今日送信済みのメール件数を取得する（JST基準）"""
+    from datetime import timezone, timedelta
+    jst = timezone(timedelta(hours=9))
+    today_jst = datetime.now(jst).date()
+    today_start_jst = datetime(today_jst.year, today_jst.month, today_jst.day, 0, 0, 0)
+    today_start_utc = today_start_jst - timedelta(hours=9)
     return MailLog.query.filter(
-        MailLog.sent_at >= today_start,
+        MailLog.sent_at >= today_start_utc,
         MailLog.status.in_(["sent", "simulated"]),
     ).count()
 
