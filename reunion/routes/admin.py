@@ -645,6 +645,7 @@ def api_mail_preview(mail_type):
 
     remaining = get_remaining_today()
 
+    import os
     pdf_setting = AppSetting.query.filter_by(key="reunion_guide_pdf").first()
     pdf_path = pdf_setting.value if pdf_setting and pdf_setting.value else None
     if not pdf_path:
