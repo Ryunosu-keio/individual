@@ -718,8 +718,9 @@ def _send_smtp_text(to_email: str, subject: str, body: str, cfg: dict, attachmen
         server.sendmail(cfg["from_addr"], [to_email], msg.as_string())
 
 
-def _send_brevo(to_email: str, subject: str, body: str, cfg: dict, use_html: bool = True) -> None:
+def _send_brevo(to_email: str, subject: str, body: str, cfg: dict, use_html: bool = True, attachment_path: str = None) -> None:
     """Brevo Transactional Email APIでメールを送信する"""
+    import base64
     api_key = cfg.get("brevo_api_key", "") or os.environ.get("BREVO_API_KEY", "") or current_app.config.get("BREVO_API_KEY", "")
     if not api_key:
         raise ValueError("BREVO_API_KEY が設定されていません")
@@ -733,6 +734,10 @@ def _send_brevo(to_email: str, subject: str, body: str, cfg: dict, use_html: boo
     }
     if use_html:
         data["htmlContent"] = _text_to_html(body)
+    if attachment_path and os.path.isfile(attachment_path):
+        with open(attachment_path, "rb") as f:
+            encoded = base64.b64encode(f.read()).decode("utf-8")
+        data["attachment"] = [{"content": encoded, "name": os.path.basename(attachment_path)}]
     payload = json.dumps(data).encode("utf-8")
 
     req = urllib.request.Request(
@@ -797,7 +802,7 @@ def _dispatch_send(to_email: str, subject: str, body: str, mail_cfg: dict, attac
             _send_smtp_text(to_email, subject, body, mail_cfg, attachment_path=attachment_path)
         return "sent"
     elif mode == "brevo":
-        _send_brevo(to_email, subject, body, mail_cfg, use_html=use_html)
+        _send_brevo(to_email, subject, body, mail_cfg, use_html=use_html, attachment_path=attachment_path)
         return "sent"
     else:
         if attachment_path:
