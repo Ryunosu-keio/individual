@@ -307,10 +307,14 @@ def final(token):
     # ロック中の制御
     if locked:
         if can_cancel and request.form.get("status") == "cancelled":
-            # 直前キャンセルのみ受け付ける
+            cancel_reason = request.form.get("cancel_reason", "").strip()
+            if not cancel_reason:
+                flash("欠席の理由を入力してください。", "danger")
+                return redirect(url_for("forms.final", token=token))
             response = FinalResponse(
                 participant_id=participant.id,
                 status="cancelled",
+                remarks=cancel_reason,
                 submitted_at=datetime.utcnow(),
                 ip_address=request.remote_addr or "",
             )
