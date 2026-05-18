@@ -179,24 +179,18 @@
       <div class="card-header fw-bold bg-light"><i class="bi bi-envelope me-1"></i>メール送信</div>
       <div class="card-body">
         <div class="d-flex gap-2 flex-wrap">
-          <form method="POST" action="{{ url_for('admin.send_final_url_single', participant_id=participant.id) }}"
-                onsubmit="return confirm('本出欠URLを送信しますか？')">
-            <button type="submit" class="btn btn-success btn-sm">
-              <i class="bi bi-envelope me-1"></i>本出欠URL送信
-            </button>
-          </form>
-          <form method="POST" action="{{ url_for('admin.send_reminder_single', participant_id=participant.id) }}"
-                onsubmit="return confirm('本出欠リマインドを送信しますか？')">
-            <button type="submit" class="btn btn-primary btn-sm">
-              <i class="bi bi-bell me-1"></i>本出欠リマインド
-            </button>
-          </form>
-          <form method="POST" action="{{ url_for('admin.send_final_reminder_single', participant_id=participant.id) }}"
-                onsubmit="return confirm('最終リマインドを送信しますか？')">
-            <button type="submit" class="btn btn-danger btn-sm">
-              <i class="bi bi-envelope-fill me-1"></i>最終リマインド
-            </button>
-          </form>
+          <button class="btn btn-success btn-sm" onclick="openMailPreview('final_url')">
+            <i class="bi bi-envelope me-1"></i>本出欠URL送信
+          </button>
+          <button class="btn btn-primary btn-sm" onclick="openMailPreview('reminder')">
+            <i class="bi bi-bell me-1"></i>本出欠リマインド
+          </button>
+          <button class="btn btn-danger btn-sm" onclick="openMailPreview('final_reminder')">
+            <i class="bi bi-envelope-fill me-1"></i>最終リマインド
+          </button>
+          <button class="btn btn-warning btn-sm" onclick="openMailPreview('unlock_notice')">
+            <i class="bi bi-unlock me-1"></i>ロック解除通知
+          </button>
         </div>
       </div>
     </div>
@@ -253,6 +247,57 @@
 </div>
 {% endblock %}
 
+<!-- メールプレビューモーダル -->
+<div class="modal fade" id="mailPreviewModal" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-envelope me-2"></i><span id="modalMailLabel">メール確認</span></h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div id="modalLoading" class="text-center py-4">
+          <div class="spinner-border text-primary" role="status"></div>
+          <div class="mt-2 text-muted small">読み込み中...</div>
+        </div>
+        <div id="modalContent" class="d-none">
+          <div class="mb-3">
+            <span class="text-muted small fw-bold">宛先</span>
+            <div class="form-control bg-light mt-1" id="modalTo"></div>
+          </div>
+          <div class="mb-3">
+            <span class="text-muted small fw-bold">件名</span>
+            <div class="form-control bg-light mt-1" id="modalSubject"></div>
+          </div>
+          <div id="modalAttachment" class="d-none mb-2">
+            <span class="badge bg-success"><i class="bi bi-paperclip me-1"></i>添付: <span id="modalAttachName"></span>（<span id="modalAttachSize"></span> KB）</span>
+          </div>
+          <div class="mb-2 d-flex gap-2 align-items-center">
+            <span class="text-muted small fw-bold">本文</span>
+            <div class="btn-group btn-group-sm ms-auto" role="group">
+              <input type="radio" class="btn-check" name="modalFormat" id="modalFmtText" value="text" checked>
+              <label class="btn btn-outline-secondary" for="modalFmtText">テキスト</label>
+              <input type="radio" class="btn-check" name="modalFormat" id="modalFmtHtml" value="html">
+              <label class="btn btn-outline-secondary" for="modalFmtHtml">HTML</label>
+            </div>
+          </div>
+          <pre id="modalBodyText" class="form-control bg-light" style="white-space:pre-wrap; min-height:200px; font-size:0.85rem;"></pre>
+          <iframe id="modalBodyHtml" class="w-100 border rounded bg-light d-none" style="min-height:200px;"></iframe>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
+        <form id="modalSendForm" method="POST">
+          <input type="hidden" name="mail_format" id="modalFormatInput" value="text">
+          <button type="submit" class="btn btn-primary" id="modalSendBtn">
+            <i class="bi bi-send me-1"></i>送信する
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
 {% block extra_js %}
 <script>
 function copyUrl() {
@@ -261,5 +306,74 @@ function copyUrl() {
     alert('URLをコピーしました');
   });
 }
+
+var PREVIEW_URLS = {
+  'final_url':      '{{ url_for("admin.api_mail_preview_individual", participant_id=participant.id, mail_type="final_url") }}',
+  'reminder':       '{{ url_for("admin.api_mail_preview_individual", participant_id=participant.id, mail_type="reminder") }}',
+  'final_reminder': '{{ url_for("admin.api_mail_preview_individual", participant_id=participant.id, mail_type="final_reminder") }}',
+  'unlock_notice':  '{{ url_for("admin.api_mail_preview_individual", participant_id=participant.id, mail_type="unlock_notice") }}',
+};
+var SEND_URLS = {
+  'final_url':      '{{ url_for("admin.send_final_url_single", participant_id=participant.id) }}',
+  'reminder':       '{{ url_for("admin.send_reminder_single", participant_id=participant.id) }}',
+  'final_reminder': '{{ url_for("admin.send_final_reminder_single", participant_id=participant.id) }}',
+  'unlock_notice':  '{{ url_for("admin.send_unlock_notice_single", participant_id=participant.id) }}',
+};
+var SEND_LABELS = {
+  'final_url':      '本出欠URL送信',
+  'reminder':       '本出欠リマインド送信',
+  'final_reminder': '最終リマインド送信',
+  'unlock_notice':  'ロック解除通知送信',
+};
+
+function openMailPreview(mailType) {
+  var modal = new bootstrap.Modal(document.getElementById('mailPreviewModal'));
+  document.getElementById('modalMailLabel').textContent = SEND_LABELS[mailType] + ' 確認';
+  document.getElementById('modalLoading').classList.remove('d-none');
+  document.getElementById('modalContent').classList.add('d-none');
+  document.getElementById('modalSendBtn').disabled = true;
+  modal.show();
+
+  fetch(PREVIEW_URLS[mailType])
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      document.getElementById('modalTo').textContent = d.to_name + ' <' + d.to_email + '>';
+      document.getElementById('modalSubject').textContent = d.subject;
+      document.getElementById('modalBodyText').textContent = d.body;
+
+      var iframe = document.getElementById('modalBodyHtml');
+      var doc = iframe.contentDocument || iframe.contentWindow.document;
+      doc.open(); doc.write(d.html_body); doc.close();
+      iframe.style.height = Math.max(200, iframe.contentWindow.document.body.scrollHeight + 20) + 'px';
+
+      var att = document.getElementById('modalAttachment');
+      if (d.attachment) {
+        document.getElementById('modalAttachName').textContent = d.attachment.filename;
+        document.getElementById('modalAttachSize').textContent = d.attachment.size_kb;
+        att.classList.remove('d-none');
+      } else {
+        att.classList.add('d-none');
+      }
+
+      document.getElementById('modalSendForm').action = SEND_URLS[mailType];
+      document.getElementById('modalSendBtn').textContent = SEND_LABELS[mailType];
+      document.getElementById('modalSendBtn').disabled = false;
+
+      document.getElementById('modalLoading').classList.add('d-none');
+      document.getElementById('modalContent').classList.remove('d-none');
+    })
+    .catch(function() {
+      document.getElementById('modalLoading').innerHTML = '<span class="text-danger">読み込みに失敗しました</span>';
+    });
+}
+
+document.querySelectorAll('input[name="modalFormat"]').forEach(function(r) {
+  r.addEventListener('change', function() {
+    var isHtml = this.value === 'html';
+    document.getElementById('modalBodyText').classList.toggle('d-none', isHtml);
+    document.getElementById('modalBodyHtml').classList.toggle('d-none', !isHtml);
+    document.getElementById('modalFormatInput').value = this.value;
+  });
+});
 </script>
 {% endblock %}
