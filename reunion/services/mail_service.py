@@ -178,7 +178,11 @@ MAIL_DEFAULTS = {
         "持ち物: {belongings}\n"
         "会費　: {reunion_fee}円\n\n"
         "※詳細は添付のご案内PDFをご確認ください。\n"
-        "※やむを得ずキャンセルされる場合は{final_reminder_deadline_short} 23:59 JST までにこのメールへ返信してご連絡ください。\n\n"
+        "※やむを得ずキャンセルされる場合は、{final_reminder_deadline_short} 23:59 JST までに\n"
+        "　下記の本出欠フォームより欠席のご連絡をお願いいたします。\n"
+        "　なお、一度欠席のご連絡をされると取り消しはできません。\n"
+        "　また、すでにお振込みいただいた会費はご返金できませんのであらかじめご了承ください。\n"
+        "{final_url}\n\n"
         "当日お会いできることを楽しみにしております。\n\n"
         "──────────────────\n"
         "{reunion_name} 幹事代表 {organizer_name}"
@@ -274,7 +278,10 @@ MAIL_DEFAULTS = {
         "服装　: {dress_code}\n"
         "持ち物: {belongings}\n\n"
         "※詳細は添付のご案内PDFをご確認ください。\n"
-        "※やむを得ずご欠席される場合は{final_reminder_deadline_short} 23:59 JST までにこのメールへ返信してご連絡ください。\n\n"
+        "※やむを得ずご欠席される場合は、{final_reminder_deadline_short} 23:59 JST までに\n"
+        "　下記の本出欠フォームより欠席のご連絡をお願いいたします。\n"
+        "　なお、一度欠席のご連絡をされると取り消しはできませんのでご注意ください。\n"
+        "{final_url}\n\n"
         "先生にお会いできることを楽しみにしております。\n\n"
         "──────────────────\n"
         "{reunion_name} 幹事代表 {organizer_name}"
@@ -1066,7 +1073,7 @@ def send_reminder(participant, final_url: str, use_html: bool = True) -> MailLog
     return log
 
 
-def _build_final_reminder_body(participant_name: str, role: str = "") -> tuple:
+def _build_final_reminder_body(participant_name: str, role: str = "", final_url: str = "") -> tuple:
     """最終リマインドメールの件名・本文を生成する"""
     reunion = _get_reunion_info()
     teacher = _is_teacher(role)
@@ -1080,11 +1087,11 @@ def _build_final_reminder_body(participant_name: str, role: str = "") -> tuple:
         dress_code=reunion["dress_code"],
         belongings=reunion["belongings"],
         organizer_name=reunion["organizer_name"],
-
         final_deadline=reunion["final_deadline"],
         final_deadline_short=reunion["final_deadline_short"],
         final_reminder_deadline=reunion["final_reminder_deadline"],
         final_reminder_deadline_short=reunion["final_reminder_deadline_short"],
+        final_url=final_url,
     )
     s_key = 'mail_final_reminder_subject_teacher' if teacher else 'mail_final_reminder_subject'
     b_key = 'mail_final_reminder_body_teacher'    if teacher else 'mail_final_reminder_body'
@@ -1095,8 +1102,13 @@ def _build_final_reminder_body(participant_name: str, role: str = "") -> tuple:
 
 def send_final_reminder(participant, attachment_path: str = None, use_html: bool = True) -> MailLog:
     """本出欠参加者に最終リマインドメール（PDF添付）を送信する。"""
+    from flask import current_app
+    from services.token_service import ensure_token
     mail_cfg = _get_mail_config()
-    subject, body = _build_final_reminder_body(participant.display_name, role=participant.role or "")
+    base_url = current_app.config.get("APP_BASE_URL", "")
+    token = ensure_token(participant)
+    final_url = f"{base_url}/form/final/{token}" if base_url else ""
+    subject, body = _build_final_reminder_body(participant.display_name, role=participant.role or "", final_url=final_url)
 
     log = MailLog(
         participant_id=participant.id,
