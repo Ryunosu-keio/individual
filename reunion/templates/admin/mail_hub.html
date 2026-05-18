@@ -245,10 +245,6 @@ document.addEventListener('DOMContentLoaded', function() {
           attachmentMissing.classList.add('d-none');
         }
 
-        var iframe = document.getElementById('previewBodyHtml');
-        var doc = iframe.contentDocument || iframe.contentWindow.document;
-        doc.open(); doc.write(data.html_body); doc.close();
-        iframe.style.height = Math.max(400, iframe.contentWindow.document.body.scrollHeight + 20) + 'px';
         document.getElementById('previewBodyText').textContent = data.body;
 
         document.getElementById('targetCount').textContent = data.target_count;
