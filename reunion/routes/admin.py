@@ -710,6 +710,114 @@ def api_mail_preview(mail_type):
     })
 
 
+@admin_bp.route("/api/mail-preview-individual/<int:participant_id>/<mail_type>")
+def api_mail_preview_individual(participant_id, mail_type):
+    """参加者個人向けメールプレビューをJSON返却"""
+    from services.mail_service import (
+        MAIL_DEFAULTS, _get_template, _get_reunion_info, _get_mail_config,
+        _text_to_html, _is_teacher as _ms_is_teacher,
+    )
+    from datetime import timedelta
+
+    participant = db.session.get(Participant, participant_id)
+    if participant is None:
+        return jsonify({"error": "参加者が見つかりません"}), 404
+
+    reunion = _get_reunion_info()
+    base_url = current_app.config.get("APP_BASE_URL", "http://localhost:5000")
+    is_teacher = _ms_is_teacher(participant.role or "")
+    token = ensure_token(participant)
+    final_url = f"{base_url}/form/final/{token}"
+
+    unlock_deadline = datetime.utcnow() + timedelta(hours=9, weeks=1)
+    unlock_deadline_str = f"{unlock_deadline.month}月{unlock_deadline.day}日"
+
+    CONFIGS = {
+        "final_url": {
+            "s_key": "mail_final_url_subject_teacher" if is_teacher else "mail_final_url_subject",
+            "b_key": "mail_final_url_body_teacher"    if is_teacher else "mail_final_url_body",
+        },
+        "reminder": {
+            "s_key": "mail_reminder_subject_teacher" if is_teacher else "mail_reminder_subject",
+            "b_key": "mail_reminder_body_teacher"    if is_teacher else "mail_reminder_body",
+        },
+        "final_reminder": {
+            "s_key": "mail_final_reminder_subject_teacher" if is_teacher else "mail_final_reminder_subject",
+            "b_key": "mail_final_reminder_body_teacher"    if is_teacher else "mail_final_reminder_body",
+        },
+        "unlock_notice": {
+            "s_key": "mail_unlock_notice_subject",
+            "b_key": "mail_unlock_notice_body",
+        },
+    }
+    if mail_type not in CONFIGS:
+        return jsonify({"error": "不正なメール種別です"}), 400
+
+    cfg = CONFIGS[mail_type]
+    subject_tmpl = _get_template(cfg["s_key"], MAIL_DEFAULTS.get(cfg["s_key"], ""))
+    body_tmpl    = _get_template(cfg["b_key"], MAIL_DEFAULTS.get(cfg["b_key"], ""))
+
+    vars = dict(
+        name=participant.display_name,
+        final_url=final_url,
+        reunion_name=reunion["reunion_name"],
+        reunion_date=reunion["reunion_date"],
+        reunion_time=reunion["reunion_time"],
+        reunion_venue=reunion["reunion_venue"],
+        reunion_fee=reunion["reunion_fee"],
+        dress_code=reunion["dress_code"],
+        belongings=reunion["belongings"],
+        organizer_name=reunion["organizer_name"],
+        final_deadline=reunion["final_deadline"],
+        final_deadline_short=reunion["final_deadline_short"],
+        final_reminder_deadline=reunion["final_reminder_deadline"],
+        final_reminder_deadline_short=reunion["final_reminder_deadline_short"],
+        provisional_url=f"{base_url}/form/provisional",
+        status="参加",
+        transfer_bank=reunion["transfer_bank"],
+        transfer_branch=reunion["transfer_branch"],
+        transfer_branch_number=reunion["transfer_branch_number"],
+        transfer_account_type=reunion["transfer_account_type"],
+        transfer_account_number=reunion["transfer_account_number"],
+        transfer_account_name=reunion["transfer_account_name"],
+        transfer_deadline=reunion["transfer_deadline"],
+        deadline=unlock_deadline_str,
+    )
+    for k, v in vars.items():
+        subject_tmpl = subject_tmpl.replace("{" + k + "}", str(v))
+        body_tmpl    = body_tmpl.replace("{" + k + "}", str(v))
+
+    mail_cfg = _get_mail_config()
+    from_addr = mail_cfg.get("from_addr", "")
+    if from_addr:
+        body_tmpl = body_tmpl.rstrip("\n") + f"\nE-mail: {from_addr}\n"
+
+    import os
+    attachment_info = None
+    if mail_type == "final_reminder":
+        pdf_setting = AppSetting.query.filter_by(key="reunion_guide_pdf").first()
+        pdf_path = pdf_setting.value if pdf_setting and pdf_setting.value else None
+        if not pdf_path:
+            default_pdf = os.path.join(current_app.root_path, "static", "uploads", "reunion_guide.pdf")
+            if os.path.isfile(default_pdf):
+                pdf_path = default_pdf
+        if pdf_path and os.path.isfile(pdf_path):
+            attachment_info = {
+                "filename": os.path.basename(pdf_path),
+                "size_kb": round(os.path.getsize(pdf_path) / 1024, 1),
+            }
+
+    return jsonify({
+        "subject": subject_tmpl,
+        "body": body_tmpl,
+        "html_body": _text_to_html(body_tmpl),
+        "to_name": participant.name,
+        "to_email": participant.email,
+        "attachment": attachment_info,
+        "unlock_deadline": unlock_deadline_str,
+    })
+
+
 # -----------------------------------------------
 # メール送信（個別・一括）
 # -----------------------------------------------
