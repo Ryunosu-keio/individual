@@ -469,6 +469,23 @@ MAIL_DEFAULTS = {
         "──────────────────\n"
         "{reunion_name} 幹事代表 {organizer_name}"
     ),
+    # ── 直前キャンセル確認 ──────────────────────────────────
+    "mail_final_confirm_cancelled_subject": "【{reunion_name}】欠席のご連絡を受け付けました",
+    "mail_final_confirm_cancelled_body": (
+        "{name} 様\n\n"
+        "{reunion_name}幹事代表の{organizer_name}です。\n\n"
+        "欠席のご連絡を受け付けました。\n\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        "■ ご連絡内容\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        "ご回答: 欠席\n"
+        "ご理由: {cancel_reason}\n\n"
+        "なお、すでにお振込みいただいた会費はご返金できませんのであらかじめご了承ください。\n\n"
+        "当日お会いできず残念ですが、またの機会に元気なお顔を見せてください。\n\n"
+        "ご不明な点がございましたら、このメールへのご返信にてお気軽にご連絡ください。\n\n"
+        "──────────────────\n"
+        "{reunion_name} 幹事代表 {organizer_name}"
+    ),
     # ── フォームロック解除通知 ──────────────────────────────
     "mail_unlock_notice_subject": "【{reunion_name}】本出欠フォーム受付再開のお知らせ",
     "mail_unlock_notice_body": (
@@ -1161,6 +1178,38 @@ def get_today_sent_count() -> int:
 def get_remaining_today() -> int:
     """今日の残り送信可能件数を取得する"""
     return max(0, get_daily_send_limit() - get_today_sent_count())
+
+
+def send_cancel_confirmation(participant, cancel_reason: str) -> MailLog:
+    """直前キャンセル時の確認メールを送信する。"""
+    mail_cfg = _get_mail_config()
+    reunion = _get_reunion_info()
+    vars = dict(
+        name=participant.display_name,
+        cancel_reason=cancel_reason,
+        reunion_name=reunion["reunion_name"],
+        organizer_name=reunion["organizer_name"],
+    )
+    subject = _render_template(_get_template("mail_final_confirm_cancelled_subject", MAIL_DEFAULTS["mail_final_confirm_cancelled_subject"]), **vars)
+    body    = _render_template(_get_template("mail_final_confirm_cancelled_body",    MAIL_DEFAULTS["mail_final_confirm_cancelled_body"]),    **vars)
+
+    log = MailLog(
+        participant_id=participant.id,
+        mail_type="cancel_confirmation",
+        sent_at=datetime.utcnow(),
+    )
+    try:
+        log.status = _dispatch_send(participant.email, subject, body, mail_cfg)
+        db.session.add(log)
+        db.session.commit()
+        logger.info(f"キャンセル確認メール送信成功: {participant.email}")
+    except Exception as e:
+        log.status = "failed"
+        log.error_message = str(e)
+        db.session.add(log)
+        db.session.commit()
+        logger.error(f"キャンセル確認メール送信失敗: {participant.email} - {e}", exc_info=True)
+    return log
 
 
 def send_unlock_notice(participant, final_url: str, deadline_str: str, use_html: bool = True) -> MailLog:

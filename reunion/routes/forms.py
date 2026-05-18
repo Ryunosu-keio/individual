@@ -24,7 +24,7 @@ from extensions import db
 from models import Participant, ProvisionalResponse, FinalResponse, Payment
 from models import AppSetting
 from services.token_service import get_participant_by_token, ensure_token, generate_final_url
-from services.mail_service import send_provisional_confirmation, send_final_confirmation
+from services.mail_service import send_provisional_confirmation, send_final_confirmation, send_cancel_confirmation
 from utils import normalize_transfer_name, decompose_voiced
 
 logger = logging.getLogger(__name__)
@@ -325,7 +325,11 @@ def final(token):
             participant.updated_at = datetime.utcnow()
             db.session.commit()
             logger.info(f"直前キャンセル: {participant.name} ({participant.email})")
-            flash("欠席のご連絡を受け付けました。", "success")
+            try:
+                send_cancel_confirmation(participant, cancel_reason)
+            except Exception as e:
+                logger.error(f"キャンセル確認メール送信エラー: {e}", exc_info=True)
+            flash("欠席のご連絡を受け付けました。確認メールをお送りしました。", "success")
             return redirect(url_for("forms.done", type="final"))
         else:
             flash("回答期限を過ぎているため変更できません。", "danger")
