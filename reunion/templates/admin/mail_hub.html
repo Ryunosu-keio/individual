@@ -88,14 +88,8 @@
     <!-- メールプレビュー -->
     <div class="col-md-7">
       <div class="card border-0 shadow-sm">
-        <div class="card-header bg-light fw-bold d-flex align-items-center justify-content-between">
-          <span><i class="bi bi-envelope-paper me-1"></i>メール内容プレビュー</span>
-          <div class="btn-group btn-group-sm" role="group">
-            <input type="radio" class="btn-check" name="mailFormat" id="formatHtml" value="html">
-            <label class="btn btn-outline-secondary" for="formatHtml">HTML</label>
-            <input type="radio" class="btn-check" name="mailFormat" id="formatText" value="text" checked>
-            <label class="btn btn-outline-secondary" for="formatText">テキスト</label>
-          </div>
+        <div class="card-header bg-light fw-bold">
+          <i class="bi bi-envelope-paper me-1"></i>メール内容プレビュー
         </div>
         <div class="card-body">
           <div class="mb-3">
@@ -114,7 +108,6 @@
           </div>
           <div class="mb-3">
             <label class="form-label fw-bold text-muted small">本文</label>
-            <iframe id="previewBodyHtml" class="w-100 border rounded bg-light d-none" style="min-height: 400px; font-size: 0.9rem;"></iframe>
             <pre id="previewBodyText" class="form-control bg-light" style="white-space: pre-wrap; min-height: 400px; font-size: 0.9rem;"></pre>
           </div>
           <div class="text-muted small">
@@ -163,7 +156,6 @@
               <span id="sendDescription"></span>
             </p>
             <form id="sendForm" method="POST">
-              <input type="hidden" name="mail_format" id="mailFormatInput" value="text">
               <button type="submit" class="btn btn-success btn-lg w-100" id="sendButton">
                 <i class="bi bi-send me-2"></i>
                 <span id="sendButtonText">送信する</span>
@@ -330,16 +322,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // 先生トグルをリセット
     document.getElementById('toggleStudent').checked = true;
     loadPreview(this.value);
-  });
-
-  // テキスト/HTML切替
-  document.querySelectorAll('input[name="mailFormat"]').forEach(function(radio) {
-    radio.addEventListener('change', function() {
-      var isHtml = this.value === 'html';
-      document.getElementById('previewBodyHtml').classList.toggle('d-none', !isHtml);
-      document.getElementById('previewBodyText').classList.toggle('d-none', isHtml);
-      document.getElementById('mailFormatInput').value = this.value;
-    });
   });
 
   // URLパラメータ ?type=XXX があれば自動選択

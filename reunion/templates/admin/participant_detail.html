@@ -277,23 +277,15 @@
           <div id="modalAttachment" class="d-none mb-2">
             <span class="badge bg-success"><i class="bi bi-paperclip me-1"></i>添付: <span id="modalAttachName"></span>（<span id="modalAttachSize"></span> KB）</span>
           </div>
-          <div class="mb-2 d-flex gap-2 align-items-center">
+          <div class="mb-2">
             <span class="text-muted small fw-bold">本文</span>
-            <div class="btn-group btn-group-sm ms-auto" role="group">
-              <input type="radio" class="btn-check" name="modalFormat" id="modalFmtText" value="text" checked>
-              <label class="btn btn-outline-secondary" for="modalFmtText">テキスト</label>
-              <input type="radio" class="btn-check" name="modalFormat" id="modalFmtHtml" value="html">
-              <label class="btn btn-outline-secondary" for="modalFmtHtml">HTML</label>
-            </div>
           </div>
           <pre id="modalBodyText" class="form-control bg-light" style="white-space:pre-wrap; min-height:200px; font-size:0.85rem;"></pre>
-          <iframe id="modalBodyHtml" class="w-100 border rounded bg-light d-none" style="min-height:200px;"></iframe>
         </div>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
         <form id="modalSendForm" method="POST">
-          <input type="hidden" name="mail_format" id="modalFormatInput" value="text">
           <button type="submit" class="btn btn-primary" id="modalSendBtn">
             <i class="bi bi-send me-1"></i>送信する
           </button>
@@ -348,11 +340,6 @@ function openMailPreview(mailType) {
       document.getElementById('modalSubject').textContent = d.subject;
       document.getElementById('modalBodyText').textContent = d.body;
 
-      var iframe = document.getElementById('modalBodyHtml');
-      var doc = iframe.contentDocument || iframe.contentWindow.document;
-      doc.open(); doc.write(d.html_body); doc.close();
-      iframe.style.height = Math.max(200, iframe.contentWindow.document.body.scrollHeight + 20) + 'px';
-
       var att = document.getElementById('modalAttachment');
       if (d.attachment) {
         document.getElementById('modalAttachName').textContent = d.attachment.filename;
@@ -374,13 +361,5 @@ function openMailPreview(mailType) {
     });
 }
 
-document.querySelectorAll('input[name="modalFormat"]').forEach(function(r) {
-  r.addEventListener('change', function() {
-    var isHtml = this.value === 'html';
-    document.getElementById('modalBodyText').classList.toggle('d-none', isHtml);
-    document.getElementById('modalBodyHtml').classList.toggle('d-none', !isHtml);
-    document.getElementById('modalFormatInput').value = this.value;
-  });
-});
 </script>
 {% endblock %}
