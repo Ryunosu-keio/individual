@@ -19,6 +19,21 @@
   .mail-stat-row .mail-val { font-size: 1.1rem; font-weight: 600; }
   .card-hover { transition: transform 0.15s, box-shadow 0.15s; cursor: pointer; }
   .card-hover:hover { transform: translateY(-2px); box-shadow: 0 .5rem 1rem rgba(0,0,0,.12) !important; }
+  .apple-toggle {
+    position: relative; width: 51px; height: 31px; border-radius: 16px;
+    background: #e5e5ea; cursor: pointer;
+    transition: background 0.25s cubic-bezier(.4,0,.2,1);
+    flex-shrink: 0;
+  }
+  .apple-toggle.active { background: #34c759; }
+  .apple-toggle-knob {
+    position: absolute; top: 2px; left: 2px;
+    width: 27px; height: 27px; border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 2px 6px rgba(0,0,0,.22), 0 0.5px 1px rgba(0,0,0,.12);
+    transition: transform 0.25s cubic-bezier(.4,0,.2,1);
+  }
+  .apple-toggle.active .apple-toggle-knob { transform: translateX(20px); }
 </style>
 {% endblock %}
 
@@ -171,6 +186,49 @@
   </div>
 </div>
 
+<!-- フォームロック管理 -->
+<div class="row g-4 mb-4">
+  <div class="col-12">
+    <div class="card border-0 shadow-sm">
+      <div class="card-body">
+        <h6 class="text-muted mb-3"><i class="bi bi-lock me-2"></i>フォームロック管理</h6>
+        <div class="row g-3">
+          <div class="col-md-6">
+            <div class="d-flex align-items-center justify-content-between p-3 rounded bg-light">
+              <div>
+                <div class="fw-bold">仮出欠フォーム</div>
+                <div class="small" id="label-provisional">
+                  {% if locks.provisional %}<span class="text-danger"><i class="bi bi-lock-fill me-1"></i>ロック中</span>{% else %}<span class="text-success"><i class="bi bi-unlock-fill me-1"></i>受付中</span>{% endif %}
+                </div>
+              </div>
+              <div class="apple-toggle {% if not locks.provisional %}active{% endif %}" id="toggle-provisional"
+                   data-url="{{ url_for('admin.toggle_form_lock', form_type='provisional') }}"
+                   data-target="provisional">
+                <div class="apple-toggle-knob"></div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="d-flex align-items-center justify-content-between p-3 rounded bg-light">
+              <div>
+                <div class="fw-bold">本出欠フォーム</div>
+                <div class="small" id="label-final">
+                  {% if locks.final %}<span class="text-danger"><i class="bi bi-lock-fill me-1"></i>ロック中</span>{% else %}<span class="text-success"><i class="bi bi-unlock-fill me-1"></i>受付中</span>{% endif %}
+                </div>
+              </div>
+              <div class="apple-toggle {% if not locks.final %}active{% endif %}" id="toggle-final"
+                   data-url="{{ url_for('admin.toggle_form_lock', form_type='final') }}"
+                   data-target="final">
+                <div class="apple-toggle-knob"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- クイックアクション -->
 <h6 class="text-muted mb-2">クイックアクション</h6>
 <div class="row g-3 mb-4">
@@ -314,6 +372,25 @@
     { label: '未入金',   value: {{ stats.unpaid }}, color: '#dc3545', url: URLS.payments + '?status=unpaid' }
   ]);
 })();
+
+  // フォームロックトグル
+  document.querySelectorAll('.apple-toggle[data-url]').forEach(function(el) {
+    el.addEventListener('click', function() {
+      var url = el.dataset.url;
+      var target = el.dataset.target;
+      el.style.pointerEvents = 'none';
+      fetch(url, { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+        .then(function() {
+          var isActive = el.classList.toggle('active');
+          var label = document.getElementById('label-' + target);
+          label.innerHTML = isActive
+            ? '<span class="text-success"><i class="bi bi-unlock-fill me-1"></i>受付中</span>'
+            : '<span class="text-danger"><i class="bi bi-lock-fill me-1"></i>ロック中</span>';
+          el.style.pointerEvents = '';
+        })
+        .catch(function() { el.style.pointerEvents = ''; });
+    });
+  });
 
   // 自動送信プレビュー読み込み
   fetch("{{ url_for('admin.api_auto_send_preview') }}")

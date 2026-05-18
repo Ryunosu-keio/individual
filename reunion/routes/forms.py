@@ -222,7 +222,10 @@ def _today_jst():
 
 
 def _is_provisional_form_locked() -> bool:
-    """provisional_deadline の翌日以降（JST）はフォームをロックする。未設定ならロックしない。"""
+    """手動ロック設定を優先し、なければ provisional_deadline 翌日以降（JST）でロック。"""
+    manual = AppSetting.query.filter_by(key="provisional_form_locked").first()
+    if manual:
+        return manual.value == "1"
     s = AppSetting.query.filter_by(key="provisional_deadline").first()
     if not (s and s.value):
         return False
@@ -234,7 +237,10 @@ def _is_provisional_form_locked() -> bool:
 
 
 def _is_final_form_locked() -> bool:
-    """final_deadline の翌日以降（JST）はフォームをロックする。未設定ならロックしない。"""
+    """手動ロック設定を優先し、なければ final_deadline 翌日以降（JST）でロック。"""
+    manual = AppSetting.query.filter_by(key="final_form_locked").first()
+    if manual:
+        return manual.value == "1"
     s = AppSetting.query.filter_by(key="final_deadline").first()
     if not (s and s.value):
         return False
