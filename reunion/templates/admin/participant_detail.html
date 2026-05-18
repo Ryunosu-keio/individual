@@ -84,15 +84,21 @@
             <dd class="col-7">
               {% if final.status == 'attending' %}
                 <span class="badge bg-success">参加</span>
+              {% elif final.status == 'cancelled' %}
+                <span class="badge bg-warning text-dark">直前キャンセル</span>
               {% else %}
                 <span class="badge bg-secondary">不参加</span>
               {% endif %}
             </dd>
+            {% if final.status == 'cancelled' %}
+            <dt class="col-5">欠席理由</dt><dd class="col-7">{{ final.remarks or '-' }}</dd>
+            {% else %}
             <dt class="col-5">同伴者数</dt><dd class="col-7">{{ final.companions }} 名</dd>
             <dt class="col-5">振込名義</dt><dd class="col-7">{{ final.transfer_name or '-' }}</dd>
             <dt class="col-5">支払予定</dt><dd class="col-7">{{ final.payment_expected | default(0) }} 円</dd>
             <dt class="col-5">支払方法</dt><dd class="col-7">{{ final.payment_method }}</dd>
             <dt class="col-5">備考</dt><dd class="col-7">{{ final.remarks or '-' }}</dd>
+            {% endif %}
             <dt class="col-5">回答日時</dt>
             <dd class="col-7 small text-muted">{{ final.submitted_at | jst }}</dd>
           </dl>
