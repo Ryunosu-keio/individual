@@ -131,7 +131,40 @@ def index():
         "remaining_today": remaining_today,
         "send_stage": send_stage,
     }
-    return render_template("admin/index.html", stats=stats)
+    def _form_locked(key):
+        s = AppSetting.query.filter_by(key=key).first()
+        return s.value == "1" if s else False
+
+    locks = {
+        "provisional": _form_locked("provisional_form_locked"),
+        "final": _form_locked("final_form_locked"),
+    }
+    return render_template("admin/index.html", stats=stats, locks=locks)
+
+
+@admin_bp.route("/toggle-form-lock/<form_type>", methods=["POST"])
+def toggle_form_lock(form_type):
+    """仮出欠・本出欠フォームのロックを手動切替"""
+    if form_type not in ("provisional", "final"):
+        flash("不正なフォーム種別です。", "danger")
+        return redirect(url_for("admin.index"))
+    key = f"{form_type}_form_locked"
+    s = AppSetting.query.filter_by(key=key).first()
+    current = s.value == "1" if s else False
+    new_val = "0" if current else "1"
+    if s:
+        s.value = new_val
+        s.updated_at = datetime.utcnow()
+    else:
+        db.session.add(AppSetting(key=key, value=new_val))
+    db.session.commit()
+    if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        from flask import make_response
+        return make_response("", 204)
+    label = "仮出欠" if form_type == "provisional" else "本出欠"
+    state = "ロック" if new_val == "1" else "解除"
+    flash(f"{label}フォームを{state}しました。", "success" if new_val == "0" else "warning")
+    return redirect(url_for("admin.index"))
 
 
 # -----------------------------------------------
