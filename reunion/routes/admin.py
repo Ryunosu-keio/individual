@@ -856,6 +856,37 @@ def send_final_reminder_single(participant_id):
     return redirect(url_for("admin.participant_detail", participant_id=participant_id))
 
 
+@admin_bp.route("/send-unlock-notice/<int:participant_id>", methods=["POST"])
+def send_unlock_notice_single(participant_id):
+    """フォームロック解除通知を個別送信"""
+    from services.mail_service import send_unlock_notice
+    from datetime import datetime, timedelta
+    participant = db.session.get(Participant, participant_id)
+    if participant is None:
+        flash("参加者が見つかりません。", "danger")
+        return redirect(url_for("admin.participants"))
+
+    token = ensure_token(participant)
+    base_url = current_app.config.get("APP_BASE_URL", request.host_url.rstrip("/"))
+    final_url = f"{base_url}/form/final/{token}"
+
+    deadline_date = datetime.utcnow() + timedelta(hours=9) + timedelta(weeks=1)
+    deadline_str = f"{deadline_date.month}月{deadline_date.day}日"
+
+    use_html = request.form.get("mail_format", "text") != "text"
+
+    try:
+        log = send_unlock_notice(participant, final_url, deadline_str, use_html=use_html)
+        if log.status == "simulated":
+            flash(f"[開発モード] {participant.name} へのロック解除通知をコンソールに出力しました。", "info")
+        else:
+            flash(f"{participant.name} へロック解除通知を送信しました（期限: {deadline_str} 23:59 JST）。", "success")
+    except Exception as e:
+        flash(f"送信失敗: {e}", "danger")
+
+    return redirect(url_for("admin.participant_detail", participant_id=participant_id))
+
+
 @admin_bp.route("/send-reminder-bulk", methods=["POST"])
 def send_reminder_bulk():
     """リマインドメールを一括送信（本出欠URL送信済み＆本出欠未回答の参加者）"""

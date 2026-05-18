@@ -197,6 +197,12 @@
               <i class="bi bi-envelope-fill me-1"></i>最終リマインド
             </button>
           </form>
+          <form method="POST" action="{{ url_for('admin.send_unlock_notice_single', participant_id=participant.id) }}"
+                onsubmit="return confirm('ロック解除通知メールを送信しますか？\n\n期限は送信日から1週間後（23:59 JST）に設定されます。')">
+            <button type="submit" class="btn btn-warning btn-sm">
+              <i class="bi bi-unlock me-1"></i>ロック解除通知
+            </button>
+          </form>
         </div>
       </div>
     </div>

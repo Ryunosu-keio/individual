@@ -462,6 +462,22 @@ MAIL_DEFAULTS = {
         "──────────────────\n"
         "{reunion_name} 幹事代表 {organizer_name}"
     ),
+    # ── フォームロック解除通知 ──────────────────────────────
+    "mail_unlock_notice_subject": "【{reunion_name}】本出欠フォーム受付再開のお知らせ",
+    "mail_unlock_notice_body": (
+        "{name} 様\n\n"
+        "お世話になっております。\n"
+        "{reunion_name}幹事代表の{organizer_name}です。\n\n"
+        "本出欠フォームのロックを解除いたしました。\n"
+        "お手数ですが、{deadline} 23:59 JST までに下記URLよりご回答ください。\n\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        "■ 本出欠フォーム\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        "{final_url}\n\n"
+        "ご不明な点がございましたら、このメールへのご返信にてお気軽にご連絡ください。\n\n"
+        "──────────────────\n"
+        "{reunion_name} 幹事代表 {organizer_name}"
+    ),
 }
 
 
@@ -1133,3 +1149,38 @@ def get_today_sent_count() -> int:
 def get_remaining_today() -> int:
     """今日の残り送信可能件数を取得する"""
     return max(0, get_daily_send_limit() - get_today_sent_count())
+
+
+def send_unlock_notice(participant, final_url: str, deadline_str: str, use_html: bool = True) -> MailLog:
+    """フォームロック解除通知メールを送信する。deadline_str は 'M月D日' 形式。"""
+    mail_cfg = _get_mail_config()
+    reunion = _get_reunion_info()
+    vars = dict(
+        name=participant.display_name,
+        final_url=final_url,
+        deadline=deadline_str,
+        reunion_name=reunion["reunion_name"],
+        organizer_name=reunion["organizer_name"],
+    )
+    subject = _render_template(_get_template("mail_unlock_notice_subject", MAIL_DEFAULTS["mail_unlock_notice_subject"]), **vars)
+    body    = _render_template(_get_template("mail_unlock_notice_body",    MAIL_DEFAULTS["mail_unlock_notice_body"]),    **vars)
+
+    log = MailLog(
+        participant_id=participant.id,
+        mail_type="unlock_notice",
+        sent_at=datetime.utcnow(),
+    )
+    try:
+        log.status = _dispatch_send(participant.email, subject, body, mail_cfg, use_html=use_html)
+        if log.status == "sent":
+            logger.info(f"ロック解除通知送信成功: {participant.email}")
+        db.session.add(log)
+        db.session.commit()
+    except Exception as e:
+        log.status = "failed"
+        log.error_message = str(e)
+        db.session.add(log)
+        db.session.commit()
+        logger.error(f"ロック解除通知送信失敗: {participant.email} - {e}", exc_info=True)
+        raise
+    return log
