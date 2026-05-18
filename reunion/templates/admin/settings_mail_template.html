@@ -440,7 +440,7 @@
         </div>
       </div>
 
-      <!-- 直前キャンセル確認 -->
+      <!-- 直前キャンセル確認（生徒用） -->
       <div id="section_final_confirm_cancelled" class="mail-section d-none">
         <div class="card border-0 shadow-sm">
           <div class="card-header bg-light fw-bold">
@@ -461,7 +461,28 @@
         </div>
       </div>
 
-      <!-- ロック解除通知 -->
+      <!-- 直前キャンセル確認（先生用） -->
+      <div id="section_final_confirm_cancelled_teacher" class="mail-section d-none">
+        <div class="card border-0 shadow-sm">
+          <div class="card-header bg-light fw-bold">
+            <i class="bi bi-x-circle me-1"></i>直前キャンセル確認メール（先生用）
+          </div>
+          <div class="card-body">
+            <div class="mb-3">
+              <label class="form-label fw-bold text-muted small">件名</label>
+              <input type="text" class="form-control" name="mail_final_confirm_cancelled_subject_teacher"
+                     value="{{ settings.get('mail_final_confirm_cancelled_subject_teacher', '') }}">
+            </div>
+            <div class="mb-3">
+              <label class="form-label fw-bold text-muted small">本文</label>
+              <div class="form-text mb-1">利用可能: <code>{name}</code> <code>{cancel_reason}</code> <code>{reunion_name}</code> <code>{organizer_name}</code></div>
+              <textarea class="form-control font-monospace auto-resize" name="mail_final_confirm_cancelled_body_teacher">{{ settings.get('mail_final_confirm_cancelled_body_teacher', '') }}</textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ロック解除通知（生徒用） -->
       <div id="section_unlock_notice" class="mail-section d-none">
         <div class="card border-0 shadow-sm">
           <div class="card-header bg-light fw-bold">
@@ -482,6 +503,27 @@
         </div>
       </div>
 
+      <!-- ロック解除通知（先生用） -->
+      <div id="section_unlock_notice_teacher" class="mail-section d-none">
+        <div class="card border-0 shadow-sm">
+          <div class="card-header bg-light fw-bold">
+            <i class="bi bi-unlock me-1"></i>ロック解除通知メール（先生用）
+          </div>
+          <div class="card-body">
+            <div class="mb-3">
+              <label class="form-label fw-bold text-muted small">件名</label>
+              <input type="text" class="form-control" name="mail_unlock_notice_subject_teacher"
+                     value="{{ settings.get('mail_unlock_notice_subject_teacher', '') }}">
+            </div>
+            <div class="mb-3">
+              <label class="form-label fw-bold text-muted small">本文</label>
+              <div class="form-text mb-1">利用可能: <code>{name}</code> <code>{final_url}</code> <code>{deadline}</code> <code>{reunion_name}</code> <code>{organizer_name}</code></div>
+              <textarea class="form-control font-monospace auto-resize" name="mail_unlock_notice_body_teacher">{{ settings.get('mail_unlock_notice_body_teacher', '') }}</textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div class="d-flex gap-2 flex-wrap">
         <button type="submit" class="btn btn-primary">保存する</button>
       </div>
@@ -496,7 +538,7 @@ document.addEventListener('DOMContentLoaded', function () {
     'provisional_confirm_attending', 'provisional_confirm_not_attending', 'provisional_confirm_undecided',
     'final_url', 'reminder',
     'final_confirm_attending', 'final_confirm_not_attending',
-    'final_reminder',
+    'final_reminder', 'final_confirm_cancelled', 'unlock_notice',
   ];
 
   function autoResize(ta) {

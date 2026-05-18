@@ -486,6 +486,22 @@ MAIL_DEFAULTS = {
         "──────────────────\n"
         "{reunion_name} 幹事代表 {organizer_name}"
     ),
+    # ── 直前キャンセル確認（先生用） ────────────────────────
+    "mail_final_confirm_cancelled_subject_teacher": "【{reunion_name}】ご欠席のご連絡を受け付けました",
+    "mail_final_confirm_cancelled_body_teacher": (
+        "{name} 先生\n\n"
+        "{reunion_name}幹事代表の{organizer_name}です。\n\n"
+        "ご欠席のご連絡を受け付けました。\n\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        "■ ご連絡内容\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        "ご回答: 欠席\n"
+        "ご理由: {cancel_reason}\n\n"
+        "当日お会いできず誠に残念ですが、またの機会にぜひお目にかかれればと存じます。\n\n"
+        "ご不明な点がございましたら、このメールへのご返信にてお気軽にご連絡ください。\n\n"
+        "──────────────────\n"
+        "{reunion_name} 幹事代表 {organizer_name}"
+    ),
     # ── フォームロック解除通知 ──────────────────────────────
     "mail_unlock_notice_subject": "【{reunion_name}】本出欠フォーム受付再開のお知らせ",
     "mail_unlock_notice_body": (
@@ -496,6 +512,22 @@ MAIL_DEFAULTS = {
         "お手数ですが、{deadline} 23:59 JST までに下記URLよりご回答ください。\n\n"
         "━━━━━━━━━━━━━━━━━━━━\n"
         "■ 本出欠フォーム\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        "{final_url}\n\n"
+        "ご不明な点がございましたら、このメールへのご返信にてお気軽にご連絡ください。\n\n"
+        "──────────────────\n"
+        "{reunion_name} 幹事代表 {organizer_name}"
+    ),
+    # ── フォームロック解除通知（先生用） ────────────────────
+    "mail_unlock_notice_subject_teacher": "【{reunion_name}】出欠フォーム受付再開のお知らせ",
+    "mail_unlock_notice_body_teacher": (
+        "{name} 先生\n\n"
+        "お世話になっております。\n"
+        "{reunion_name}幹事代表の{organizer_name}です。\n\n"
+        "出欠フォームのロックを解除いたしました。\n"
+        "ご多用のところ恐れ入りますが、{deadline} 23:59 JST までに下記URLよりご回答いただけますと幸いです。\n\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        "■ 出欠フォーム\n"
         "━━━━━━━━━━━━━━━━━━━━\n"
         "{final_url}\n\n"
         "ご不明な点がございましたら、このメールへのご返信にてお気軽にご連絡ください。\n\n"
@@ -1184,14 +1216,18 @@ def send_cancel_confirmation(participant, cancel_reason: str) -> MailLog:
     """直前キャンセル時の確認メールを送信する。"""
     mail_cfg = _get_mail_config()
     reunion = _get_reunion_info()
+    teacher = _is_teacher(participant.role or "")
+    suffix = "_teacher" if teacher else ""
     vars = dict(
         name=participant.display_name,
         cancel_reason=cancel_reason,
         reunion_name=reunion["reunion_name"],
         organizer_name=reunion["organizer_name"],
     )
-    subject = _render_template(_get_template("mail_final_confirm_cancelled_subject", MAIL_DEFAULTS["mail_final_confirm_cancelled_subject"]), **vars)
-    body    = _render_template(_get_template("mail_final_confirm_cancelled_body",    MAIL_DEFAULTS["mail_final_confirm_cancelled_body"]),    **vars)
+    s_key = f"mail_final_confirm_cancelled_subject{suffix}"
+    b_key = f"mail_final_confirm_cancelled_body{suffix}"
+    subject = _render_template(_get_template(s_key, MAIL_DEFAULTS[s_key]), **vars)
+    body    = _render_template(_get_template(b_key, MAIL_DEFAULTS[b_key]), **vars)
 
     log = MailLog(
         participant_id=participant.id,
@@ -1216,6 +1252,8 @@ def send_unlock_notice(participant, final_url: str, deadline_str: str, use_html:
     """フォームロック解除通知メールを送信する。deadline_str は 'M月D日' 形式。"""
     mail_cfg = _get_mail_config()
     reunion = _get_reunion_info()
+    teacher = _is_teacher(participant.role or "")
+    suffix = "_teacher" if teacher else ""
     vars = dict(
         name=participant.display_name,
         final_url=final_url,
@@ -1223,8 +1261,10 @@ def send_unlock_notice(participant, final_url: str, deadline_str: str, use_html:
         reunion_name=reunion["reunion_name"],
         organizer_name=reunion["organizer_name"],
     )
-    subject = _render_template(_get_template("mail_unlock_notice_subject", MAIL_DEFAULTS["mail_unlock_notice_subject"]), **vars)
-    body    = _render_template(_get_template("mail_unlock_notice_body",    MAIL_DEFAULTS["mail_unlock_notice_body"]),    **vars)
+    s_key = f"mail_unlock_notice_subject{suffix}"
+    b_key = f"mail_unlock_notice_body{suffix}"
+    subject = _render_template(_get_template(s_key, MAIL_DEFAULTS[s_key]), **vars)
+    body    = _render_template(_get_template(b_key, MAIL_DEFAULTS[b_key]), **vars)
 
     log = MailLog(
         participant_id=participant.id,
