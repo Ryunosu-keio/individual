@@ -790,8 +790,8 @@ def _send_smtp_text(to_email: str, subject: str, body: str, cfg: dict, attachmen
         server.sendmail(cfg["from_addr"], [to_email], msg.as_string())
 
 
-def _send_brevo(to_email: str, subject: str, body: str, cfg: dict, use_html: bool = True, attachment_path: str = None) -> None:
-    """Brevo Transactional Email APIでメールを送信する"""
+def _send_brevo(to_email: str, subject: str, body: str, cfg: dict, attachment_path: str = None) -> None:
+    """Brevo Transactional Email APIでメールを送信する（テキスト形式）"""
     import base64
     api_key = cfg.get("brevo_api_key", "") or os.environ.get("BREVO_API_KEY", "") or current_app.config.get("BREVO_API_KEY", "")
     if not api_key:
@@ -804,8 +804,6 @@ def _send_brevo(to_email: str, subject: str, body: str, cfg: dict, use_html: boo
         "subject":     subject,
         "textContent": body,
     }
-    if use_html:
-        data["htmlContent"] = _text_to_html(body)
     if attachment_path and os.path.isfile(attachment_path):
         with open(attachment_path, "rb") as f:
             encoded = base64.b64encode(f.read()).decode("utf-8")
@@ -858,8 +856,8 @@ def _get_mail_config():
     }
 
 
-def _dispatch_send(to_email: str, subject: str, body: str, mail_cfg: dict, attachment_path: str = None, use_html: bool = True) -> str:
-    """モードに応じてメール送信し、ステータス文字列を返す"""
+def _dispatch_send(to_email: str, subject: str, body: str, mail_cfg: dict, attachment_path: str = None) -> str:
+    """モードに応じてメール送信し、ステータス文字列を返す（テキスト形式固定）"""
     from_addr = mail_cfg.get("from_addr", "")
     if from_addr:
         body = body.rstrip("\n") + f"\nE-mail: {from_addr}\n"
@@ -868,13 +866,10 @@ def _dispatch_send(to_email: str, subject: str, body: str, mail_cfg: dict, attac
         _send_gas(to_email, subject, body, mail_cfg["from_name"])
         return "sent"
     elif mode == "smtp":
-        if use_html:
-            _send_smtp_cfg(to_email, subject, body, mail_cfg, attachment_path=attachment_path)
-        else:
-            _send_smtp_text(to_email, subject, body, mail_cfg, attachment_path=attachment_path)
+        _send_smtp_text(to_email, subject, body, mail_cfg, attachment_path=attachment_path)
         return "sent"
     elif mode == "brevo":
-        _send_brevo(to_email, subject, body, mail_cfg, use_html=use_html, attachment_path=attachment_path)
+        _send_brevo(to_email, subject, body, mail_cfg, attachment_path=attachment_path)
         return "sent"
     else:
         if attachment_path:
@@ -883,7 +878,7 @@ def _dispatch_send(to_email: str, subject: str, body: str, mail_cfg: dict, attac
         return "simulated"
 
 
-def send_final_url(participant, final_url: str, use_html: bool = True) -> MailLog:
+def send_final_url(participant, final_url: str) -> MailLog:
     """参加者に本出欠URLを送信する。"""
     mail_cfg = _get_mail_config()
     subject, body = _build_final_url_mail_body(participant.display_name, final_url, role=participant.role or "")
@@ -895,7 +890,7 @@ def send_final_url(participant, final_url: str, use_html: bool = True) -> MailLo
     )
 
     try:
-        log.status = _dispatch_send(participant.email, subject, body, mail_cfg, use_html=use_html)
+        log.status = _dispatch_send(participant.email, subject, body, mail_cfg)
         if log.status == "sent":
             logger.info(f"本出欠URL送信成功: {participant.email}")
         db.session.add(log)
@@ -1094,7 +1089,7 @@ def send_final_confirmation(participant, status_label: str, final_url: str, stat
     return log
 
 
-def send_reminder(participant, final_url: str, use_html: bool = True) -> MailLog:
+def send_reminder(participant, final_url: str) -> MailLog:
     """参加者にリマインドメールを送信する。"""
     mail_cfg = _get_mail_config()
     subject, body = _build_reminder_mail_body(participant.display_name, final_url, role=participant.role or "")
@@ -1106,7 +1101,7 @@ def send_reminder(participant, final_url: str, use_html: bool = True) -> MailLog
     )
 
     try:
-        log.status = _dispatch_send(participant.email, subject, body, mail_cfg, use_html=use_html)
+        log.status = _dispatch_send(participant.email, subject, body, mail_cfg)
         if log.status == "sent":
             logger.info(f"リマインド送信成功: {participant.email}")
         db.session.add(log)
@@ -1149,7 +1144,7 @@ def _build_final_reminder_body(participant_name: str, role: str = "", final_url:
     return subject, body
 
 
-def send_final_reminder(participant, attachment_path: str = None, use_html: bool = True) -> MailLog:
+def send_final_reminder(participant, attachment_path: str = None) -> MailLog:
     """本出欠参加者に最終リマインドメール（PDF添付）を送信する。"""
     from flask import current_app
     from services.token_service import ensure_token
@@ -1167,7 +1162,7 @@ def send_final_reminder(participant, attachment_path: str = None, use_html: bool
 
     try:
         log.status = _dispatch_send(participant.email, subject, body, mail_cfg,
-                                    attachment_path=attachment_path, use_html=use_html)
+                                    attachment_path=attachment_path)
         if log.status == "sent":
             logger.info(f"最終リマインド送信成功: {participant.email}")
         db.session.add(log)
@@ -1248,7 +1243,7 @@ def send_cancel_confirmation(participant, cancel_reason: str) -> MailLog:
     return log
 
 
-def send_unlock_notice(participant, final_url: str, deadline_str: str, use_html: bool = True) -> MailLog:
+def send_unlock_notice(participant, final_url: str, deadline_str: str) -> MailLog:
     """フォームロック解除通知メールを送信する。deadline_str は 'M月D日' 形式。"""
     mail_cfg = _get_mail_config()
     reunion = _get_reunion_info()
@@ -1272,7 +1267,7 @@ def send_unlock_notice(participant, final_url: str, deadline_str: str, use_html:
         sent_at=datetime.utcnow(),
     )
     try:
-        log.status = _dispatch_send(participant.email, subject, body, mail_cfg, use_html=use_html)
+        log.status = _dispatch_send(participant.email, subject, body, mail_cfg)
         if log.status == "sent":
             logger.info(f"ロック解除通知送信成功: {participant.email}")
         db.session.add(log)
