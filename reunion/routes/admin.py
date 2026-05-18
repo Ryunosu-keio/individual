@@ -1399,7 +1399,9 @@ def settings_mail_template():
         "mail_final_reminder_subject",                            "mail_final_reminder_body",
         "mail_final_reminder_subject_teacher",                    "mail_final_reminder_body_teacher",
         "mail_final_confirm_cancelled_subject",                   "mail_final_confirm_cancelled_body",
+        "mail_final_confirm_cancelled_subject_teacher",           "mail_final_confirm_cancelled_body_teacher",
         "mail_unlock_notice_subject",                             "mail_unlock_notice_body",
+        "mail_unlock_notice_subject_teacher",                     "mail_unlock_notice_body_teacher",
     ]
     if request.method == "POST":
         for key in KEYS:
