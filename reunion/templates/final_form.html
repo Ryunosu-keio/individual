@@ -176,7 +176,7 @@
                           </div>
                           <div class="modal-footer">
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">戻る</button>
-                            <button type="submit" class="btn btn-danger">
+                            <button type="button" class="btn btn-danger" id="cancelConfirmBtn">
                               <i class="bi bi-check-lg me-1"></i>欠席を確定する
                             </button>
                           </div>
@@ -187,6 +187,16 @@
                   <script>
                     document.getElementById('cancelReason').addEventListener('input', function() {
                       document.getElementById('cancelReasonCount').textContent = this.value.length;
+                    });
+                    document.getElementById('cancelConfirmBtn').addEventListener('click', function() {
+                      var reason = document.getElementById('cancelReason').value.trim();
+                      if (!reason) {
+                        document.getElementById('cancelReason').reportValidity();
+                        return;
+                      }
+                      if (confirm('欠席のご連絡をします。よろしいですか？')) {
+                        this.closest('form').submit();
+                      }
                     });
                   </script>
                 {% elif existing and existing.status == 'cancelled' %}
