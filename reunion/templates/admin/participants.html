@@ -173,6 +173,8 @@
                      href="{{ url_for('admin.participants', q=q, sort=sort, order=order, status=status_filter, final_status='attending', role=role_filter, class_name=class_filter) }}">参加</a></li>
               <li><a class="dropdown-item {{ 'active' if final_filter == 'not_attending' }}"
                      href="{{ url_for('admin.participants', q=q, sort=sort, order=order, status=status_filter, final_status='not_attending', role=role_filter, class_name=class_filter) }}">不参加</a></li>
+              <li><a class="dropdown-item {{ 'active' if final_filter == 'cancelled' }}"
+                     href="{{ url_for('admin.participants', q=q, sort=sort, order=order, status=status_filter, final_status='cancelled', role=role_filter, class_name=class_filter) }}">直前キャンセル</a></li>
               <li><a class="dropdown-item {{ 'active' if final_filter == 'no_response' }}"
                      href="{{ url_for('admin.participants', q=q, sort=sort, order=order, status=status_filter, final_status='no_response', role=role_filter, class_name=class_filter) }}">未回答</a></li>
             </ul>
@@ -219,6 +221,7 @@
         <td>
           {% if final %}
             {% if final.status == 'attending' %}<span class="badge bg-success">参加</span>
+            {% elif final.status == 'cancelled' %}<span class="badge bg-warning text-dark">直前キャンセル</span>
             {% else %}<span class="badge bg-secondary">不参加</span>{% endif %}
           {% else %}
             <span class="badge bg-light text-muted border">未回答</span>
