@@ -21,15 +21,13 @@ class Participant(db.Model):
     __tablename__ = "participants"
 
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False)          # 氏名（旧姓含む）
-    name_kana = db.Column(db.String(100), default="")         # 氏名カナ（旧姓）
-    new_name = db.Column(db.String(100), default="")          # 新氏名（旧姓と同じなら空）
-    new_name_kana = db.Column(db.String(100), default="")     # 新氏名カナ
+    name = db.Column(db.String(100), nullable=False)          # 氏名
+    name_kana = db.Column(db.String(100), default="")         # 氏名カナ
     email = db.Column(db.String(200), nullable=False, unique=True)  # メールアドレス（重複排除の基準）
     token = db.Column(db.String(64), unique=True, nullable=True)    # 本出欠フォームURL用トークン
     class_name = db.Column(db.String(50), default="")         # クラス（2桁数字: 31=3年1組、学年主任は空）
     student_number = db.Column(db.String(20), default="")     # 出席番号
-    # role: 生徒 / 教師 / 学年主任
+    # role: 生徒 / 教師 / 学年主任 / 幹事
     role = db.Column(db.String(20), default="生徒")
     notes = db.Column(db.Text, default="")                    # 参加者自身のメモ（備考）
     teacher_memo = db.Column(db.Text, default="")             # 幹事用メモ

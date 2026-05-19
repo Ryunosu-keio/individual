@@ -22,9 +22,6 @@
           <dt class="col-4">氏名</dt>
           <dd class="col-8">
             {{ participant.display_name }}
-            {% if participant.new_name %}
-              <br><span class="text-muted small">旧氏名: {{ participant.name }}</span>
-            {% endif %}
           </dd>
           <dt class="col-4">メール</dt><dd class="col-8">{{ participant.email }}</dd>
           <dt class="col-4">登録日時</dt>
@@ -202,9 +199,34 @@
     </div>
   </div>
 
+  <!-- 役割 -->
+  <div class="col-md-6">
+    <div class="card h-100">
+      <div class="card-header fw-bold bg-light">役割</div>
+      <div class="card-body">
+        <p class="mb-2">
+          現在:
+          {% if participant.role == '教師' %}<span class="badge bg-warning text-dark">教師</span>
+          {% elif participant.role == '学年主任' %}<span class="badge bg-danger">学年主任</span>
+          {% elif participant.role == '幹事' %}<span class="badge bg-info text-dark">幹事</span>
+          {% else %}<span class="badge bg-primary">生徒</span>{% endif %}
+        </p>
+        <form method="POST" action="{{ url_for('admin.update_role', participant_id=participant.id) }}" class="d-flex gap-2 align-items-center">
+          <select class="form-select form-select-sm" name="role" style="width:auto;">
+            <option value="生徒" {{ 'selected' if participant.role == '生徒' }}>生徒</option>
+            <option value="教師" {{ 'selected' if participant.role == '教師' }}>教師</option>
+            <option value="学年主任" {{ 'selected' if participant.role == '学年主任' }}>学年主任</option>
+            <option value="幹事" {{ 'selected' if participant.role == '幹事' }}>幹事</option>
+          </select>
+          <button type="submit" class="btn btn-primary btn-sm">変更</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
   <!-- 幹事メモ -->
-  <div class="col-12">
-    <div class="card">
+  <div class="col-md-6">
+    <div class="card h-100">
       <div class="card-header fw-bold bg-light">幹事メモ</div>
       <div class="card-body">
         <form method="POST" action="{{ url_for('admin.update_memo', participant_id=participant.id) }}">
