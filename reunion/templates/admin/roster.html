@@ -70,6 +70,7 @@
               <option value="生徒">生徒</option>
               <option value="教師">教師（担任・副担任）</option>
               <option value="学年主任">学年主任</option>
+              <option value="幹事">幹事</option>
             </select>
           </div>
           <div class="row g-2 mb-2">
@@ -98,49 +99,100 @@
 
 <!-- 名簿一覧 -->
 <div class="d-flex justify-content-between align-items-center mb-2">
-  <h5 class="mb-0">現在の名簿（{{ participants | length }} 名）</h5>
+  <h5 class="mb-0">現在の名簿（<span id="visibleCount">{{ participants | length }}</span> / {{ participants | length }} 名）</h5>
+  <button class="btn btn-outline-secondary btn-sm" id="clearFilters">
+    <i class="bi bi-x-circle me-1"></i>フィルター・並び順をリセット
+  </button>
 </div>
 
 <div class="table-responsive">
-  <table class="table table-hover table-sm align-middle">
+  <table class="table table-hover table-sm align-middle" id="rosterTable">
     <thead class="table-light">
-      <tr>
-        <th>ID</th>
-        <th>氏名</th>
-        <th>氏名（カナ）</th>
-        <th>メールアドレス</th>
-        <th>役割</th>
-        <th>クラス</th>
-        <th>出席番号</th>
-        <th>幹事メモ</th>
-        <th>仮出欠</th>
-        <th>本出欠</th>
-        <th>登録日</th>
+      <tr id="headerRow">
+        <th class="sortable" data-col="id" style="cursor:pointer;white-space:nowrap;">ID <span class="sort-icon text-muted">↕</span></th>
+        <th class="sortable" data-col="name" style="cursor:pointer;white-space:nowrap;">氏名 <span class="sort-icon text-muted">↕</span></th>
+        <th class="sortable" data-col="name_kana" style="cursor:pointer;white-space:nowrap;">氏名（カナ）<span class="sort-icon text-muted">↕</span></th>
+        <th class="sortable" data-col="email" style="cursor:pointer;white-space:nowrap;">メールアドレス <span class="sort-icon text-muted">↕</span></th>
+        <th class="sortable" data-col="role" style="cursor:pointer;white-space:nowrap;">役割 <span class="sort-icon text-muted">↕</span></th>
+        <th class="sortable" data-col="class" style="cursor:pointer;white-space:nowrap;">クラス <span class="sort-icon text-muted">↕</span></th>
+        <th class="sortable" data-col="number" style="cursor:pointer;white-space:nowrap;">出席番号 <span class="sort-icon text-muted">↕</span></th>
+        <th class="sortable" data-col="memo" style="cursor:pointer;white-space:nowrap;">幹事メモ <span class="sort-icon text-muted">↕</span></th>
+        <th class="sortable" data-col="prov" style="cursor:pointer;white-space:nowrap;">仮出欠 <span class="sort-icon text-muted">↕</span></th>
+        <th class="sortable" data-col="final" style="cursor:pointer;white-space:nowrap;">本出欠 <span class="sort-icon text-muted">↕</span></th>
+        <th class="sortable" data-col="created" style="cursor:pointer;white-space:nowrap;">登録日 <span class="sort-icon text-muted">↕</span></th>
         <th>操作</th>
       </tr>
+      <tr id="filterRow" class="table-secondary">
+        <td><input type="text" class="form-control form-control-sm" id="f-id" placeholder="検索"></td>
+        <td><input type="text" class="form-control form-control-sm" id="f-name" placeholder="検索"></td>
+        <td><input type="text" class="form-control form-control-sm" id="f-name-kana" placeholder="検索"></td>
+        <td><input type="text" class="form-control form-control-sm" id="f-email" placeholder="検索"></td>
+        <td>
+          <select class="form-select form-select-sm" id="f-role">
+            <option value="">全て</option>
+            <option value="生徒">生徒</option>
+            <option value="教師">教師</option>
+            <option value="学年主任">学年主任</option>
+            <option value="幹事">幹事</option>
+          </select>
+        </td>
+        <td><input type="text" class="form-control form-control-sm" id="f-class" placeholder="検索"></td>
+        <td><input type="text" class="form-control form-control-sm" id="f-number" placeholder="検索"></td>
+        <td><input type="text" class="form-control form-control-sm" id="f-memo" placeholder="検索"></td>
+        <td>
+          <select class="form-select form-select-sm" id="f-prov">
+            <option value="">全て</option>
+            <option value="参加">参加</option>
+            <option value="不参加">不参加</option>
+            <option value="未定">未定</option>
+            <option value="未回答">未回答</option>
+          </select>
+        </td>
+        <td>
+          <select class="form-select form-select-sm" id="f-final">
+            <option value="">全て</option>
+            <option value="参加">参加</option>
+            <option value="不参加">不参加</option>
+            <option value="未回答">未回答</option>
+          </select>
+        </td>
+        <td><input type="text" class="form-control form-control-sm" id="f-created" placeholder="例: 2024/05"></td>
+        <td></td>
+      </tr>
     </thead>
-    <tbody>
+    <tbody id="rosterTbody">
       {% for p in participants %}
       {% set prov = p.latest_provisional %}
       {% set final = p.latest_final %}
+      {% if prov %}
+        {% if prov.status == 'attending' %}{% set prov_label = '参加' %}
+        {% elif prov.status == 'not_attending' %}{% set prov_label = '不参加' %}
+        {% else %}{% set prov_label = '未定' %}{% endif %}
+      {% else %}{% set prov_label = '未回答' %}{% endif %}
+      {% if final %}
+        {% if final.status == 'attending' %}{% set final_label = '参加' %}
+        {% else %}{% set final_label = '不参加' %}{% endif %}
+      {% else %}{% set final_label = '未回答' %}{% endif %}
+      {% set role_sort = {'生徒': 0, '教師': 1, '学年主任': 2, '幹事': 3}.get(p.role, 9) %}
       <tr>
-        <td class="text-muted small">{{ p.id }}</td>
-        <td>
+        <td data-col="id" data-val="{{ p.id }}" data-sort="{{ p.id }}" class="text-muted small">{{ p.id }}</td>
+        <td data-col="name" data-val="{{ p.name }}">
           <a href="{{ url_for('admin.participant_detail', participant_id=p.id) }}">{{ p.name }}</a>
         </td>
-        <td class="small text-muted">{{ p.name_kana or '' }}</td>
-        <td class="small">
+        <td data-col="name_kana" data-val="{{ p.name_kana or '' }}" class="small text-muted">{{ p.name_kana or '' }}</td>
+        <td data-col="email" data-val="{{ p.email if p.email and '@placeholder.local' not in p.email else '' }}" class="small">
           {% if p.email and '@placeholder.local' not in p.email %}{{ p.email }}{% else %}<span class="text-muted">未登録</span>{% endif %}
         </td>
-        <td>
+        <td data-col="role" data-val="{{ p.role }}" data-sort="{{ role_sort }}">
           {% if p.role == '教師' %}<span class="badge bg-warning text-dark">教師</span>
           {% elif p.role == '学年主任' %}<span class="badge bg-danger">学年主任</span>
+          {% elif p.role == '幹事' %}<span class="badge bg-info text-dark">幹事</span>
           {% else %}<span class="badge bg-primary">生徒</span>{% endif %}
         </td>
-        <td class="small text-center">{{ p.class_name or '' }}</td>
-        <td class="small text-center">{{ p.student_number or '' }}</td>
-        <td class="small text-muted">{{ p.teacher_memo or '' }}</td>
-        <td>
+        <td data-col="class" data-val="{{ p.class_name or '' }}" class="small text-center">{{ p.class_name or '' }}</td>
+        <td data-col="number" data-val="{{ p.student_number or '' }}" data-sort="{{ p.student_number if p.student_number and p.student_number.isdigit() else '9999' }}" class="small text-center">{{ p.student_number or '' }}</td>
+        <td data-col="memo" data-val="{{ p.teacher_memo or '' }}" class="small text-muted">{{ p.teacher_memo or '' }}</td>
+        <td data-col="prov" data-val="{{ prov_label }}">
           {% if prov %}
             {% if prov.status == 'attending' %}<span class="badge bg-success">参加</span>
             {% elif prov.status == 'not_attending' %}<span class="badge bg-secondary">不参加</span>
@@ -149,7 +201,7 @@
             <span class="badge bg-light text-muted border">未回答</span>
           {% endif %}
         </td>
-        <td>
+        <td data-col="final" data-val="{{ final_label }}">
           {% if final %}
             {% if final.status == 'attending' %}<span class="badge bg-success">参加</span>
             {% else %}<span class="badge bg-secondary">不参加</span>{% endif %}
@@ -157,7 +209,7 @@
             <span class="badge bg-light text-muted border">未回答</span>
           {% endif %}
         </td>
-        <td class="small text-muted">{{ p.created_at | jst('%Y/%m/%d') }}</td>
+        <td data-col="created" data-val="{{ p.created_at | jst('%Y/%m/%d') }}" class="small text-muted">{{ p.created_at | jst('%Y/%m/%d') }}</td>
         <td>
           <form method="POST"
                 action="{{ url_for('admin.roster_delete', participant_id=p.id) }}"
@@ -167,13 +219,12 @@
         </td>
       </tr>
       {% else %}
-      <tr>
-        <td colspan="8" class="text-center text-muted py-5">
+      <tr id="emptyRow">
+        <td colspan="12" class="text-center text-muted py-5">
           名簿がありません。CSVを取込むか、1名ずつ追加してください。
         </td>
       </tr>
       {% endfor %}
-
     </tbody>
   </table>
 </div>
@@ -181,6 +232,7 @@
 
 {% block extra_js %}
 <script>
+(function () {
   var classInput = document.getElementById('classNameInput');
   var kanaInput  = document.getElementById('nameKanaInput');
   var kanaReq    = document.getElementById('kanaRequired');
@@ -192,8 +244,145 @@
     kanaReq.classList.toggle('d-none', !needKana);
     kanaHint.classList.toggle('d-none', !needKana);
   }
+  if (classInput) {
+    classInput.addEventListener('input', updateKanaRequired);
+    updateKanaRequired();
+  }
 
-  classInput.addEventListener('input', updateKanaRequired);
-  updateKanaRequired();
+  // ---- フィルター & ソート ----
+  var tbody = document.getElementById('rosterTbody');
+  if (!tbody) return;
+
+  var COLS = [
+    { col: 'id',        filterId: 'f-id',        isSelect: false },
+    { col: 'name',      filterId: 'f-name',      isSelect: false },
+    { col: 'name_kana', filterId: 'f-name-kana', isSelect: false },
+    { col: 'email',     filterId: 'f-email',     isSelect: false },
+    { col: 'role',      filterId: 'f-role',      isSelect: true  },
+    { col: 'class',     filterId: 'f-class',     isSelect: false },
+    { col: 'number',    filterId: 'f-number',    isSelect: false },
+    { col: 'memo',      filterId: 'f-memo',      isSelect: false },
+    { col: 'prov',      filterId: 'f-prov',      isSelect: true  },
+    { col: 'final',     filterId: 'f-final',     isSelect: true  },
+    { col: 'created',   filterId: 'f-created',   isSelect: false },
+  ];
+
+  var sortCol = null;
+  var sortAsc = true;
+
+  function getVal(row, col) {
+    var td = row.querySelector('td[data-col="' + col + '"]');
+    return td ? (td.dataset.val || '') : '';
+  }
+
+  function getSortVal(row, col) {
+    var td = row.querySelector('td[data-col="' + col + '"]');
+    if (!td) return '';
+    return td.dataset.sort !== undefined ? td.dataset.sort : (td.dataset.val || '');
+  }
+
+  function applyAll() {
+    // 全データ行（emptyRow以外）
+    var allRows = Array.from(tbody.querySelectorAll('tr')).filter(function(r) {
+      return r.id !== 'emptyRow';
+    });
+
+    // ソート
+    if (sortCol) {
+      allRows.sort(function(a, b) {
+        var va = getSortVal(a, sortCol);
+        var vb = getSortVal(b, sortCol);
+        var na = parseFloat(va);
+        var nb = parseFloat(vb);
+        var cmp;
+        if (!isNaN(na) && !isNaN(nb)) {
+          cmp = na - nb;
+        } else {
+          cmp = va.localeCompare(vb, 'ja');
+        }
+        return sortAsc ? cmp : -cmp;
+      });
+      allRows.forEach(function(row) { tbody.appendChild(row); });
+    }
+
+    // フィルター
+    var filterVals = {};
+    COLS.forEach(function(c) {
+      var el = document.getElementById(c.filterId);
+      filterVals[c.col] = el ? el.value.trim() : '';
+    });
+
+    var count = 0;
+    allRows.forEach(function(row) {
+      var show = true;
+      COLS.forEach(function(c) {
+        var fval = filterVals[c.col];
+        if (!fval) return;
+        var val = getVal(row, c.col);
+        if (c.isSelect) {
+          if (val !== fval) show = false;
+        } else {
+          if (val.toLowerCase().indexOf(fval.toLowerCase()) === -1) show = false;
+        }
+      });
+      row.style.display = show ? '' : 'none';
+      if (show) count++;
+    });
+
+    var countEl = document.getElementById('visibleCount');
+    if (countEl) countEl.textContent = count;
+  }
+
+  // フィルター入力にリスナーを設定
+  COLS.forEach(function(c) {
+    var el = document.getElementById(c.filterId);
+    if (el) el.addEventListener('input', applyAll);
+  });
+
+  // ヘッダークリックでソート
+  document.querySelectorAll('th.sortable').forEach(function(th) {
+    th.addEventListener('click', function() {
+      var col = th.dataset.col;
+      if (sortCol === col) {
+        sortAsc = !sortAsc;
+      } else {
+        sortCol = col;
+        sortAsc = true;
+      }
+      document.querySelectorAll('th.sortable').forEach(function(t) {
+        var icon = t.querySelector('.sort-icon');
+        if (!icon) return;
+        if (t.dataset.col === sortCol) {
+          icon.textContent = sortAsc ? '↑' : '↓';
+          icon.classList.remove('text-muted');
+        } else {
+          icon.textContent = '↕';
+          icon.classList.add('text-muted');
+        }
+      });
+      applyAll();
+    });
+  });
+
+  // リセットボタン
+  var clearBtn = document.getElementById('clearFilters');
+  if (clearBtn) {
+    clearBtn.addEventListener('click', function() {
+      COLS.forEach(function(c) {
+        var el = document.getElementById(c.filterId);
+        if (el) el.value = '';
+      });
+      sortCol = null;
+      sortAsc = true;
+      document.querySelectorAll('th.sortable .sort-icon').forEach(function(icon) {
+        icon.textContent = '↕';
+        icon.classList.add('text-muted');
+      });
+      applyAll();
+    });
+  }
+
+  applyAll();
+})();
 </script>
 {% endblock %}

@@ -122,6 +122,8 @@
                      href="{{ url_for('admin.participants', q=q, sort=sort, order=order, status=status_filter, final_status=final_filter, role='教師', class_name=class_filter) }}">教師</a></li>
               <li><a class="dropdown-item {{ 'active' if role_filter == '学年主任' }}"
                      href="{{ url_for('admin.participants', q=q, sort=sort, order=order, status=status_filter, final_status=final_filter, role='学年主任', class_name=class_filter) }}">学年主任</a></li>
+              <li><a class="dropdown-item {{ 'active' if role_filter == '幹事' }}"
+                     href="{{ url_for('admin.participants', q=q, sort=sort, order=order, status=status_filter, final_status=final_filter, role='幹事', class_name=class_filter) }}">幹事</a></li>
             </ul>
           </div>
           <a href="{{ sort_url('role') }}"><i class="bi {{ sort_icon('role') }}"></i></a>
@@ -194,15 +196,13 @@
         <td class="text-muted small">{{ p.id }}</td>
         <td>
           {{ p.display_name }}
-          {% if p.new_name %}
-            <br><span class="text-muted small">（旧: {{ p.name }}）</span>
-          {% endif %}
         </td>
         <td class="small text-center">{{ p.class_name or '' }}</td>
         <td class="small text-center">{{ p.student_number or '' }}</td>
         <td class="small">
           {% if p.role == '教師' %}<span class="badge bg-warning text-dark">教師</span>
           {% elif p.role == '学年主任' %}<span class="badge bg-danger">学年主任</span>
+          {% elif p.role == '幹事' %}<span class="badge bg-info text-dark">幹事</span>
           {% else %}<span class="badge bg-primary">生徒</span>{% endif %}
         </td>
         <td class="small">

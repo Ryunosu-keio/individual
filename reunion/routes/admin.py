@@ -189,7 +189,6 @@ def participants():
         query = query.filter(
             db.or_(
                 Participant.name.ilike(f"%{q}%"),
-                Participant.new_name.ilike(f"%{q}%"),
                 Participant.email.ilike(f"%{q}%"),
             )
         )
@@ -205,7 +204,7 @@ def participants():
         return int(p.student_number) if p.student_number and p.student_number.isdigit() else 9999
 
     def _role_order(p):
-        return {"生徒": 0, "教師": 1, "学年主任": 2}.get(p.role, 3)
+        return {"生徒": 0, "教師": 1, "学年主任": 2, "幹事": 3}.get(p.role, 4)
 
     sort_key_map = {
         "class":   lambda p: (p.class_name or "", _role_order(p), _num(p)),
@@ -373,6 +372,26 @@ def update_memo(participant_id):
     participant.updated_at = datetime.utcnow()
     db.session.commit()
     flash("メモを更新しました。", "success")
+    return redirect(url_for("admin.participant_detail", participant_id=participant_id))
+
+
+@admin_bp.route("/participant/<int:participant_id>/update-role", methods=["POST"])
+def update_role(participant_id):
+    """役割を更新"""
+    participant = db.session.get(Participant, participant_id)
+    if participant is None:
+        flash("参加者が見つかりません。", "danger")
+        return redirect(url_for("admin.participants"))
+
+    role = request.form.get("role", "").strip()
+    if role not in {"生徒", "教師", "学年主任", "幹事"}:
+        flash("無効な役割です。", "danger")
+        return redirect(url_for("admin.participant_detail", participant_id=participant_id))
+
+    participant.role = role
+    participant.updated_at = datetime.utcnow()
+    db.session.commit()
+    flash(f"役割を「{role}」に変更しました。", "success")
     return redirect(url_for("admin.participant_detail", participant_id=participant_id))
 
 
@@ -1511,7 +1530,8 @@ def roster():
         (Participant.role == "生徒", 0),
         (Participant.role == "教師", 1),
         (Participant.role == "学年主任", 2),
-        else_=3,
+        (Participant.role == "幹事", 3),
+        else_=4,
     )
     participants = Participant.query.all()
 
@@ -1519,7 +1539,7 @@ def roster():
         return int(p.student_number) if p.student_number and p.student_number.isdigit() else 9999
 
     def _role_ord(p):
-        return {"生徒": 0, "教師": 1, "学年主任": 2}.get(p.role, 3)
+        return {"生徒": 0, "教師": 1, "学年主任": 2, "幹事": 3}.get(p.role, 4)
 
     participants.sort(key=lambda p: (p.class_name or "", _role_ord(p), _num(p)))
     return render_template("admin/roster.html", participants=participants)
@@ -1572,20 +1592,20 @@ def roster_import():
     # ヘッダー行の検出と列インデックスの解決
     NAME_HEADERS          = {"氏名", "名前", "name"}
     NAME_KANA_HEADERS     = {"氏名カナ", "氏名（カナ）", "フリガナ", "ふりがな", "kana", "name_kana"}
-    NEW_NAME_HEADERS      = {"新氏名", "新名前", "new_name"}
-    NEW_NAME_KANA_HEADERS = {"新氏名カナ", "新フリガナ", "new_name_kana"}
     EMAIL_HEADERS         = {"メールアドレス", "メール", "email", "mail"}
     CLASS_HEADERS         = {"クラス", "class", "組", "担当クラス"}
     NUMBER_HEADERS        = {"出席番号", "番号", "number", "no"}
     ROLE_HEADERS          = {"役割", "role", "種別", "区分"}
-    MEMO_HEADERS          = {"幹事メモ", "メモ", "memo", "備考"}
+    MEMO_HEADERS          = {"幹事メモ", "メモ", "memo"}
     TOKEN_HEADERS         = {"トークン", "token"}
     PROV_STATUS_HEADERS   = {"仮出欠", "provisional_status"}
     FINAL_STATUS_HEADERS  = {"本出欠", "final_status"}
     COMPANIONS_HEADERS    = {"同伴者数", "companions"}
     TRANSFER_NAME_HEADERS = {"振込名義", "transfer_name"}
+    REMARKS_HEADERS       = {"備考", "remarks", "本出欠備考"}
     PAY_STATUS_HEADERS    = {"入金ステータス", "payment_status"}
     PAID_AMOUNT_HEADERS   = {"入金金額", "paid_amount"}
+    EXPECTED_AMOUNT_HEADERS = {"支払予定金額", "expected_amount", "予定金額"}
     PAYMENT_DATE_HEADERS  = {"支払日", "payment_date"}
 
     first = [h.strip().lower() for h in rows[0]]
@@ -1600,8 +1620,6 @@ def roster_import():
 
         idx_name          = find_idx(NAME_HEADERS)
         idx_name_kana     = find_idx(NAME_KANA_HEADERS)
-        idx_new_name      = find_idx(NEW_NAME_HEADERS)
-        idx_new_name_kana = find_idx(NEW_NAME_KANA_HEADERS)
         idx_email         = find_idx(EMAIL_HEADERS)
         idx_class         = find_idx(CLASS_HEADERS)
         idx_number        = find_idx(NUMBER_HEADERS)
@@ -1611,16 +1629,19 @@ def roster_import():
         idx_prov_status   = find_idx(PROV_STATUS_HEADERS)
         idx_final_status  = find_idx(FINAL_STATUS_HEADERS)
         idx_companions    = find_idx(COMPANIONS_HEADERS)
-        idx_transfer_name = find_idx(TRANSFER_NAME_HEADERS)
-        idx_pay_status    = find_idx(PAY_STATUS_HEADERS)
-        idx_paid_amount   = find_idx(PAID_AMOUNT_HEADERS)
-        idx_payment_date  = find_idx(PAYMENT_DATE_HEADERS)
-        data_rows         = rows[1:]
+        idx_transfer_name    = find_idx(TRANSFER_NAME_HEADERS)
+        idx_remarks          = find_idx(REMARKS_HEADERS)
+        idx_pay_status       = find_idx(PAY_STATUS_HEADERS)
+        idx_paid_amount      = find_idx(PAID_AMOUNT_HEADERS)
+        idx_expected_amount  = find_idx(EXPECTED_AMOUNT_HEADERS)
+        idx_payment_date     = find_idx(PAYMENT_DATE_HEADERS)
+        data_rows            = rows[1:]
     else:
-        # ヘッダーなし → 固定順: 氏名, 氏名カナ, 新氏名, 新氏名カナ, メール, クラス, 出席番号, 役割, 幹事メモ
-        idx_name, idx_name_kana, idx_new_name, idx_new_name_kana, idx_email, idx_class, idx_number, idx_role, idx_memo = 0, 1, 2, 3, 4, 5, 6, 7, 8
+        # ヘッダーなし → 固定順: 氏名, 氏名カナ, メール, クラス, 出席番号, 役割, 幹事メモ
+        idx_name, idx_name_kana, idx_email, idx_class, idx_number, idx_role, idx_memo = 0, 1, 2, 3, 4, 5, 6
         idx_token = idx_prov_status = idx_final_status = None
-        idx_companions = idx_transfer_name = idx_pay_status = idx_paid_amount = idx_payment_date = None
+        idx_companions = idx_transfer_name = idx_remarks = None
+        idx_pay_status = idx_paid_amount = idx_expected_amount = idx_payment_date = None
         data_rows = rows
 
     if idx_name is None:
@@ -1633,7 +1654,7 @@ def roster_import():
         return ""
 
     # 有効な役割値
-    VALID_ROLES = {"生徒", "教師", "学年主任"}
+    VALID_ROLES = {"生徒", "教師", "学年主任", "幹事"}
 
     PROV_STATUS_MAP  = {"参加": "attending", "不参加": "not_attending", "未定": "undecided",
                         "attending": "attending", "not_attending": "not_attending", "undecided": "undecided"}
@@ -1654,8 +1675,6 @@ def roster_import():
 
         name          = get_col(row, idx_name)
         name_kana     = get_col(row, idx_name_kana)
-        new_name      = get_col(row, idx_new_name)
-        new_name_kana = get_col(row, idx_new_name_kana)
         email         = get_col(row, idx_email).lower()
         class_        = get_col(row, idx_class)
         number        = get_col(row, idx_number)
@@ -1667,9 +1686,12 @@ def roster_import():
         companions_raw = get_col(row, idx_companions)
         companions    = int(companions_raw) if companions_raw.isdigit() else 0
         transfer_name = normalize_transfer_name(get_col(row, idx_transfer_name))
+        remarks       = get_col(row, idx_remarks)
         pay_status    = PAY_STATUS_MAP.get(get_col(row, idx_pay_status), "")
         paid_raw      = get_col(row, idx_paid_amount)
         paid_amount   = int(paid_raw) if paid_raw.isdigit() else 0
+        expected_raw  = get_col(row, idx_expected_amount)
+        expected_amount = int(expected_raw) if expected_raw.isdigit() else 0
         pay_date_raw  = get_col(row, idx_payment_date)
         payment_date  = None
         if pay_date_raw:
@@ -1696,21 +1718,15 @@ def roster_import():
         if not email or "@" not in email:
             email = f"__no_email_{name}_{class_}_{role}@placeholder.local"
 
-        # 新氏名が旧氏名と同じなら空にする（表示時に重複を避けるため）
-        if new_name == name:
-            new_name = ""
-        if new_name_kana == name_kana:
-            new_name_kana = ""
-
         new_participants.append(dict(
             name=name, name_kana=name_kana,
-            new_name=new_name, new_name_kana=new_name_kana,
             email=email, class_name=class_,
             student_number=number, role=role, teacher_memo=memo,
             _token=token,
             _prov_status=prov_status, _final_status=final_status,
-            _companions=companions, _transfer_name=transfer_name,
-            _pay_status=pay_status, _paid_amount=paid_amount, _payment_date=payment_date,
+            _companions=companions, _transfer_name=transfer_name, _remarks=remarks,
+            _pay_status=pay_status, _paid_amount=paid_amount,
+            _expected_amount=expected_amount, _payment_date=payment_date,
         ))
 
     # 全テーブルをリセットして再登録
@@ -1724,14 +1740,16 @@ def roster_import():
     db.session.flush()
 
     for p_data in new_participants:
-        token         = p_data.pop("_token")
-        prov_status   = p_data.pop("_prov_status")
-        final_status  = p_data.pop("_final_status")
-        companions    = p_data.pop("_companions")
-        transfer_name = p_data.pop("_transfer_name")
-        pay_status    = p_data.pop("_pay_status")
-        paid_amount   = p_data.pop("_paid_amount")
-        payment_date  = p_data.pop("_payment_date")
+        token           = p_data.pop("_token")
+        prov_status     = p_data.pop("_prov_status")
+        final_status    = p_data.pop("_final_status")
+        companions      = p_data.pop("_companions")
+        transfer_name   = p_data.pop("_transfer_name")
+        remarks         = p_data.pop("_remarks")
+        pay_status      = p_data.pop("_pay_status")
+        paid_amount     = p_data.pop("_paid_amount")
+        expected_amount = p_data.pop("_expected_amount")
+        payment_date    = p_data.pop("_payment_date")
 
         p = Participant(**p_data)
         if token:
@@ -1746,11 +1764,13 @@ def roster_import():
             db.session.add(FinalResponse(
                 participant_id=p.id, status=final_status,
                 companions=companions, transfer_name=transfer_name,
+                remarks=remarks,
             ))
             db.session.add(Payment(
                 participant_id=p.id,
                 payment_status=pay_status or "unpaid",
                 paid_amount=paid_amount,
+                expected_amount=expected_amount,
                 payment_date=payment_date,
                 transfer_name=transfer_name,
             ))
@@ -1826,10 +1846,10 @@ def roster_export():
     writer = csv.writer(output)
 
     writer.writerow([
-        "氏名", "氏名（カナ）", "新氏名", "新氏名カナ",
+        "氏名", "氏名（カナ）",
         "メールアドレス", "クラス", "出席番号", "役割", "幹事メモ",
-        "トークン", "仮出欠", "本出欠", "同伴者数", "振込名義",
-        "入金ステータス", "入金金額", "支払日",
+        "トークン", "仮出欠", "本出欠", "同伴者数", "振込名義", "備考",
+        "入金ステータス", "入金金額", "支払予定金額", "支払日",
     ])
 
     PROV_LABELS  = {"attending": "参加", "not_attending": "不参加", "undecided": "未定"}
@@ -1844,8 +1864,6 @@ def roster_export():
         writer.writerow([
             p.name,
             p.name_kana or "",
-            p.new_name or "",
-            p.new_name_kana or "",
             email_out,
             p.class_name or "",
             p.student_number or "",
@@ -1856,8 +1874,10 @@ def roster_export():
             FINAL_LABELS.get(final.status, "")  if final else "",
             final.companions                    if final else "",
             final.transfer_name                 if final else "",
+            final.remarks                       if final else "",
             PAY_LABELS.get(pay.payment_status, "") if pay else "",
             pay.paid_amount                     if pay else "",
+            pay.expected_amount                 if pay else "",
             pay.payment_date.strftime("%Y-%m-%d") if (pay and pay.payment_date) else "",
         ])
 
