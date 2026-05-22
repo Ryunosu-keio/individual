@@ -1956,51 +1956,19 @@ def roster_export():
 
 @admin_bp.route("/final-form-preview")
 def final_form_preview():
-    """\u672c\u51fa\u6b20\u30d5\u30a9\u30fc\u30e0\u306e\u30ec\u30a4\u30a2\u30a6\u30c8\u30d7\u30ec\u30d3\u30e5\u30fc\uff08DB\u4e0a\u306e\u6700\u521d\u306e\u53c2\u52a0\u8005\u30c7\u30fc\u30bf\u3067\u8868\u793a\uff09"""
-    from utils import normalize_transfer_name, decompose_voiced
-
-    participant = Participant.query.order_by(Participant.class_name, Participant.student_number).first()
+    """トークンを持つ代表者の本出欠フォーム実URLにリダイレクト"""
+    participant = (
+        Participant.query
+        .filter(Participant.token.isnot(None))
+        .order_by(Participant.class_name, Participant.student_number)
+        .first()
+    )
     if not participant:
-        flash("\u53c2\u52a0\u8005\u304c\u767b\u9332\u3055\u308c\u3066\u3044\u306a\u3044\u305f\u3081\u30d7\u30ec\u30d3\u30e5\u30fc\u3067\u304d\u307e\u305b\u3093\u3002", "warning")
-        return redirect(url_for("admin.index"))
+        flash("本出欠URLが発行済みの参加者がいません。先にトークンを発行してください。", "warning")
+        return redirect(url_for("admin.participants"))
 
-    transfer_keys = [
-        "transfer_bank", "transfer_branch", "transfer_branch_number",
-        "transfer_account_type", "transfer_account_name", "transfer_account_number",
-        "transfer_deadline", "reunion_fee",
-    ]
-    transfer_info = {}
-    for s in AppSetting.query.filter(AppSetting.key.in_(transfer_keys)).all():
-        transfer_info[s.key] = s.value
-
-    if participant.class_name and participant.student_number:
-        student_id = f"{participant.class_name}{participant.student_number.zfill(2)}"
-    else:
-        student_id = "3000"
-    kana = participant.display_name_kana
-    default_transfer_name = normalize_transfer_name(
-        f"{student_id}{kana}" if kana else student_id
-    )
-    default_transfer_name_alt = decompose_voiced(default_transfer_name)
-
-    from services.mail_service import _format_deadline_jp
-    fd = AppSetting.query.filter_by(key="final_deadline").first()
-    final_deadline_jp = _format_deadline_jp(fd.value) if fd and fd.value else ""
-    is_teacher = participant.role in ("教師", "学年主任", "副担任")
-
-    return render_template(
-        "final_form.html",
-        participant=participant,
-        existing=None,
-        token=participant.token or "preview",
-        transfer_info=transfer_info,
-        default_transfer_name=default_transfer_name,
-        default_transfer_name_alt=default_transfer_name_alt,
-        locked=False,
-        can_cancel=False,
-        final_deadline_jp=final_deadline_jp,
-        is_teacher=is_teacher,
-    )
+    base_url = current_app.config.get("APP_BASE_URL", request.host_url.rstrip("/"))
+    return redirect(f"{base_url}/form/final/{participant.token}")
 
 
 GUIDE_DEFAULTS = {
