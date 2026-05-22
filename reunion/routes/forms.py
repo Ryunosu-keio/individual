@@ -136,6 +136,21 @@ def provisional():
     if participant_id:
         participant = db.session.get(Participant, int(participant_id))
         if participant:
+            stored_email_real = participant.email and PLACEHOLDER_DOMAIN not in participant.email
+            already_responded = bool(participant.provisional_responses)
+
+            # 回答済み＆別メールアドレス → 別人による上書き試みをブロック
+            if already_responded and stored_email_real and participant.email != email:
+                flash(
+                    f"「{participant.name}」さんはすでに別のメールアドレスで回答済みです。"
+                    " ご本人のメールアドレスで再度ご回答いただくか、幹事にお問い合わせください。",
+                    "danger"
+                )
+                return render_template("provisional_form.html",
+                                       name=name, name_kana=name_kana,
+                                       email=email, status=status,
+                                       class_name=class_name)
+
             # 同じメールを持つ別の参加者が既にいるか確認
             existing_by_email = Participant.query.filter_by(email=email).first()
             if existing_by_email and existing_by_email.id != participant.id:
@@ -145,9 +160,10 @@ def provisional():
                                        email=email, status=status,
                                        class_name=class_name)
             participant.email = email
-            if name:
+            # 既に名前が登録されている場合は上書きしない
+            if name and not participant.name:
                 participant.name = name
-            if name_kana:
+            if name_kana and not participant.name_kana:
                 participant.name_kana = name_kana
             participant.updated_at = datetime.utcnow()
             matched_how = "selected"
@@ -161,12 +177,11 @@ def provisional():
         participant = Participant.query.filter_by(email=email).first()
 
         if participant and PLACEHOLDER_DOMAIN not in participant.email:
-            participant.name = name
-            if name_kana:
-                participant.name_kana = name_kana
+            # 名前は上書きせず登録済みの情報を保持する
             participant.updated_at = datetime.utcnow()
             matched_how = "email"
-            logger.info(f"既存参加者（メール一致）: {name} ({email})")
+            name = participant.name
+            logger.info(f"既存参加者（メール一致）: {participant.name} ({email})")
 
         elif not participant:
             # ── ステップ3: 氏名で名簿を検索（名寄せ）──
