@@ -25,6 +25,12 @@
   <!-- ========== 入金一覧タブ ========== -->
   <div class="tab-pane fade show active" id="listPane" role="tabpanel">
 
+    <div class="d-flex justify-content-end mb-2">
+      <a href="{{ url_for('admin.payments_export') }}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-download me-1"></i>入金一覧CSVエクスポート
+      </a>
+    </div>
+
     <!-- 集計 -->
     <div class="row g-2 mb-3">
       <div class="col-6 col-md-3">

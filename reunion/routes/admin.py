@@ -375,6 +375,24 @@ def update_memo(participant_id):
     return redirect(url_for("admin.participant_detail", participant_id=participant_id))
 
 
+@admin_bp.route("/participant/<int:participant_id>/clear-responses", methods=["POST"])
+def clear_responses(participant_id):
+    """参加者の回答・入金データを全てクリアして未回答状態に戻す"""
+    from models import ProvisionalResponse, FinalResponse, Payment
+    participant = db.session.get(Participant, participant_id)
+    if participant is None:
+        flash("参加者が見つかりません。", "danger")
+        return redirect(url_for("admin.participants"))
+
+    ProvisionalResponse.query.filter_by(participant_id=participant_id).delete()
+    FinalResponse.query.filter_by(participant_id=participant_id).delete()
+    Payment.query.filter_by(participant_id=participant_id).delete()
+    participant.updated_at = datetime.utcnow()
+    db.session.commit()
+    flash(f"{participant.name} の回答・入金データをクリアしました。", "success")
+    return redirect(url_for("admin.participant_detail", participant_id=participant_id))
+
+
 @admin_bp.route("/participant/<int:participant_id>/update-role", methods=["POST"])
 def update_role(participant_id):
     """役割を更新"""
@@ -1172,6 +1190,52 @@ def payments():
                            total_expected=total_expected,
                            total_paid=total_paid,
                            bank_imports=bank_imports)
+
+
+@admin_bp.route("/payments/export")
+def payments_export():
+    """入金一覧をCSVエクスポート"""
+    from models import Payment
+    payments = (
+        Payment.query
+        .join(Participant, Payment.participant_id == Participant.id)
+        .order_by(Participant.class_name, Participant.student_number)
+        .all()
+    )
+
+    PAY_LABELS = {"unpaid": "未払い", "paid": "支払済み", "partial": "一部支払い"}
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow([
+        "氏名", "氏名（カナ）", "クラス", "出席番号", "役割",
+        "入金ステータス", "入金金額", "支払予定金額", "支払日", "振込名義",
+        "CSV照合", "CSV上の名義", "CSV上の金額", "CSV上の日付",
+    ])
+    for pay in payments:
+        p = pay.participant
+        writer.writerow([
+            p.name,
+            p.name_kana or "",
+            p.class_name or "",
+            p.student_number or "",
+            p.role or "生徒",
+            PAY_LABELS.get(pay.payment_status, pay.payment_status),
+            pay.paid_amount or 0,
+            pay.expected_amount or 0,
+            pay.payment_date.strftime("%Y-%m-%d") if pay.payment_date else "",
+            pay.transfer_name or "",
+            "照合済み" if pay.bank_csv_matched else "未照合",
+            pay.bank_csv_raw_name or "",
+            pay.bank_csv_amount or "",
+            pay.bank_csv_date.strftime("%Y-%m-%d") if pay.bank_csv_date else "",
+        ])
+
+    return Response(
+        "﻿" + output.getvalue(),
+        mimetype="text/csv",
+        headers={"Content-Disposition": "attachment; filename=payments_export.csv"}
+    )
 
 
 @admin_bp.route("/payment/<int:payment_id>/update", methods=["POST"])

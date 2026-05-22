@@ -272,6 +272,23 @@
   </div>
   {% endif %}
 
+  <!-- 回答クリア -->
+  <div class="col-12">
+    <div class="card border-danger">
+      <div class="card-header fw-bold text-danger bg-light">危険な操作</div>
+      <div class="card-body">
+        <p class="text-muted small mb-2">仮出欠・本出欠・入金データを全て削除し、未回答状態に戻します。</p>
+        <form method="POST"
+              action="{{ url_for('admin.clear_responses', participant_id=participant.id) }}"
+              onsubmit="return confirm('{{ participant.name }} の回答・入金データを全てクリアします。この操作は取り消せません。よろしいですか？')">
+          <button type="submit" class="btn btn-outline-danger btn-sm">
+            <i class="bi bi-trash me-1"></i>回答・入金データをクリア
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
 </div>
 
 <!-- メールプレビューモーダル -->
