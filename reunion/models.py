@@ -88,6 +88,7 @@ class ProvisionalResponse(db.Model):
     participant_id = db.Column(db.Integer, db.ForeignKey("participants.id"), nullable=False)
     # status: attending=参加 / not_attending=不参加 / undecided=未定
     status = db.Column(db.String(20), nullable=False, default="undecided")
+    share_consent = db.Column(db.Boolean, default=False)
     submitted_at = db.Column(db.DateTime, default=datetime.utcnow)
     ip_address = db.Column(db.String(50), default="")  # 送信元IPアドレス（簡易ログ用）
 
@@ -124,6 +125,7 @@ class FinalResponse(db.Model):
     payment_expected = db.Column(db.Integer, default=0)        # 支払予定金額（円）
     payment_method = db.Column(db.String(50), default="bank_transfer")  # 支払方法
     remarks = db.Column(db.Text, default="")                   # 備考
+    share_consent = db.Column(db.Boolean, default=False)
     submitted_at = db.Column(db.DateTime, default=datetime.utcnow)
     ip_address = db.Column(db.String(50), default="")
 

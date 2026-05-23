@@ -143,11 +143,11 @@
 
   const CLASS_DATA = [
     {% for cls in sorted_classes %}
-    { label: "{{ cls.label }}", people: [{% for p in cls.people %}{ name: "{{ p.name }}", prov: "{{ p.prov }}", final: "{{ p.final }}" },{% endfor %}] },
+    { label: "{{ cls.label }}", people: [{% for p in cls.people %}{ name: "{{ p.name }}", prov: "{{ p.prov }}", final: "{{ p.final }}", prov_consent: {{ 'true' if p.prov_consent else 'false' }}, final_consent: {{ 'true' if p.final_consent else 'false' }} },{% endfor %}] },
     {% endfor %}
   ];
 
-  const TEACHER_DATA = [{% for p in teachers %}{ name: "{{ p.name }} 先生", prov: "{{ p.prov }}", final: "{{ p.final }}" },{% endfor %}];
+  const TEACHER_DATA = [{% for p in teachers %}{ name: "{{ p.name }} 先生", prov: "{{ p.prov }}", final: "{{ p.final }}", prov_consent: {{ 'true' if p.prov_consent else 'false' }}, final_consent: {{ 'true' if p.final_consent else 'false' }} },{% endfor %}];
 
   let currentType    = 'prov';
   let activeIdx      = null;
@@ -187,9 +187,34 @@
       legend.appendChild(li);
     });
 
-    document.querySelectorAll('.cls-body.show').forEach(b => applyBadges(type, b));
+    // 開いているクラスを再描画（名前表示がconsentで変わるため）
+    clsBtns.forEach((btn, idx) => {
+      const b = document.getElementById('cls-body-' + idx);
+      if (b && b.classList.contains('show')) {
+        const cls = CLASS_DATA[idx];
+        b.innerHTML = cls.people.map(p => {
+          const showName = type === 'prov' ? p.prov_consent : p.final_consent;
+          const displayName = showName ? p.name : '<span class="text-muted">非公開</span>';
+          return `<div class="person-row" data-prov="${p.prov}" data-final="${p.final}">
+            <span class="flex-grow-1">${displayName}</span>
+            <span class="badge person-badge ms-2"></span>
+          </div>`;
+        }).join('');
+        applyBadges(type, b);
+      }
+    });
     const teacherBody = document.getElementById('teacher-body');
-    if (teacherBody) applyBadges(type, teacherBody);
+    if (teacherBody && teacherBody.classList.contains('show')) {
+      teacherBody.innerHTML = TEACHER_DATA.map(p => {
+        const showName = type === 'prov' ? p.prov_consent : p.final_consent;
+        const displayName = showName ? p.name : '<span class="text-muted">非公開</span>';
+        return `<div class="person-row" data-prov="${p.prov}" data-final="${p.final}">
+          <span class="flex-grow-1">${displayName}</span>
+          <span class="badge person-badge ms-2"></span>
+        </div>`;
+      }).join('');
+      applyBadges(type, teacherBody);
+    }
   }
 
   // Class accordion (inline body per class)
@@ -212,12 +237,14 @@
       if (isOpen) return;
 
       const cls = CLASS_DATA[idx];
-      body.innerHTML = cls.people.map(p =>
-        `<div class="person-row" data-prov="${p.prov}" data-final="${p.final}">
-           <span class="flex-grow-1">${p.name}</span>
+      body.innerHTML = cls.people.map(p => {
+        const showName = currentType === 'prov' ? p.prov_consent : p.final_consent;
+        const displayName = showName ? p.name : '<span class="text-muted">非公開</span>';
+        return `<div class="person-row" data-prov="${p.prov}" data-final="${p.final}">
+           <span class="flex-grow-1">${displayName}</span>
            <span class="badge person-badge ms-2"></span>
-         </div>`
-      ).join('');
+         </div>`;
+      }).join('');
       applyBadges(currentType, body);
       body.classList.add('show');
       btn.classList.add('active');
@@ -232,12 +259,14 @@
     teacherBtn.addEventListener('click', function () {
       teacherOpen = !teacherOpen;
       if (teacherOpen) {
-        teacherBody.innerHTML = TEACHER_DATA.map(p =>
-          `<div class="person-row" data-prov="${p.prov}" data-final="${p.final}">
-             <span class="flex-grow-1">${p.name}</span>
+        teacherBody.innerHTML = TEACHER_DATA.map(p => {
+          const showName = currentType === 'prov' ? p.prov_consent : p.final_consent;
+          const displayName = showName ? p.name : '<span class="text-muted">非公開</span>';
+          return `<div class="person-row" data-prov="${p.prov}" data-final="${p.final}">
+             <span class="flex-grow-1">${displayName}</span>
              <span class="badge person-badge ms-2"></span>
-           </div>`
-        ).join('');
+           </div>`;
+        }).join('');
         applyBadges(currentType, teacherBody);
         teacherBody.classList.add('show');
         teacherBtn.classList.add('active');

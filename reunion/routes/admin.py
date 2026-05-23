@@ -360,6 +360,29 @@ def set_final_status(participant_id):
     return redirect(url_for("admin.participant_detail", participant_id=participant_id))
 
 
+@admin_bp.route("/participant/<int:participant_id>/toggle-consent/<response_type>", methods=["POST"])
+def toggle_consent(participant_id, response_type):
+    """仮/本出欠の名前共有同意を切り替え"""
+    participant = db.session.get(Participant, participant_id)
+    if participant is None:
+        flash("参加者が見つかりません。", "danger")
+        return redirect(url_for("admin.participants"))
+    if response_type == "provisional":
+        response = participant.latest_provisional
+    elif response_type == "final":
+        response = participant.latest_final
+    else:
+        response = None
+    if response is None:
+        flash("回答が見つかりません。", "danger")
+        return redirect(url_for("admin.participant_detail", participant_id=participant_id))
+    response.share_consent = not response.share_consent
+    db.session.commit()
+    label = "名前の共有を許可しました。" if response.share_consent else "共有許可を取り消しました。"
+    flash(label, "success")
+    return redirect(url_for("admin.participant_detail", participant_id=participant_id))
+
+
 @admin_bp.route("/participant/<int:participant_id>/memo", methods=["POST"])
 def update_memo(participant_id):
     """幹事メモを更新"""
