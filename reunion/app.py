@@ -115,8 +115,8 @@ def create_app():
         from models import Participant
 
         def _class_label(cls):
-            if cls and len(cls) >= 2 and cls.isdigit():
-                return f"{cls[0]}年{cls[1]}組"
+            if cls and cls.isdigit():
+                return f"{cls}組"
             return cls or "不明"
 
         TEACHER_ROLES = {"教師", "学年主任", "副担任"}
