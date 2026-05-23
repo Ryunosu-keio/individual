@@ -140,11 +140,12 @@ def create_app():
             prov_stats[ps]  = prov_stats.get(ps, 0)  + 1
             final_stats[fs] = final_stats.get(fs, 0) + 1
 
-            info = {"name": p.name, "prov": ps, "final": fs,
+            is_teacher = p.role in TEACHER_ROLES
+            info = {"name": p.name + (" 先生" if is_teacher else ""), "prov": ps, "final": fs,
                     "prov_consent": prov_consent, "final_consent": final_consent,
                     "prov_at": prov.submitted_at.isoformat() if prov else None,
                     "final_at": final.submitted_at.isoformat() if final else None}
-            if p.role in TEACHER_ROLES:
+            if is_teacher:
                 teachers.append(info)
             else:
                 cls = p.class_name or ""

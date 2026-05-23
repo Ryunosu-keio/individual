@@ -107,8 +107,8 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 <script>
 (function () {
-  const PROV  = { attending: {{ prov_stats.attending }}, not_attending: {{ prov_stats.not_attending }}, undecided: {{ prov_stats.undecided }}, no_response: {{ prov_stats.no_response }} };
-  const FINAL = { attending: {{ final_stats.attending }}, not_attending: {{ final_stats.not_attending }}, no_response: {{ final_stats.no_response }} };
+  const PROV  = {{ prov_stats  | tojson }};
+  const FINAL = {{ final_stats | tojson }};
 
   const CFG = {
     prov: {
@@ -141,13 +141,8 @@
     },
   };
 
-  const CLASS_DATA = [
-    {% for cls in sorted_classes %}
-    { label: "{{ cls.label }}", people: [{% for p in cls.people %}{ name: "{{ p.name }}", prov: "{{ p.prov }}", final: "{{ p.final }}", prov_consent: {{ 'true' if p.prov_consent else 'false' }}, final_consent: {{ 'true' if p.final_consent else 'false' }}, prov_at: {{ ('"' ~ p.prov_at ~ '"') if p.prov_at else 'null' }}, final_at: {{ ('"' ~ p.final_at ~ '"') if p.final_at else 'null' }} },{% endfor %}] },
-    {% endfor %}
-  ];
-
-  const TEACHER_DATA = [{% for p in teachers %}{ name: "{{ p.name }} 先生", prov: "{{ p.prov }}", final: "{{ p.final }}", prov_consent: {{ 'true' if p.prov_consent else 'false' }}, final_consent: {{ 'true' if p.final_consent else 'false' }}, prov_at: {{ ('"' ~ p.prov_at ~ '"') if p.prov_at else 'null' }}, final_at: {{ ('"' ~ p.final_at ~ '"') if p.final_at else 'null' }} },{% endfor %}];
+  const CLASS_DATA   = {{ sorted_classes | tojson }};
+  const TEACHER_DATA = {{ teachers       | tojson }};
 
   function sortByResponse(people, type) {
     return [...people].sort((a, b) => {
