@@ -367,18 +367,19 @@ def toggle_consent(participant_id, response_type):
     if participant is None:
         flash("参加者が見つかりません。", "danger")
         return redirect(url_for("admin.participants"))
-    if response_type == "provisional":
-        response = participant.latest_provisional
-    elif response_type == "final":
-        response = participant.latest_final
-    else:
-        response = None
-    if response is None:
+    prov  = participant.latest_provisional
+    final = participant.latest_final
+    if prov is None and final is None:
         flash("回答が見つかりません。", "danger")
         return redirect(url_for("admin.participant_detail", participant_id=participant_id))
-    response.share_consent = not response.share_consent
+    current = bool(prov.share_consent if prov else False) or bool(final.share_consent if final else False)
+    new_val = not current
+    if prov:
+        prov.share_consent = new_val
+    if final:
+        final.share_consent = new_val
     db.session.commit()
-    label = "名前の共有を許可しました。" if response.share_consent else "共有許可を取り消しました。"
+    label = "名前の共有を許可しました。" if new_val else "共有許可を取り消しました。"
     flash(label, "success")
     return redirect(url_for("admin.participant_detail", participant_id=participant_id))
 
