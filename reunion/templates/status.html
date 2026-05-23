@@ -143,11 +143,21 @@
 
   const CLASS_DATA = [
     {% for cls in sorted_classes %}
-    { label: "{{ cls.label }}", people: [{% for p in cls.people %}{ name: "{{ p.name }}", prov: "{{ p.prov }}", final: "{{ p.final }}", prov_consent: {{ 'true' if p.prov_consent else 'false' }}, final_consent: {{ 'true' if p.final_consent else 'false' }} },{% endfor %}] },
+    { label: "{{ cls.label }}", people: [{% for p in cls.people %}{ name: "{{ p.name }}", prov: "{{ p.prov }}", final: "{{ p.final }}", prov_consent: {{ 'true' if p.prov_consent else 'false' }}, final_consent: {{ 'true' if p.final_consent else 'false' }}, prov_at: {{ ('"' ~ p.prov_at ~ '"') if p.prov_at else 'null' }}, final_at: {{ ('"' ~ p.final_at ~ '"') if p.final_at else 'null' }} },{% endfor %}] },
     {% endfor %}
   ];
 
-  const TEACHER_DATA = [{% for p in teachers %}{ name: "{{ p.name }} 先生", prov: "{{ p.prov }}", final: "{{ p.final }}", prov_consent: {{ 'true' if p.prov_consent else 'false' }}, final_consent: {{ 'true' if p.final_consent else 'false' }} },{% endfor %}];
+  const TEACHER_DATA = [{% for p in teachers %}{ name: "{{ p.name }} 先生", prov: "{{ p.prov }}", final: "{{ p.final }}", prov_consent: {{ 'true' if p.prov_consent else 'false' }}, final_consent: {{ 'true' if p.final_consent else 'false' }}, prov_at: {{ ('"' ~ p.prov_at ~ '"') if p.prov_at else 'null' }}, final_at: {{ ('"' ~ p.final_at ~ '"') if p.final_at else 'null' }} },{% endfor %}];
+
+  function sortByResponse(people, type) {
+    return [...people].sort((a, b) => {
+      const ta = a[type + '_at'], tb = b[type + '_at'];
+      if (ta && tb) return ta < tb ? -1 : 1;
+      if (ta) return -1;
+      if (tb) return 1;
+      return 0;
+    });
+  }
 
   let currentType    = 'prov';
   let activeIdx      = null;
@@ -192,7 +202,7 @@
       const b = document.getElementById('cls-body-' + idx);
       if (b && b.classList.contains('show')) {
         const cls = CLASS_DATA[idx];
-        b.innerHTML = cls.people.map(p => {
+        b.innerHTML = sortByResponse(cls.people, type).map(p => {
           const showName = type === 'prov' ? p.prov_consent : p.final_consent;
           const displayName = showName ? p.name : '<span class="text-muted">非公開</span>';
           return `<div class="person-row" data-prov="${p.prov}" data-final="${p.final}">
@@ -205,7 +215,7 @@
     });
     const teacherBody = document.getElementById('teacher-body');
     if (teacherBody && teacherBody.classList.contains('show')) {
-      teacherBody.innerHTML = TEACHER_DATA.map(p => {
+      teacherBody.innerHTML = sortByResponse(TEACHER_DATA, currentType).map(p => {
         const showName = type === 'prov' ? p.prov_consent : p.final_consent;
         const displayName = showName ? p.name : '<span class="text-muted">非公開</span>';
         return `<div class="person-row" data-prov="${p.prov}" data-final="${p.final}">
@@ -237,7 +247,7 @@
       if (isOpen) return;
 
       const cls = CLASS_DATA[idx];
-      body.innerHTML = cls.people.map(p => {
+      body.innerHTML = sortByResponse(cls.people, currentType).map(p => {
         const showName = currentType === 'prov' ? p.prov_consent : p.final_consent;
         const displayName = showName ? p.name : '<span class="text-muted">非公開</span>';
         return `<div class="person-row" data-prov="${p.prov}" data-final="${p.final}">
@@ -259,7 +269,7 @@
     teacherBtn.addEventListener('click', function () {
       teacherOpen = !teacherOpen;
       if (teacherOpen) {
-        teacherBody.innerHTML = TEACHER_DATA.map(p => {
+        teacherBody.innerHTML = sortByResponse(TEACHER_DATA, currentType).map(p => {
           const showName = currentType === 'prov' ? p.prov_consent : p.final_consent;
           const displayName = showName ? p.name : '<span class="text-muted">非公開</span>';
           return `<div class="person-row" data-prov="${p.prov}" data-final="${p.final}">

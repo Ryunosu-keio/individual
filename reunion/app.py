@@ -141,7 +141,9 @@ def create_app():
             final_stats[fs] = final_stats.get(fs, 0) + 1
 
             info = {"name": p.name, "prov": ps, "final": fs,
-                    "prov_consent": prov_consent, "final_consent": final_consent}
+                    "prov_consent": prov_consent, "final_consent": final_consent,
+                    "prov_at": prov.submitted_at.isoformat() if prov else None,
+                    "final_at": final.submitted_at.isoformat() if final else None}
             if p.role in TEACHER_ROLES:
                 teachers.append(info)
             else:
