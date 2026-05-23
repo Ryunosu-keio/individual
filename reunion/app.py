@@ -113,52 +113,48 @@ def create_app():
     def status():
         from flask import render_template
         from models import Participant
-        participants = Participant.query.all()
 
-        prov_attending, prov_not_attending, prov_undecided, prov_no_response = [], [], [], []
-        final_attending, final_not_attending, final_no_response = [], [], []
+        def _class_label(cls):
+            if cls and len(cls) >= 2 and cls.isdigit():
+                return f"{cls[0]}年{cls[1]}組"
+            return cls or "不明"
+
+        TEACHER_ROLES = {"教師", "学年主任", "副担任"}
+
+        participants = Participant.query.all()
+        prov_stats  = {"attending": 0, "not_attending": 0, "undecided": 0, "no_response": 0}
+        final_stats = {"attending": 0, "not_attending": 0, "no_response": 0}
+        student_map = {}
+        teachers    = []
 
         for p in participants:
-            prov = p.latest_provisional
+            prov  = p.latest_provisional
             final = p.latest_final
-            if prov:
-                if prov.status == "attending":
-                    prov_attending.append(p.name)
-                elif prov.status == "not_attending":
-                    prov_not_attending.append(p.name)
-                else:
-                    prov_undecided.append(p.name)
-            else:
-                prov_no_response.append(p.name)
+            ps = prov.status  if prov  else "no_response"
+            fs = (final.status if final.status != "cancelled" else "not_attending") if final else "no_response"
 
-            if final:
-                if final.status == "attending":
-                    final_attending.append(p.name)
-                else:
-                    final_not_attending.append(p.name)
-            else:
-                final_no_response.append(p.name)
+            prov_stats[ps]  = prov_stats.get(ps, 0)  + 1
+            final_stats[fs] = final_stats.get(fs, 0) + 1
 
-        stats = {
-            "total": len(participants),
-            "prov_attending": len(prov_attending),
-            "prov_not_attending": len(prov_not_attending),
-            "prov_undecided": len(prov_undecided),
-            "prov_no_response": len(prov_no_response),
-            "final_attending": len(final_attending),
-            "final_not_attending": len(final_not_attending),
-            "final_no_response": len(final_no_response),
-        }
-        breakdown = {
-            "prov_attending": prov_attending,
-            "prov_not_attending": prov_not_attending,
-            "prov_undecided": prov_undecided,
-            "prov_no_response": prov_no_response,
-            "final_attending": final_attending,
-            "final_not_attending": final_not_attending,
-            "final_no_response": final_no_response,
-        }
-        return render_template("status.html", stats=stats, breakdown=breakdown)
+            info = {"name": p.name, "prov": ps, "final": fs}
+            if p.role in TEACHER_ROLES:
+                teachers.append(info)
+            else:
+                cls = p.class_name or ""
+                student_map.setdefault(cls, []).append(info)
+
+        sorted_classes = [
+            {"key": cls, "label": _class_label(cls), "people": people}
+            for cls, people in sorted(student_map.items(), key=lambda x: (not x[0], x[0]))
+        ]
+
+        return render_template("status.html",
+            prov_stats=prov_stats,
+            final_stats=final_stats,
+            sorted_classes=sorted_classes,
+            teachers=teachers,
+            total=len(participants),
+        )
 
     # -----------------------------------------------
     # エラーハンドラ
