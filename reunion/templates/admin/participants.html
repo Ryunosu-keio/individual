@@ -361,6 +361,7 @@
     var csvTab = document.getElementById('csv-tab');
     if (csvTab) new bootstrap.Tab(csvTab).show();
   }
+  sessionStorage.setItem('participantListUrl', location.href);
 })();
 </script>
 {% endblock %}

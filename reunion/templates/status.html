@@ -154,6 +154,19 @@
     });
   }
 
+  function makeRows(people, type) {
+    return sortByResponse(people, type)
+      .filter(p => p[type] !== 'no_response')
+      .map(p => {
+        const showName = type === 'prov' ? p.prov_consent : p.final_consent;
+        const displayName = showName ? p.name : '<span class="text-muted">非公開</span>';
+        return `<div class="person-row" data-prov="${p.prov}" data-final="${p.final}">
+          <span class="flex-grow-1">${displayName}</span>
+          <span class="badge person-badge ms-2"></span>
+        </div>`;
+      }).join('');
+  }
+
   let currentType    = 'prov';
   let activeIdx      = null;
   let teacherOpen    = false;
@@ -197,27 +210,13 @@
       const b = document.getElementById('cls-body-' + idx);
       if (b && b.classList.contains('show')) {
         const cls = CLASS_DATA[idx];
-        b.innerHTML = sortByResponse(cls.people, type).map(p => {
-          const showName = type === 'prov' ? p.prov_consent : p.final_consent;
-          const displayName = showName ? p.name : '<span class="text-muted">非公開</span>';
-          return `<div class="person-row" data-prov="${p.prov}" data-final="${p.final}">
-            <span class="flex-grow-1">${displayName}</span>
-            <span class="badge person-badge ms-2"></span>
-          </div>`;
-        }).join('');
+        b.innerHTML = makeRows(cls.people, type);
         applyBadges(type, b);
       }
     });
     const teacherBody = document.getElementById('teacher-body');
     if (teacherBody && teacherBody.classList.contains('show')) {
-      teacherBody.innerHTML = sortByResponse(TEACHER_DATA, currentType).map(p => {
-        const showName = type === 'prov' ? p.prov_consent : p.final_consent;
-        const displayName = showName ? p.name : '<span class="text-muted">非公開</span>';
-        return `<div class="person-row" data-prov="${p.prov}" data-final="${p.final}">
-          <span class="flex-grow-1">${displayName}</span>
-          <span class="badge person-badge ms-2"></span>
-        </div>`;
-      }).join('');
+      teacherBody.innerHTML = makeRows(TEACHER_DATA, type);
       applyBadges(type, teacherBody);
     }
   }
@@ -242,18 +241,11 @@
       if (isOpen) return;
 
       const cls = CLASS_DATA[idx];
-      body.innerHTML = sortByResponse(cls.people, currentType).map(p => {
-        const showName = currentType === 'prov' ? p.prov_consent : p.final_consent;
-        const displayName = showName ? p.name : '<span class="text-muted">非公開</span>';
-        return `<div class="person-row" data-prov="${p.prov}" data-final="${p.final}">
-           <span class="flex-grow-1">${displayName}</span>
-           <span class="badge person-badge ms-2"></span>
-         </div>`;
-      }).join('');
+      body.innerHTML = makeRows(cls.people, currentType);
       applyBadges(currentType, body);
       body.classList.add('show');
       btn.classList.add('active');
-      setTimeout(() => body.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50);
+      setTimeout(() => btn.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50);
     });
   });
 
@@ -264,18 +256,11 @@
     teacherBtn.addEventListener('click', function () {
       teacherOpen = !teacherOpen;
       if (teacherOpen) {
-        teacherBody.innerHTML = sortByResponse(TEACHER_DATA, currentType).map(p => {
-          const showName = currentType === 'prov' ? p.prov_consent : p.final_consent;
-          const displayName = showName ? p.name : '<span class="text-muted">非公開</span>';
-          return `<div class="person-row" data-prov="${p.prov}" data-final="${p.final}">
-             <span class="flex-grow-1">${displayName}</span>
-             <span class="badge person-badge ms-2"></span>
-           </div>`;
-        }).join('');
+        teacherBody.innerHTML = makeRows(TEACHER_DATA, currentType);
         applyBadges(currentType, teacherBody);
         teacherBody.classList.add('show');
         teacherBtn.classList.add('active');
-        setTimeout(() => teacherBody.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50);
+        setTimeout(() => teacherBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50);
       } else {
         teacherBody.classList.remove('show');
         teacherBtn.classList.remove('active');
