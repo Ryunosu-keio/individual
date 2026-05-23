@@ -525,11 +525,16 @@
                 </div>
 
                 <div class="mb-3 p-3 rounded" style="background:#f8f9fa; border:1px solid #dee2e6;">
-                  <div class="form-check">
-                    <input class="form-check-input" type="checkbox" name="share_consent" id="share_consent" value="1">
-                    <label class="form-check-label small" for="share_consent">
-                      回答内容を名前とともに参加者に共有することを許可する
-                    </label>
+                  <p class="small mb-2 fw-bold">回答内容を名前とともに参加者に共有することを許可しますか？<span class="text-danger ms-1">*</span></p>
+                  <div class="d-flex gap-3">
+                    <div class="form-check">
+                      <input class="form-check-input" type="radio" name="share_consent" id="consent_yes" value="1" required>
+                      <label class="form-check-label" for="consent_yes">はい</label>
+                    </div>
+                    <div class="form-check">
+                      <input class="form-check-input" type="radio" name="share_consent" id="consent_no" value="0">
+                      <label class="form-check-label" for="consent_no">いいえ</label>
+                    </div>
                   </div>
                 </div>
                 <div class="d-grid">
