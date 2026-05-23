@@ -9,7 +9,20 @@
       "Bash(./venv/Scripts/python -c ':*)",
       "Bash(python3 -c ':*)",
       "Bash(python *)",
-      "Bash(git add *)"
+      "Bash(git add *)",
+      "Bash(git fetch *)",
+      "Bash(git restore *)",
+      "Bash(git pull *)",
+      "Bash(git checkout *)",
+      "Bash(pip show *)",
+      "Bash(python3 -c \"import flask; print\\('flask ok'\\)\")",
+      "Bash(python3 -m pip show flask)",
+      "Bash(python3 -c ' *)",
+      "Bash(python3 -m venv venv)",
+      "Bash(venv/bin/pip install *)",
+      "Bash(venv/bin/python -c ' *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)"
     ]
   }
 }
