@@ -13,27 +13,37 @@
       transform: translate(-50%, -50%);
       text-align: center; pointer-events: none;
     }
-    .chart-center .num  { font-size: 1.6rem; font-weight: 700; line-height: 1; }
-    .chart-center .lbl  { font-size: 0.65rem; color: #6c757d; }
+    .chart-center .num { font-size: 1.6rem; font-weight: 700; line-height: 1; }
+    .chart-center .lbl { font-size: 0.65rem; color: #6c757d; }
     .legend-list { list-style: none; padding: 0; margin: 0.6rem 0 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 14px; }
     .legend-list li { display: flex; align-items: center; gap: 5px; font-size: 0.82rem; }
     .legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
     .legend-val { font-weight: 600; }
-    .acc-btn {
-      background: #fff; border: none; border-radius: 10px;
-      width: 100%; display: flex; align-items: center;
-      padding: 10px 14px; font-size: 0.9rem; font-weight: 600;
-      box-shadow: 0 1px 4px rgba(0,0,0,.08);
-      cursor: pointer; transition: background 0.15s;
+
+    .cls-btn {
+      background: #fff; border: 1px solid #e0e0e0; border-radius: 10px;
+      width: 100%; padding: 10px 8px; font-size: 0.85rem; font-weight: 600;
+      display: flex; flex-direction: column; align-items: center; gap: 2px;
+      cursor: pointer; transition: background 0.15s, border-color 0.15s;
+      text-align: center;
     }
-    .acc-btn:hover { background: #f0f0f0; }
-    .acc-btn .arrow { margin-left: auto; transition: transform 0.2s; font-size: 0.75rem; color: #aaa; }
-    .acc-btn.open .arrow { transform: rotate(90deg); }
-    .acc-body { display: none; background: #fff; border-radius: 0 0 10px 10px; padding: 4px 0 8px; margin-top: -4px; box-shadow: 0 2px 4px rgba(0,0,0,.06); }
-    .acc-body.show { display: block; }
-    .person-row { display: flex; align-items: center; padding: 6px 14px; border-bottom: 1px solid #f0f0f0; font-size: 0.875rem; }
+    .cls-btn:hover { background: #f0f0f5; }
+    .cls-btn.active { background: #e8f0fe; border-color: #0d6efd; color: #0d6efd; }
+    .cls-btn .cnt { font-size: 0.72rem; color: #888; font-weight: 400; }
+    .cls-btn.active .cnt { color: #6ea0ff; }
+
+    .cls-body {
+      display: none; background: #fff; border-radius: 10px;
+      box-shadow: 0 2px 6px rgba(0,0,0,.08); overflow: hidden;
+    }
+    .cls-body.show { display: block; }
+
+    .person-row { display: flex; align-items: center; padding: 7px 14px; border-bottom: 1px solid #f0f0f0; font-size: 0.875rem; }
     .person-row:last-child { border-bottom: none; }
+
     .section-label { font-size: 0.78rem; font-weight: 700; color: #6c757d; letter-spacing: .05em; margin: 16px 0 6px; }
+
+    .teacher-card { background: #fff; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,.08); overflow: hidden; }
   </style>
 </head>
 <body>
@@ -66,48 +76,33 @@
   <!-- Students -->
   {% if sorted_classes %}
   <div class="section-label">生徒</div>
-  <div class="d-flex flex-column gap-2" id="acc-students">
+  <div class="row g-2 mb-2">
     {% for cls in sorted_classes %}
-    <div class="acc-item">
-      <button class="acc-btn" data-target="cls-{{ loop.index }}">
+    <div class="col-6">
+      <button class="cls-btn" data-cls-idx="{{ loop.index0 }}">
         <span>{{ cls.label }}</span>
-        <span class="ms-2 text-muted fw-normal small cls-count" data-key="{{ cls.key }}">{{ cls.people|length }}名</span>
-        <span class="arrow">▶</span>
+        <span class="cnt">{{ cls.people|length }}名</span>
       </button>
-      <div class="acc-body" id="cls-{{ loop.index }}">
-        {% for p in cls.people %}
-        <div class="person-row" data-prov="{{ p.prov }}" data-final="{{ p.final }}">
-          <span class="flex-grow-1">{{ p.name }}</span>
-          <span class="badge person-badge ms-2"></span>
-        </div>
-        {% endfor %}
-      </div>
     </div>
     {% endfor %}
   </div>
+  <div class="cls-body mb-3" id="cls-body"></div>
   {% endif %}
 
   <!-- Teachers -->
   {% if teachers %}
   <div class="section-label">先生</div>
-  <div class="acc-item">
-    <button class="acc-btn" data-target="cls-teachers">
-      <span>先生・その他</span>
-      <span class="ms-2 text-muted fw-normal small">{{ teachers|length }}名</span>
-      <span class="arrow">▶</span>
-    </button>
-    <div class="acc-body" id="cls-teachers">
-      {% for p in teachers %}
-      <div class="person-row" data-prov="{{ p.prov }}" data-final="{{ p.final }}">
-        <span class="flex-grow-1">{{ p.name }}</span>
-        <span class="badge person-badge ms-2"></span>
-      </div>
-      {% endfor %}
+  <div class="teacher-card mb-4">
+    {% for p in teachers %}
+    <div class="person-row" data-prov="{{ p.prov }}" data-final="{{ p.final }}">
+      <span class="flex-grow-1">{{ p.name }}</span>
+      <span class="badge person-badge ms-2"></span>
     </div>
+    {% endfor %}
   </div>
   {% endif %}
 
-  <p class="text-center text-muted mt-4" style="font-size:0.75rem;">このページは閲覧専用です</p>
+  <p class="text-center text-muted mt-2" style="font-size:0.75rem;">このページは閲覧専用です</p>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
@@ -147,6 +142,15 @@
     },
   };
 
+  const CLASS_DATA = [
+    {% for cls in sorted_classes %}
+    { label: "{{ cls.label }}", people: [{% for p in cls.people %}{ name: "{{ p.name }}", prov: "{{ p.prov }}", final: "{{ p.final }}" },{% endfor %}] },
+    {% endfor %}
+  ];
+
+  let currentType = 'prov';
+  let activeIdx   = null;
+
   // Chart
   const chart = new Chart(document.getElementById('chart'), {
     type: 'doughnut',
@@ -154,11 +158,23 @@
     options: { cutout: '65%', responsive: true, maintainAspectRatio: true, plugins: { legend: { display: false } } },
   });
 
+  function applyBadges(type, container) {
+    container.querySelectorAll('.person-row').forEach(row => {
+      const st = row.dataset[type] || 'no_response';
+      const [cls, lbl] = CFG[type].badge[st] || CFG[type].badge['no_response'];
+      const b = row.querySelector('.person-badge');
+      b.className = 'badge person-badge ms-2 ' + cls;
+      b.textContent = lbl;
+    });
+  }
+
   function update(type) {
+    currentType = type;
     const cfg = CFG[type];
-    chart.data.labels                        = cfg.segs.map(s => s.label);
-    chart.data.datasets[0].data             = cfg.segs.map(s => cfg.data[s.key] || 0);
-    chart.data.datasets[0].backgroundColor  = cfg.segs.map(s => s.color);
+
+    chart.data.labels                       = cfg.segs.map(s => s.label);
+    chart.data.datasets[0].data            = cfg.segs.map(s => cfg.data[s.key] || 0);
+    chart.data.datasets[0].backgroundColor = cfg.segs.map(s => s.color);
     chart.update();
 
     const legend = document.getElementById('legend');
@@ -169,21 +185,40 @@
       legend.appendChild(li);
     });
 
-    document.querySelectorAll('.person-row').forEach(row => {
-      const st  = row.dataset[type] || 'no_response';
-      const [cls, lbl] = cfg.badge[st] || cfg.badge['no_response'];
-      const badge = row.querySelector('.person-badge');
-      badge.className = 'badge person-badge ms-2 ' + cls;
-      badge.textContent = lbl;
-    });
+    // Re-apply badges in open class body and teachers
+    const clsBody = document.getElementById('cls-body');
+    if (clsBody) applyBadges(type, clsBody);
+    applyBadges(type, document.body);
   }
 
-  // Accordion
-  document.querySelectorAll('.acc-btn').forEach(btn => {
+  // Class accordion (shared body)
+  const clsBody  = document.getElementById('cls-body');
+  const clsBtns  = document.querySelectorAll('.cls-btn');
+
+  clsBtns.forEach((btn, idx) => {
     btn.addEventListener('click', function () {
-      const body = document.getElementById(this.dataset.target);
-      const open = body.classList.toggle('show');
-      this.classList.toggle('open', open);
+      if (activeIdx === idx) {
+        clsBody.classList.remove('show');
+        btn.classList.remove('active');
+        activeIdx = null;
+        return;
+      }
+      clsBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      activeIdx = idx;
+
+      const cls = CLASS_DATA[idx];
+      clsBody.innerHTML = cls.people.map(p =>
+        `<div class="person-row" data-prov="${p.prov}" data-final="${p.final}">
+           <span class="flex-grow-1">${p.name}</span>
+           <span class="badge person-badge ms-2"></span>
+         </div>`
+      ).join('');
+      applyBadges(currentType, clsBody);
+      clsBody.classList.add('show');
+
+      // scroll to body
+      setTimeout(() => clsBody.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50);
     });
   });
 
