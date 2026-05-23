@@ -7,13 +7,42 @@
     <a id="back-link" href="{{ url_for('admin.participants') }}" class="text-decoration-none text-muted me-2">
       <i class="bi bi-chevron-left"></i>
     </a>
-    <script>
-      var saved = sessionStorage.getItem('participantListUrl');
-      if (saved) document.getElementById('back-link').href = saved;
-    </script>
     {{ participant.display_name }} さんの詳細
   </h4>
+  <div class="d-flex gap-1" id="nav-btns"></div>
 </div>
+<script>
+(function() {
+  var saved = sessionStorage.getItem('participantListUrl');
+  if (saved) document.getElementById('back-link').href = saved;
+
+  var ids = JSON.parse(sessionStorage.getItem('participantListIds') || 'null');
+  var currentId = {{ participant.id }};
+  if (ids) {
+    var idx = ids.indexOf(currentId);
+    var container = document.getElementById('nav-btns');
+    var baseUrl = '{{ url_for("admin.participant_detail", participant_id=0) }}'.replace('/0', '/');
+    if (idx > 0) {
+      var a = document.createElement('a');
+      a.href = baseUrl + ids[idx - 1];
+      a.className = 'btn btn-outline-secondary btn-sm';
+      a.innerHTML = '<i class="bi bi-chevron-left"></i> 前';
+      container.appendChild(a);
+    }
+    var pos = document.createElement('span');
+    pos.className = 'btn btn-sm disabled text-muted';
+    pos.textContent = (idx + 1) + ' / ' + ids.length;
+    container.appendChild(pos);
+    if (idx < ids.length - 1) {
+      var b = document.createElement('a');
+      b.href = baseUrl + ids[idx + 1];
+      b.className = 'btn btn-outline-secondary btn-sm';
+      b.innerHTML = '次 <i class="bi bi-chevron-right"></i>';
+      container.appendChild(b);
+    }
+  }
+})();
+</script>
 
 <div class="row g-3">
 

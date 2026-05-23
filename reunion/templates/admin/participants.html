@@ -362,6 +362,8 @@
     if (csvTab) new bootstrap.Tab(csvTab).show();
   }
   sessionStorage.setItem('participantListUrl', location.href);
+  var ids = [{% for p in participants %}{{ p.id }}{% if not loop.last %},{% endif %}{% endfor %}];
+  sessionStorage.setItem('participantListIds', JSON.stringify(ids));
 })();
 </script>
 {% endblock %}
