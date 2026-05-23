@@ -21,6 +21,8 @@ def _migrate(db):
         ("final_responses", "bank_name",      "VARCHAR(100) DEFAULT ''"),
         ("final_responses", "branch_name",    "VARCHAR(100) DEFAULT ''"),
         ("final_responses", "account_number", "VARCHAR(50) DEFAULT ''"),
+        ("provisional_responses", "share_consent", "BOOLEAN DEFAULT 0"),
+        ("final_responses",       "share_consent", "BOOLEAN DEFAULT 0"),
     ]
     with db.engine.connect() as conn:
         for table, column, col_def in migrations:
@@ -132,11 +134,14 @@ def create_app():
             final = p.latest_final
             ps = prov.status  if prov  else "no_response"
             fs = (final.status if final.status != "cancelled" else "not_attending") if final else "no_response"
+            prov_consent  = bool(prov.share_consent)  if prov  else False
+            final_consent = bool(final.share_consent) if final else False
 
             prov_stats[ps]  = prov_stats.get(ps, 0)  + 1
             final_stats[fs] = final_stats.get(fs, 0) + 1
 
-            info = {"name": p.name, "prov": ps, "final": fs}
+            info = {"name": p.name, "prov": ps, "final": fs,
+                    "prov_consent": prov_consent, "final_consent": final_consent}
             if p.role in TEACHER_ROLES:
                 teachers.append(info)
             else:

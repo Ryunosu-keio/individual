@@ -206,10 +206,13 @@ def provisional():
                 matched_how = "new"
                 logger.info(f"新規参加者登録: {name} ({email})")
 
+    share_consent = request.form.get("share_consent") == "1"
+
     # 仮出欠回答を追加
     response = ProvisionalResponse(
         participant_id=participant.id,
         status=status,
+        share_consent=share_consent,
         submitted_at=datetime.utcnow(),
         ip_address=request.remote_addr or "",
     )
@@ -387,6 +390,8 @@ def final(token):
     except ValueError:
         payment_expected = 0
 
+    share_consent = request.form.get("share_consent") == "1"
+
     response = FinalResponse(
         participant_id=participant.id,
         status=status,
@@ -395,6 +400,7 @@ def final(token):
         payment_expected=payment_expected,
         payment_method="bank_transfer",
         remarks=remarks,
+        share_consent=share_consent,
         submitted_at=datetime.utcnow(),
         ip_address=request.remote_addr or "",
     )
