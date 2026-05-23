@@ -109,6 +109,57 @@ def create_app():
     def index():
         return redirect(url_for("admin.index"))
 
+    @app.route("/status")
+    def status():
+        from flask import render_template
+        from models import Participant
+        participants = Participant.query.all()
+
+        prov_attending, prov_not_attending, prov_undecided, prov_no_response = [], [], [], []
+        final_attending, final_not_attending, final_no_response = [], [], []
+
+        for p in participants:
+            prov = p.latest_provisional
+            final = p.latest_final
+            if prov:
+                if prov.status == "attending":
+                    prov_attending.append(p.name)
+                elif prov.status == "not_attending":
+                    prov_not_attending.append(p.name)
+                else:
+                    prov_undecided.append(p.name)
+            else:
+                prov_no_response.append(p.name)
+
+            if final:
+                if final.status == "attending":
+                    final_attending.append(p.name)
+                else:
+                    final_not_attending.append(p.name)
+            else:
+                final_no_response.append(p.name)
+
+        stats = {
+            "total": len(participants),
+            "prov_attending": len(prov_attending),
+            "prov_not_attending": len(prov_not_attending),
+            "prov_undecided": len(prov_undecided),
+            "prov_no_response": len(prov_no_response),
+            "final_attending": len(final_attending),
+            "final_not_attending": len(final_not_attending),
+            "final_no_response": len(final_no_response),
+        }
+        breakdown = {
+            "prov_attending": prov_attending,
+            "prov_not_attending": prov_not_attending,
+            "prov_undecided": prov_undecided,
+            "prov_no_response": prov_no_response,
+            "final_attending": final_attending,
+            "final_not_attending": final_not_attending,
+            "final_no_response": final_no_response,
+        }
+        return render_template("status.html", stats=stats, breakdown=breakdown)
+
     # -----------------------------------------------
     # エラーハンドラ
     # -----------------------------------------------

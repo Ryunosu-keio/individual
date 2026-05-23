@@ -103,6 +103,10 @@ MAIL_DEFAULTS = {
         "内容を変更する場合は、下記URLから再度ご回答ください。\n"
         "{provisional_url}\n\n"
         "※同じメールアドレスで再送信すると回答が更新されます。\n\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        "■ みんなの参加状況\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        "{status_url}\n\n"
         "後日、本出欠フォームのURLを別途お送りいたします。\n"
         "引き続きよろしくお願いいたします。\n\n"
         "──────────────────\n"
@@ -130,6 +134,10 @@ MAIL_DEFAULTS = {
         "内容を変更する場合は、下記URLから再度ご回答ください。\n"
         "{provisional_url}\n\n"
         "※同じメールアドレスで再送信すると回答が更新されます。\n\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        "■ みんなの参加状況\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        "{status_url}\n\n"
         "引き続きよろしくお願いいたします。\n\n"
         "──────────────────\n"
         "{reunion_name} 幹事代表 {organizer_name}"
@@ -156,6 +164,10 @@ MAIL_DEFAULTS = {
         "内容を変更する場合は、下記URLから再度ご回答ください。\n"
         "{provisional_url}\n\n"
         "※同じメールアドレスで再送信すると回答が更新されます。\n\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        "■ みんなの参加状況\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        "{status_url}\n\n"
         "後日、本出欠フォームのURLを別途お送りいたします。\n"
         "引き続きよろしくお願いいたします。\n\n"
         "──────────────────\n"
@@ -307,6 +319,10 @@ MAIL_DEFAULTS = {
         "会費　: {reunion_fee}円\n\n"
         "内容を変更する場合は、下記URLから再度ご回答ください。\n"
         "{provisional_url}\n\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        "■ みんなの参加状況\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        "{status_url}\n\n"
         "後日、本出欠フォームのURLを別途お送りいたします。\n"
         "引き続きよろしくお願いいたします。\n\n"
         "──────────────────\n"
@@ -333,6 +349,10 @@ MAIL_DEFAULTS = {
         "会費　: {reunion_fee}円\n\n"
         "内容を変更する場合は、下記URLから再度ご回答ください。\n"
         "{provisional_url}\n\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        "■ みんなの参加状況\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        "{status_url}\n\n"
         "引き続きよろしくお願いいたします。\n\n"
         "──────────────────\n"
         "{reunion_name} 幹事代表 {organizer_name}"
@@ -358,6 +378,10 @@ MAIL_DEFAULTS = {
         "会費　: {reunion_fee}円\n\n"
         "内容を変更する場合は、下記URLから再度ご回答ください。\n"
         "{provisional_url}\n\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        "■ みんなの参加状況\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        "{status_url}\n\n"
         "後日、本出欠フォームのURLを別途お送りいたします。\n"
         "引き続きよろしくお願いいたします。\n\n"
         "──────────────────\n"
@@ -383,6 +407,10 @@ MAIL_DEFAULTS = {
         "持ち物: {belongings}\n\n"
         "内容を変更する場合は、下記URLから再度ご回答ください。\n"
         "{final_url}\n\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        "■ みんなの参加状況\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        "{status_url}\n\n"
         "ご不明な点がございましたら、このメールへのご返信にてお気軽にご連絡ください。\n\n"
         "──────────────────\n"
         "{reunion_name} 幹事代表 {organizer_name}"
@@ -407,6 +435,10 @@ MAIL_DEFAULTS = {
         "持ち物: {belongings}\n\n"
         "内容を変更する場合は、下記URLから再度ご回答ください。\n"
         "{final_url}\n\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        "■ みんなの参加状況\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        "{status_url}\n\n"
         "ご不明な点がございましたら、このメールへのご返信にてお気軽にご連絡ください。\n\n"
         "──────────────────\n"
         "{reunion_name} 幹事代表 {organizer_name}"
@@ -441,6 +473,10 @@ MAIL_DEFAULTS = {
         "振込期限: {transfer_deadline}\n\n"
         "内容を変更する場合は、下記URLから再度ご回答ください。\n"
         "{final_url}\n\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        "■ みんなの参加状況\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        "{status_url}\n\n"
         "ご不明な点がございましたら、このメールへのご返信にてお気軽にご連絡ください。\n（連絡先は本メール末尾に記載しています）\n\n"
         "──────────────────\n"
         "{reunion_name} 幹事代表 {organizer_name}"
@@ -465,6 +501,10 @@ MAIL_DEFAULTS = {
         "持ち物: {belongings}\n\n"
         "内容を変更する場合は、下記URLから再度ご回答ください。\n"
         "{final_url}\n\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        "■ みんなの参加状況\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        "{status_url}\n\n"
         "ご不明な点がございましたら、このメールへのご返信にてお気軽にご連絡ください。\n（連絡先は本メール末尾に記載しています）\n\n"
         "──────────────────\n"
         "{reunion_name} 幹事代表 {organizer_name}"
@@ -913,10 +953,12 @@ def _build_provisional_confirm_body(participant_name: str, status_label: str, pr
     s_key = f"mail_provisional_confirm_{key_suffix}_subject{teacher_suffix}"
     b_key = f"mail_provisional_confirm_{key_suffix}_body{teacher_suffix}"
     reunion = _get_reunion_info()
+    base_url = current_app.config.get("APP_BASE_URL", "")
     vars = dict(
         name=participant_name,
         status=status_label,
         provisional_url=provisional_url,
+        status_url=f"{base_url}/status",
         reunion_name=reunion["reunion_name"],
         reunion_date=reunion["reunion_date"],
         reunion_time=reunion["reunion_time"],
@@ -942,10 +984,12 @@ def _build_final_confirm_body(participant_name: str, status_label: str, final_ur
     s_key = f"mail_final_confirm_{key_suffix}_subject{teacher_suffix}"
     b_key = f"mail_final_confirm_{key_suffix}_body{teacher_suffix}"
     reunion = _get_reunion_info()
+    base_url = current_app.config.get("APP_BASE_URL", "")
     vars = dict(
         name=participant_name,
         status=status_label,
         final_url=final_url,
+        status_url=f"{base_url}/status",
         reunion_name=reunion["reunion_name"],
         reunion_date=reunion["reunion_date"],
         reunion_time=reunion["reunion_time"],
