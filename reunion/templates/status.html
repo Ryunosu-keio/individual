@@ -76,15 +76,17 @@
   <!-- Students -->
   {% if sorted_classes %}
   <div class="section-label">生徒</div>
-  <div class="d-flex flex-column gap-2 mb-2">
+  <div class="d-flex flex-column gap-2 mb-3">
     {% for cls in sorted_classes %}
-    <button class="cls-btn" data-cls-idx="{{ loop.index0 }}">
-      <span>{{ cls.label }}</span>
-      <span class="cnt">{{ cls.people|length }}名</span>
-    </button>
+    <div>
+      <button class="cls-btn" data-cls-idx="{{ loop.index0 }}">
+        <span>{{ cls.label }}</span>
+        <span class="cnt">{{ cls.people|length }}名</span>
+      </button>
+      <div class="cls-body" id="cls-body-{{ loop.index0 }}"></div>
+    </div>
     {% endfor %}
   </div>
-  <div class="cls-body mb-3" id="cls-body"></div>
   {% endif %}
 
   <!-- Teachers -->
@@ -185,40 +187,41 @@
       legend.appendChild(li);
     });
 
-    const clsBody     = document.getElementById('cls-body');
+    document.querySelectorAll('.cls-body.show').forEach(b => applyBadges(type, b));
     const teacherBody = document.getElementById('teacher-body');
-    if (clsBody)     applyBadges(type, clsBody);
     if (teacherBody) applyBadges(type, teacherBody);
   }
 
-  // Class accordion (shared body)
-  const clsBody  = document.getElementById('cls-body');
-  const clsBtns  = document.querySelectorAll('.cls-btn');
+  // Class accordion (inline body per class)
+  const clsBtns = document.querySelectorAll('.cls-btn');
 
   clsBtns.forEach((btn, idx) => {
+    const body = document.getElementById('cls-body-' + idx);
+    if (!body) return;
+
     btn.addEventListener('click', function () {
-      if (activeIdx === idx) {
-        clsBody.classList.remove('show');
-        btn.classList.remove('active');
-        activeIdx = null;
-        return;
-      }
-      clsBtns.forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      activeIdx = idx;
+      const isOpen = body.classList.contains('show');
+
+      // Close all
+      clsBtns.forEach((b, i) => {
+        b.classList.remove('active');
+        const ob = document.getElementById('cls-body-' + i);
+        if (ob) ob.classList.remove('show');
+      });
+
+      if (isOpen) return;
 
       const cls = CLASS_DATA[idx];
-      clsBody.innerHTML = cls.people.map(p =>
+      body.innerHTML = cls.people.map(p =>
         `<div class="person-row" data-prov="${p.prov}" data-final="${p.final}">
            <span class="flex-grow-1">${p.name}</span>
            <span class="badge person-badge ms-2"></span>
          </div>`
       ).join('');
-      applyBadges(currentType, clsBody);
-      clsBody.classList.add('show');
-
-      // scroll to body
-      setTimeout(() => clsBody.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50);
+      applyBadges(currentType, body);
+      body.classList.add('show');
+      btn.classList.add('active');
+      setTimeout(() => body.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50);
     });
   });
 
