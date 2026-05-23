@@ -22,10 +22,10 @@
 
     .cls-btn {
       background: #fff; border: 1px solid #e0e0e0; border-radius: 10px;
-      width: 100%; padding: 10px 8px; font-size: 0.85rem; font-weight: 600;
-      display: flex; flex-direction: column; align-items: center; gap: 2px;
+      width: 100%; padding: 10px 14px; font-size: 0.88rem; font-weight: 600;
+      display: flex; align-items: center; gap: 8px;
       cursor: pointer; transition: background 0.15s, border-color 0.15s;
-      text-align: center;
+      text-align: left;
     }
     .cls-btn:hover { background: #f0f0f5; }
     .cls-btn.active { background: #e8f0fe; border-color: #0d6efd; color: #0d6efd; }
@@ -76,14 +76,12 @@
   <!-- Students -->
   {% if sorted_classes %}
   <div class="section-label">生徒</div>
-  <div class="row g-2 mb-2">
+  <div class="d-flex flex-column gap-2 mb-2">
     {% for cls in sorted_classes %}
-    <div class="col-6">
-      <button class="cls-btn" data-cls-idx="{{ loop.index0 }}">
-        <span>{{ cls.label }}</span>
-        <span class="cnt">{{ cls.people|length }}名</span>
-      </button>
-    </div>
+    <button class="cls-btn" data-cls-idx="{{ loop.index0 }}">
+      <span>{{ cls.label }}</span>
+      <span class="cnt">{{ cls.people|length }}名</span>
+    </button>
     {% endfor %}
   </div>
   <div class="cls-body mb-3" id="cls-body"></div>
@@ -92,14 +90,13 @@
   <!-- Teachers -->
   {% if teachers %}
   <div class="section-label">先生</div>
-  <div class="teacher-card mb-4">
-    {% for p in teachers %}
-    <div class="person-row" data-prov="{{ p.prov }}" data-final="{{ p.final }}">
-      <span class="flex-grow-1">{{ p.name }}</span>
-      <span class="badge person-badge ms-2"></span>
-    </div>
-    {% endfor %}
+  <div class="d-flex flex-column gap-2 mb-2">
+    <button class="cls-btn" id="teacher-btn">
+      <span>先生・その他</span>
+      <span class="cnt">{{ teachers|length }}名</span>
+    </button>
   </div>
+  <div class="cls-body mb-4" id="teacher-body"></div>
   {% endif %}
 
   <p class="text-center text-muted mt-2" style="font-size:0.75rem;">このページは閲覧専用です</p>
@@ -148,8 +145,11 @@
     {% endfor %}
   ];
 
-  let currentType = 'prov';
-  let activeIdx   = null;
+  const TEACHER_DATA = [{% for p in teachers %}{ name: "{{ p.name }} 先生", prov: "{{ p.prov }}", final: "{{ p.final }}" },{% endfor %}];
+
+  let currentType    = 'prov';
+  let activeIdx      = null;
+  let teacherOpen    = false;
 
   // Chart
   const chart = new Chart(document.getElementById('chart'), {
@@ -185,10 +185,10 @@
       legend.appendChild(li);
     });
 
-    // Re-apply badges in open class body and teachers
-    const clsBody = document.getElementById('cls-body');
-    if (clsBody) applyBadges(type, clsBody);
-    applyBadges(type, document.body);
+    const clsBody     = document.getElementById('cls-body');
+    const teacherBody = document.getElementById('teacher-body');
+    if (clsBody)     applyBadges(type, clsBody);
+    if (teacherBody) applyBadges(type, teacherBody);
   }
 
   // Class accordion (shared body)
@@ -221,6 +221,30 @@
       setTimeout(() => clsBody.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50);
     });
   });
+
+  // Teacher accordion
+  const teacherBtn  = document.getElementById('teacher-btn');
+  const teacherBody = document.getElementById('teacher-body');
+  if (teacherBtn) {
+    teacherBtn.addEventListener('click', function () {
+      teacherOpen = !teacherOpen;
+      if (teacherOpen) {
+        teacherBody.innerHTML = TEACHER_DATA.map(p =>
+          `<div class="person-row" data-prov="${p.prov}" data-final="${p.final}">
+             <span class="flex-grow-1">${p.name}</span>
+             <span class="badge person-badge ms-2"></span>
+           </div>`
+        ).join('');
+        applyBadges(currentType, teacherBody);
+        teacherBody.classList.add('show');
+        teacherBtn.classList.add('active');
+        setTimeout(() => teacherBody.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50);
+      } else {
+        teacherBody.classList.remove('show');
+        teacherBtn.classList.remove('active');
+      }
+    });
+  }
 
   // Radio
   document.querySelectorAll('input[name="ft"]').forEach(r => {
