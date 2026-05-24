@@ -158,8 +158,7 @@
     return sortByResponse(people, type)
       .filter(p => p[type] !== 'no_response')
       .map(p => {
-        const showName = type === 'prov' ? p.prov_consent : p.final_consent;
-        const displayName = showName ? p.name : '<span class="text-muted">非公開</span>';
+        const displayName = p.name;
         return `<div class="person-row" data-prov="${p.prov}" data-final="${p.final}">
           <span class="flex-grow-1">${displayName}</span>
           <span class="badge person-badge ms-2"></span>

@@ -98,14 +98,6 @@
           <button name="status" value="not_attending" class="btn btn-secondary btn-sm">不参加</button>
           <button name="status" value="undecided" class="btn btn-warning btn-sm">未定</button>
         </form>
-        {% set consented = (prov and prov.share_consent) or (participant.latest_final and participant.latest_final.share_consent) %}
-        <form method="POST" action="{{ url_for('admin.toggle_consent', participant_id=participant.id, response_type='both') }}" class="mt-2">
-          {% if consented %}
-            <button class="btn btn-sm btn-outline-danger">名前共有を取り消す（仮・本）</button>
-          {% else %}
-            <button class="btn btn-sm btn-outline-primary">名前共有を許可する（仮・本）</button>
-          {% endif %}
-        </form>
       </div>
     </div>
   </div>
