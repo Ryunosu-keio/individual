@@ -452,7 +452,10 @@ def api_names():
         ).all()
         participants.sort(key=_teacher_sort_key)
     else:
-        students = Participant.query.filter_by(class_name=class_name, role="生徒").all()
+        students = Participant.query.filter(
+            Participant.class_name == class_name,
+            or_(Participant.role == "生徒", Participant.role == "幹事")
+        ).all()
         students.sort(key=lambda p: (int(p.student_number) if p.student_number and p.student_number.isdigit() else 9999))
         # 学年主任（class_nameが空）＋当クラスの教師
         heads = Participant.query.filter_by(role="学年主任").all()
