@@ -99,8 +99,6 @@ def run_auto_matching(threshold: float = 0.8) -> dict:
             # カナ氏名単体でも照合（新旧両方）
             if participant.name_kana:
                 candidate_names.append(participant.name_kana)
-            if participant.new_name_kana:
-                candidate_names.append(participant.new_name_kana)
 
             for name in candidate_names:
                 score = _similarity_score(bank_import.raw_name, name)

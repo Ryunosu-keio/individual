@@ -16,8 +16,6 @@ def _migrate(db):
     """既存テーブルへのカラム追加マイグレーション（MySQL/SQLite/PostgreSQL互換）"""
     migrations = [
         ("participants", "name_kana",     "VARCHAR(100) DEFAULT ''"),
-        ("participants", "new_name",      "VARCHAR(100) DEFAULT ''"),
-        ("participants", "new_name_kana", "VARCHAR(100) DEFAULT ''"),
         ("final_responses", "bank_name",      "VARCHAR(100) DEFAULT ''"),
         ("final_responses", "branch_name",    "VARCHAR(100) DEFAULT ''"),
         ("final_responses", "account_number", "VARCHAR(50) DEFAULT ''"),
