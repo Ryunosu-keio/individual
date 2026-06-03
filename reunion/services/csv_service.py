@@ -25,13 +25,15 @@ DATE_COLUMN_CANDIDATES = [
 # 振込名義列として認識する列名
 NAME_COLUMN_CANDIDATES = [
     "振込名義", "振込人名", "名義", "name", "相手名", "摘要", "振込人",
-    "お取り扱い内容", "取扱内容", "内容", "適用"
+    "お取り扱い内容", "取扱内容", "内容", "適用",
+    "お取引内容", "取引内容", "取引摘要",
 ]
 
 # 入金金額列として認識する列名
 AMOUNT_COLUMN_CANDIDATES = [
     "入金額", "入金", "金額", "amount", "入金金額", "お受取金額",
-    "お預入れ", "預入", "預入金額"
+    "お預入れ", "預入", "預入金額",
+    "お預り金額", "預り金額", "お預かり金額", "お預入金額", "預入金額",
 ]
 
 
@@ -58,6 +60,7 @@ def _parse_date(date_str: str) -> Optional[date]:
     formats = [
         "%Y/%m/%d",
         "%Y-%m-%d",
+        "%Y.%m.%d",
         "%Y年%m月%d日",
         "%m/%d/%Y",
         "%Y%m%d",
@@ -116,8 +119,22 @@ def parse_bank_csv(file_content: bytes, filename: str = "") -> list:
     if not rows:
         raise ValueError("CSVファイルが空です。")
 
-    # ヘッダー行を探す（最初の行にヘッダーがあると仮定）
-    headers = rows[0]
+    # ヘッダー行をスキャンして探す（上部メタデータ行をスキップ）
+    all_candidates = set(c.lower() for c in DATE_COLUMN_CANDIDATES + NAME_COLUMN_CANDIDATES + AMOUNT_COLUMN_CANDIDATES)
+    header_row_idx = None
+    for i, row in enumerate(rows):
+        cells_lower = [c.strip().lower() for c in row]
+        if sum(1 for c in cells_lower if c in all_candidates) >= 2:
+            header_row_idx = i
+            break
+
+    if header_row_idx is None:
+        raise ValueError(
+            f"CSVのヘッダー行を認識できませんでした。\n"
+            f"「日付」「振込名義」「金額」に相当する列名が必要です。"
+        )
+
+    headers = rows[header_row_idx]
     date_idx = _find_column(headers, DATE_COLUMN_CANDIDATES)
     name_idx = _find_column(headers, NAME_COLUMN_CANDIDATES)
     amount_idx = _find_column(headers, AMOUNT_COLUMN_CANDIDATES)
@@ -130,7 +147,7 @@ def parse_bank_csv(file_content: bytes, filename: str = "") -> list:
         )
 
     # データ行を処理
-    for row_num, row in enumerate(rows[1:], start=2):
+    for row_num, row in enumerate(rows[header_row_idx + 1:], start=header_row_idx + 2):
         if not row or all(cell.strip() == "" for cell in row):
             continue  # 空行はスキップ
 
