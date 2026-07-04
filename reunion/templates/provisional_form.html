@@ -63,7 +63,6 @@
                   <option value="38">38</option>
                   <option value="39">39</option>
                   <option value="teacher">教職員</option>
-                  <option value="other">クラスが分からない</option>
                 </select>
               </div>
 
@@ -105,17 +104,17 @@
                 <div class="d-flex gap-3">
                   <div class="form-check">
                     <input class="form-check-input" type="radio" name="status" id="attending"
-                           value="attending" {% if status | default('') == 'attending' %}checked{% endif %}>
+                           value="attending" {% if status == 'attending' %}checked{% endif %} required>
                     <label class="form-check-label" for="attending">参加予定</label>
                   </div>
                   <div class="form-check">
                     <input class="form-check-input" type="radio" name="status" id="not_attending"
-                           value="not_attending" {% if status | default('') == 'not_attending' %}checked{% endif %}>
+                           value="not_attending" {% if status == 'not_attending' %}checked{% endif %}>
                     <label class="form-check-label" for="not_attending">不参加</label>
                   </div>
                   <div class="form-check">
                     <input class="form-check-input" type="radio" name="status" id="undecided"
-                           value="undecided" {% if status | default('undecided') == 'undecided' %}checked{% endif %}>
+                           value="undecided" {% if status == 'undecided' %}checked{% endif %}>
                     <label class="form-check-label" for="undecided">未定</label>
                   </div>
                 </div>
@@ -158,9 +157,13 @@ function checkReady() {
       if (formLocked) return;
       var hasName = participantId.value || nameText.value.trim();
       var hasEmail = emailInput.value.trim() && emailInput.value.includes('@');
-      submitBtn.disabled = !(hasName && hasEmail);
+      var hasStatus = !!document.querySelector('input[name="status"]:checked');
+      submitBtn.disabled = !(hasName && hasEmail && hasStatus);
     }
 
+    document.querySelectorAll('input[name="status"]').forEach(function(r) {
+      r.addEventListener('change', checkReady);
+    });
     emailInput.addEventListener('input', checkReady);
 
     nameText.addEventListener('input', function() {
@@ -181,13 +184,6 @@ function checkReady() {
       if (!cls) {
         nameSelectGroup.classList.add('d-none');
         nameTextGroup.classList.add('d-none');
-        checkReady();
-        return;
-      }
-
-      if (cls === 'other') {
-        nameSelectGroup.classList.add('d-none');
-        nameTextGroup.classList.remove('d-none');
         checkReady();
         return;
       }
