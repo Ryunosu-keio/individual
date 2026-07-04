@@ -462,7 +462,10 @@ def api_names():
         class_teachers = Participant.query.filter_by(class_name=class_name, role="教師").all()
         class_teachers.sort(key=lambda p: (int(p.student_number) if p.student_number and p.student_number.isdigit() else 9999))
         participants = students + heads + class_teachers
-    return jsonify([{"id": p.id, "name": p.name, "role": p.role or "", "name_kana": p.name_kana or "", "number": p.student_number or ""} for p in participants])
+    def _responded(p):
+        prov = p.latest_provisional
+        return bool(prov and prov.submitted_at)
+    return jsonify([{"id": p.id, "name": p.name, "role": p.role or "", "name_kana": p.name_kana or "", "number": p.student_number or "", "responded": _responded(p)} for p in participants])
 
 
 @forms_bp.route("/done")
