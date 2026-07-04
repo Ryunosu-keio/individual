@@ -75,6 +75,9 @@
                 <select class="form-select" id="name_select">
                   <option value="">-- 名前を選択 --</option>
                 </select>
+                <div id="already_responded_msg" class="alert alert-warning py-2 mt-2 d-none" style="font-size:0.85rem;">
+                  ⚠️ この方はすでに回答済みです。同じ方が回答する場合はそのままお進みください。別の方の場合はお名前を選び直してください。
+                </div>
               </div>
 
               <!-- ③ 名前テキスト入力（「一覧にない」場合 or クラス不明時） -->
@@ -214,6 +217,7 @@ function checkReady() {
 
     nameSelect.addEventListener('change', function() {
       var val = nameSelect.value;
+      document.getElementById('already_responded_msg').classList.add('d-none');
       if (!val) {
         participantId.value = '';
         nameHidden.value = '';
@@ -229,6 +233,12 @@ function checkReady() {
         var selectedName = data ? data.name : nameSelect.options[nameSelect.selectedIndex].textContent;
         nameHidden.value = selectedName;
         nameTextGroup.classList.add('d-none');
+        var msg = document.getElementById('already_responded_msg');
+        if (data && data.responded) {
+          msg.classList.remove('d-none');
+        } else {
+          msg.classList.add('d-none');
+        }
       }
       checkReady();
     });
