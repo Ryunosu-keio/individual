@@ -73,6 +73,7 @@
     </div>
   </div>
 
+  {% if show_details %}
   <!-- Students -->
   {% if sorted_classes %}
   <div class="section-label">生徒</div>
@@ -99,6 +100,9 @@
     </button>
   </div>
   <div class="cls-body mb-4" id="teacher-body"></div>
+  {% endif %}
+  {% else %}
+  <p class="text-center text-muted mt-3" style="font-size:0.82rem;">参加状況は集計の人数のみ表示しています。</p>
   {% endif %}
 
   <p class="text-center text-muted mt-2" style="font-size:0.75rem;">このページは閲覧専用です</p>

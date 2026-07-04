@@ -113,7 +113,6 @@ def create_app():
     def status():
         from flask import render_template, request
         from models import Participant
-        show_detail = request.args.get("detail") == "1"
 
         def _class_label(cls):
             if cls and cls.isdigit():
@@ -121,6 +120,8 @@ def create_app():
             return cls or "不明"
 
         TEACHER_ROLES = {"教師", "学年主任", "副担任"}
+
+        show_details = request.args.get("detail", "").lower() in {"1", "true", "yes", "on"}
 
         participants = Participant.query.all()
         prov_stats  = {"attending": 0, "not_attending": 0, "undecided": 0, "no_response": 0}
@@ -158,9 +159,10 @@ def create_app():
         return render_template("status.html",
             prov_stats=prov_stats,
             final_stats=final_stats,
-            sorted_classes=sorted_classes if show_detail else [],
-            teachers=teachers if show_detail else [],
+            sorted_classes=sorted_classes,
+            teachers=teachers,
             total=len(participants),
+            show_details=show_details,
         )
 
     # -----------------------------------------------
