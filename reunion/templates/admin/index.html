@@ -266,18 +266,7 @@
     </a>
   </div>
   <div class="col-6 col-md-3">
-    <a href="{{ url_for('forms.provisional') }}" class="text-decoration-none" target="_blank">
-      <div class="card border-0 shadow-sm h-100 card-hover text-center">
-        <div class="card-body py-4">
-          <i class="bi bi-ui-checks display-4 text-warning"></i>
-          <div class="fw-bold mt-2">仮出欠フォーム</div>
-          <div class="text-muted small">フォームを開く</div>
-        </div>
-      </div>
-    </a>
-  </div>
-  <div class="col-6 col-md-3">
-    <a href="/status?detail=1" class="text-decoration-none" target="_blank">
+    <a href="{{ url_for('status', detail=1) }}" class="text-decoration-none" target="_blank">
       <div class="card border-0 shadow-sm h-100 card-hover text-center">
         <div class="card-body py-4">
           <i class="bi bi-bar-chart-fill display-4 text-secondary"></i>
