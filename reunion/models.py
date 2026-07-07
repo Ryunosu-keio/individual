@@ -258,3 +258,28 @@ class MailLog(db.Model):
 
     def __repr__(self):
         return f"<MailLog {self.id}: participant={self.participant_id} type={self.mail_type} status={self.status}>"
+
+
+class VerificationToken(db.Model):
+    """
+    メール認証トークンテーブル
+    仮出欠フォーム送信後、メールアドレスの確認が完了するまで回答を保留する。
+    クリックで認証完了 → 回答を確定 + 確認メール送信。
+    """
+    __tablename__ = "verification_tokens"
+
+    id = db.Column(db.Integer, primary_key=True)
+    token = db.Column(db.String(64), unique=True, nullable=False, index=True)
+    participant_id = db.Column(db.Integer, db.ForeignKey("participants.id"), nullable=True)
+    # 新規参加者の場合（participant_id=None）のフォームデータを保持
+    form_name = db.Column(db.String(100), default="")
+    form_name_kana = db.Column(db.String(100), default="")
+    form_class_name = db.Column(db.String(50), default="")
+    new_email = db.Column(db.String(200), nullable=False)
+    prov_status = db.Column(db.String(20), nullable=False)
+    expires_at = db.Column(db.DateTime, nullable=False)
+    used_at = db.Column(db.DateTime, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def __repr__(self):
+        return f"<VerificationToken {self.id}: participant={self.participant_id} email={self.new_email}>"

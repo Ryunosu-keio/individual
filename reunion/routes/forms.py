@@ -17,14 +17,15 @@ URL:
      c. 一致なし → 新規登録
 """
 import re
+import secrets
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from flask import Blueprint, render_template, request, redirect, url_for, flash, abort, current_app
 from extensions import db
-from models import Participant, ProvisionalResponse, FinalResponse, Payment
+from models import Participant, ProvisionalResponse, FinalResponse, Payment, VerificationToken
 from models import AppSetting
 from services.token_service import get_participant_by_token, ensure_token, generate_final_url
-from services.mail_service import send_provisional_confirmation, send_final_confirmation, send_cancel_confirmation
+from services.mail_service import send_provisional_confirmation, send_final_confirmation, send_cancel_confirmation, send_verification_email
 from utils import normalize_transfer_name, decompose_voiced
 
 logger = logging.getLogger(__name__)
@@ -131,41 +132,24 @@ def provisional():
                                class_name=class_name)
 
     matched_how = ""
+    participant = None
 
     # ── ステップ1: ドロップダウンで名簿IDが選択された場合（最優先）──
     if participant_id:
         participant = db.session.get(Participant, int(participant_id))
         if participant:
-            stored_email_real = participant.email and PLACEHOLDER_DOMAIN not in participant.email
-            already_responded = bool(participant.provisional_responses)
-
-            # 回答済み＆別メールアドレス → 別人による上書き試みをブロック
-            if already_responded and stored_email_real and participant.email != email:
-                flash(
-                    f"「{participant.name}」さんはすでに別のメールアドレスで回答済みです。"
-                    " ご本人のメールアドレスで再度ご回答いただくか、幹事にお問い合わせください。",
-                    "danger"
-                )
-                return render_template("provisional_form.html",
-                                       name=name, name_kana=name_kana,
-                                       email=email, status=status,
-                                       class_name=class_name)
-
             # 同じメールを持つ別の参加者が既にいるか確認
-            existing_by_email = Participant.query.filter_by(email=email).first()
-            if existing_by_email and existing_by_email.id != participant.id:
+            existing_by_email = Participant.query.filter(
+                Participant.email == email,
+                Participant.id != participant.id,
+                ~Participant.email.like(f"%{PLACEHOLDER_DOMAIN}"),
+            ).first()
+            if existing_by_email:
                 flash("このメールアドレスは既に別の方が登録済みです。ご自身のメールアドレスを入力してください。", "danger")
                 return render_template("provisional_form.html",
                                        name=name, name_kana=name_kana,
                                        email=email, status=status,
                                        class_name=class_name)
-            participant.email = email
-            # 既に名前が登録されている場合は上書きしない
-            if name and not participant.name:
-                participant.name = name
-            if name_kana and not participant.name_kana:
-                participant.name_kana = name_kana
-            participant.updated_at = datetime.utcnow()
             matched_how = "selected"
             name = participant.name
             logger.info(f"名簿選択: {participant.name} ({email})")
@@ -177,8 +161,6 @@ def provisional():
         participant = Participant.query.filter_by(email=email).first()
 
         if participant and PLACEHOLDER_DOMAIN not in participant.email:
-            # 名前は上書きせず登録済みの情報を保持する
-            participant.updated_at = datetime.utcnow()
             matched_how = "email"
             name = participant.name
             logger.info(f"既存参加者（メール一致）: {participant.name} ({email})")
@@ -187,49 +169,125 @@ def provisional():
             # ── ステップ3: 氏名で名簿を検索（名寄せ）──
             roster_match = _find_roster_match(name, class_name, student_number)
             if roster_match:
-                roster_match.email = email
-                roster_match.name  = name
-                if name_kana:
-                    roster_match.name_kana = name_kana
-                if class_name:
-                    roster_match.class_name = class_name
-                roster_match.updated_at = datetime.utcnow()
                 participant = roster_match
                 matched_how = "roster"
                 logger.info(f"名簿に名寄せ: {name} ({email}) → ID={roster_match.id}")
             else:
-                # ── ステップ4: 完全新規 ──
-                participant = Participant(name=name, email=email, class_name=class_name,
-                                          name_kana=name_kana)
-                db.session.add(participant)
-                db.session.flush()
+                # ── ステップ4: 完全新規（参加者はverify時に作成）──
+                participant = None
                 matched_how = "new"
-                logger.info(f"新規参加者登録: {name} ({email})")
+                logger.info(f"新規参加者（認証後登録）: {name} ({email})")
+
+        else:
+            # placeholder email で一致 → 名簿レコードとして扱う
+            matched_how = "roster"
+
+    # ── 認証トークン発行 ──
+    # 同一参加者の未使用トークンを無効化（再送の場合）
+    if participant:
+        VerificationToken.query.filter_by(
+            participant_id=participant.id, used_at=None
+        ).delete(synchronize_session=False)
+
+    vtk = VerificationToken(
+        token=secrets.token_urlsafe(32),
+        participant_id=participant.id if participant else None,
+        form_name=name,
+        form_name_kana=name_kana,
+        form_class_name=class_name,
+        new_email=email,
+        prov_status=status,
+        expires_at=datetime.utcnow() + timedelta(hours=24),
+    )
+    db.session.add(vtk)
+    db.session.commit()
+
+    logger.info(f"認証トークン発行: {name} ({email}) / 紐付け={matched_how}")
+
+    # 認証メールを送信
+    base_url = current_app.config.get("APP_BASE_URL", request.host_url.rstrip("/"))
+    verify_url = f"{base_url}/form/verify/{vtk.token}"
+    try:
+        send_verification_email(email, name, verify_url)
+    except Exception as e:
+        logger.error(f"認証メール送信エラー: {e}", exc_info=True)
+
+    return render_template("verify_pending.html", email=email, name=name)
+
+
+@forms_bp.route("/verify/<token>")
+def verify(token):
+    """メール認証リンクのクリック処理"""
+    vtk = VerificationToken.query.filter_by(token=token).first()
+
+    if not vtk:
+        return render_template("verify_error.html",
+                               message="このリンクは無効です。フォームから再度お試しください。",
+                               provisional_url=None)
+
+    if vtk.used_at:
+        return render_template("verify_complete.html", already_verified=True, participant=None)
+
+    if vtk.expires_at < datetime.utcnow():
+        return render_template("verify_error.html",
+                               message="このリンクは有効期限切れです（24時間）。フォームから再度ご登録ください。",
+                               expired=True,
+                               provisional_url=request.host_url.rstrip("/") + "/form/provisional")
+
+    # メールアドレスが他の参加者に取られていないか確認
+    existing_by_email = Participant.query.filter(
+        Participant.email == vtk.new_email,
+        ~Participant.email.like(f"%{PLACEHOLDER_DOMAIN}"),
+    ).first()
+    if existing_by_email and (vtk.participant_id is None or existing_by_email.id != vtk.participant_id):
+        return render_template("verify_error.html",
+                               message="このメールアドレスはすでに別の方が使用しています。別のメールアドレスでフォームから再登録してください。",
+                               provisional_url=request.host_url.rstrip("/") + "/form/provisional")
+
+    # 参加者を確定・作成
+    if vtk.participant_id:
+        participant = db.session.get(Participant, vtk.participant_id)
+        if participant is None:
+            return render_template("verify_error.html",
+                                   message="参加者情報が見つかりません。フォームから再度お試しください。",
+                                   provisional_url=request.host_url.rstrip("/") + "/form/provisional")
+        participant.email = vtk.new_email
+        participant.updated_at = datetime.utcnow()
+    else:
+        participant = Participant(
+            name=vtk.form_name,
+            name_kana=vtk.form_name_kana,
+            email=vtk.new_email,
+            class_name=vtk.form_class_name,
+        )
+        db.session.add(participant)
+        db.session.flush()
 
     # 仮出欠回答を追加
     response = ProvisionalResponse(
         participant_id=participant.id,
-        status=status,
+        status=vtk.prov_status,
         share_consent=True,
         submitted_at=datetime.utcnow(),
-        ip_address=request.remote_addr or "",
+        ip_address="",
     )
     db.session.add(response)
+
+    vtk.used_at = datetime.utcnow()
     db.session.commit()
 
-    logger.info(f"仮出欠登録完了: {name} / {status} / 紐付け={matched_how}")
+    logger.info(f"メール認証完了・回答確定: {participant.name} ({vtk.new_email}) → {vtk.prov_status}")
 
-    # 送信完了メールを送信（失敗してもフォーム送信はブロックしない）
+    # 確認メール送信
     try:
-        status_label = ProvisionalResponse.STATUS_LABELS.get(status, status)
+        status_label = ProvisionalResponse.STATUS_LABELS.get(vtk.prov_status, vtk.prov_status)
         base_url = current_app.config.get("APP_BASE_URL", request.host_url.rstrip("/"))
         provisional_url = f"{base_url}/form/provisional"
-        send_provisional_confirmation(participant, status_label, provisional_url, status)
+        send_provisional_confirmation(participant, status_label, provisional_url, vtk.prov_status)
     except Exception as e:
         logger.error(f"仮出欠確認メール送信エラー: {e}", exc_info=True)
 
-    flash("仮出欠を受け付けました。ありがとうございます。", "success")
-    return redirect(url_for("forms.done", type="provisional"))
+    return render_template("verify_complete.html", already_verified=False, participant=participant)
 
 
 def _today_jst():
