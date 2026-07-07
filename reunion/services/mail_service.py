@@ -509,6 +509,22 @@ MAIL_DEFAULTS = {
         "──────────────────\n"
         "{reunion_name} 幹事代表 {organizer_name}"
     ),
+    # ── メールアドレス認証 ──────────────────────────────────
+    "mail_verification_subject": "【{reunion_name}】メールアドレスの認証をお願いします",
+    "mail_verification_body": (
+        "{name} 様\n\n"
+        "仮出欠フォームにご入力いただきありがとうございます。\n\n"
+        "メールアドレス・参加意思の登録はまだ完了していません。\n"
+        "下記URLをクリックして認証を完了させてください。\n\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        "■ 認証URL\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        "{verify_url}\n\n"
+        "※ このURLの有効期限は24時間です。\n"
+        "※ このメールに心当たりがない場合は、そのまま無視していただいて構いません。\n\n"
+        "──────────────────\n"
+        "{reunion_name} 幹事代表 {organizer_name}"
+    ),
     # ── 直前キャンセル確認 ──────────────────────────────────
     "mail_final_confirm_cancelled_subject": "【{reunion_name}】欠席のご連絡を受け付けました",
     "mail_final_confirm_cancelled_body": (
@@ -1077,6 +1093,28 @@ def send_provisional_reminder(participant, provisional_url: str) -> MailLog:
         raise
 
     return log
+
+
+def send_verification_email(to_email: str, name: str, verify_url: str) -> None:
+    """メールアドレス認証メールを送信する。MailLogには記録しない（参加者確定前のため）"""
+    mail_cfg = _get_mail_config()
+    reunion = _get_reunion_info()
+    vars = dict(
+        name=name,
+        verify_url=verify_url,
+        reunion_name=reunion["reunion_name"],
+        organizer_name=reunion["organizer_name"],
+    )
+    subject = _render_template(
+        _get_template("mail_verification_subject", MAIL_DEFAULTS["mail_verification_subject"]),
+        **vars
+    )
+    body = _render_template(
+        _get_template("mail_verification_body", MAIL_DEFAULTS["mail_verification_body"]),
+        **vars
+    )
+    _dispatch_send(to_email, subject, body, mail_cfg)
+    logger.info(f"認証メール送信: {to_email}")
 
 
 def send_provisional_confirmation(participant, status_label: str, provisional_url: str, status: str = "attending") -> MailLog:

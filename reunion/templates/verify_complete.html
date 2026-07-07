@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>認証完了</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+  <div class="container py-5">
+    <div class="row justify-content-center">
+      <div class="col-md-6">
+        <div class="card shadow-sm">
+          <div class="card-header bg-success text-white text-center py-3">
+            <h4 class="mb-0">
+              {% if already_verified %}
+                <i class="bi bi-check-circle me-2"></i>認証済み
+              {% else %}
+                <i class="bi bi-check-circle-fill me-2"></i>認証完了
+              {% endif %}
+            </h4>
+          </div>
+          <div class="card-body p-4 text-center">
+            {% if already_verified %}
+              <div class="mb-4">
+                <i class="bi bi-check-all" style="font-size:3rem; color:#198754;"></i>
+              </div>
+              <h5 class="mb-3">このリンクはすでに使用済みです</h5>
+              <p class="text-muted">回答はすでに登録されています。</p>
+            {% else %}
+              <div class="mb-4">
+                <i class="bi bi-patch-check-fill" style="font-size:3rem; color:#198754;"></i>
+              </div>
+              <h5 class="mb-3">認証が完了しました！</h5>
+              {% if participant %}
+                <p class="text-muted mb-1">{{ participant.name }} さんの仮出欠が登録されました。</p>
+              {% endif %}
+              <p class="text-muted mb-4">確認メールをお送りしましたのでご確認ください。</p>
+              <div class="alert alert-success text-start" style="font-size:0.9rem;">
+                <i class="bi bi-envelope-check me-1"></i>
+                登録内容の確認メールを送信しました。<br>
+                届かない場合は迷惑メールフォルダもご確認ください。
+              </div>
+              <a href="/status" class="btn btn-outline-primary btn-sm mt-2 me-2">
+                <i class="bi bi-people me-1"></i>みんなの参加状況
+              </a>
+              <a href="/form/provisional" class="btn btn-outline-secondary btn-sm mt-2">
+                <i class="bi bi-arrow-repeat me-1"></i>回答を変更する
+              </a>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

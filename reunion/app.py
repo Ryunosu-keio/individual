@@ -66,7 +66,7 @@ def create_app():
     db.init_app(app)
 
     with app.app_context():
-        from models import Participant, ProvisionalResponse, FinalResponse, Payment, BankImport, MailLog, AppSetting
+        from models import Participant, ProvisionalResponse, FinalResponse, Payment, BankImport, MailLog, AppSetting, VerificationToken
         db.create_all()
         # カラム追加マイグレーション（既存DBへの追加カラム）
         _migrate(db)

@@ -75,8 +75,17 @@
                 <select class="form-select" id="name_select">
                   <option value="">-- 名前を選択 --</option>
                 </select>
-                <div id="already_responded_msg" class="alert alert-warning py-2 mt-2 d-none" style="font-size:0.85rem;">
-                  ⚠️ この方はすでに回答済みです。同じ方が回答する場合はそのままお進みください。別の方の場合はお名前を選び直してください。
+                <div id="already_responded_msg" class="alert alert-warning mt-2 d-none" style="font-size:0.85rem;">
+                  <strong>⚠️ この方はすでに回答済みです。</strong><br>
+                  <span class="text-muted">ご本人の場合は、メールアドレスを入力してそのまま送信してください。</span>
+                  <div class="mt-2">
+                    <button type="button" class="btn btn-sm btn-outline-warning" id="change_email_btn">
+                      メールアドレスを変更して登録する
+                    </button>
+                  </div>
+                  <div id="change_email_note" class="d-none mt-2 text-muted" style="font-size:0.8rem;">
+                    新しいメールアドレスを入力して送信すると認証メールが届きます。認証後に登録内容が更新されます。
+                  </div>
                 </div>
               </div>
 
@@ -215,9 +224,21 @@ function checkReady() {
       checkReady();
     });
 
+    document.getElementById('change_email_btn').addEventListener('click', function() {
+      document.getElementById('change_email_note').classList.remove('d-none');
+      emailInput.value = '';
+      emailInput.focus();
+      emailInput.classList.add('border-warning');
+      emailInput.placeholder = '新しいメールアドレスを入力';
+      checkReady();
+    });
+
     nameSelect.addEventListener('change', function() {
       var val = nameSelect.value;
       document.getElementById('already_responded_msg').classList.add('d-none');
+      document.getElementById('change_email_note').classList.add('d-none');
+      emailInput.classList.remove('border-warning');
+      emailInput.placeholder = 'example@example.com';
       if (!val) {
         participantId.value = '';
         nameHidden.value = '';
