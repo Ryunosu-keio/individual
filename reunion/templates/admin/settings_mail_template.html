@@ -85,6 +85,7 @@
           <option value="final_reminder">最終リマインド</option>
           <option value="final_confirm_cancelled">直前キャンセル確認</option>
           <option value="unlock_notice">ロック解除通知</option>
+          <option value="verification">メールアドレス認証</option>
         </select>
       </div>
       <div class="col-md-3">
@@ -519,6 +520,27 @@
               <label class="form-label fw-bold text-muted small">本文</label>
               <div class="form-text mb-1">利用可能: <code>{name}</code> <code>{final_url}</code> <code>{deadline}</code> <code>{reunion_name}</code> <code>{organizer_name}</code></div>
               <textarea class="form-control font-monospace auto-resize" name="mail_unlock_notice_body_teacher">{{ settings.get('mail_unlock_notice_body_teacher', '') }}</textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- メールアドレス認証 -->
+      <div id="section_verification" class="mail-section d-none">
+        <div class="card border-0 shadow-sm">
+          <div class="card-header bg-light fw-bold">
+            <i class="bi bi-envelope-check me-1"></i>メールアドレス認証メール
+          </div>
+          <div class="card-body">
+            <div class="mb-3">
+              <label class="form-label fw-bold text-muted small">件名</label>
+              <input type="text" class="form-control" name="mail_verification_subject"
+                     value="{{ settings.get('mail_verification_subject', '') }}">
+            </div>
+            <div class="mb-3">
+              <label class="form-label fw-bold text-muted small">本文</label>
+              <div class="form-text mb-1">利用可能: <code>{name}</code> <code>{verify_url}</code> <code>{reunion_name}</code> <code>{organizer_name}</code></div>
+              <textarea class="form-control font-monospace auto-resize" name="mail_verification_body">{{ settings.get('mail_verification_body', '') }}</textarea>
             </div>
           </div>
         </div>
