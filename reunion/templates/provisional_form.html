@@ -77,14 +77,11 @@
                 </select>
                 <div id="already_responded_msg" class="alert alert-warning mt-2 d-none" style="font-size:0.85rem;">
                   <strong>⚠️ この方はすでに回答済みです。</strong><br>
-                  <span class="text-muted">ご本人の場合は、メールアドレスを入力してそのまま送信してください。</span>
+                  <span class="text-muted">登録内容を変更したい場合は下のボタンから進めてください。</span>
                   <div class="mt-2">
                     <button type="button" class="btn btn-sm btn-outline-warning" id="change_email_btn">
-                      メールアドレスを変更して登録する
+                      登録内容を変更する
                     </button>
-                  </div>
-                  <div id="change_email_note" class="d-none mt-2 text-muted" style="font-size:0.8rem;">
-                    新しいメールアドレスを入力して送信すると認証メールが届きます。認証後に登録内容が更新されます。
                   </div>
                 </div>
               </div>
@@ -162,16 +159,27 @@
     const emailInput      = document.getElementById('email');
 
     var nameDataMap = {};
-
     var formLocked = '{{ "1" if locked else "0" }}' === '1';
+    var alreadyResponded = false;
+    var changeConfirmed = false;
 
-function checkReady() {
+    function checkReady() {
       if (formLocked) return;
       var hasName = participantId.value || nameText.value.trim();
       var hasEmail = emailInput.value.trim() && emailInput.value.includes('@');
       var hasStatus = !!document.querySelector('input[name="status"]:checked');
-      submitBtn.disabled = !(hasName && hasEmail && hasStatus);
+      var respondedOk = !alreadyResponded || changeConfirmed;
+      submitBtn.disabled = !(hasName && hasEmail && hasStatus && respondedOk);
     }
+
+    document.getElementById('change_email_btn').addEventListener('click', function() {
+      changeConfirmed = true;
+      emailInput.value = '';
+      emailInput.focus();
+      this.textContent = '変更モードで進む（メールアドレスを入力してください）';
+      this.disabled = true;
+      checkReady();
+    });
 
     document.querySelectorAll('input[name="status"]').forEach(function(r) {
       r.addEventListener('change', checkReady);
@@ -224,21 +232,14 @@ function checkReady() {
       checkReady();
     });
 
-    document.getElementById('change_email_btn').addEventListener('click', function() {
-      document.getElementById('change_email_note').classList.remove('d-none');
-      emailInput.value = '';
-      emailInput.focus();
-      emailInput.classList.add('border-warning');
-      emailInput.placeholder = '新しいメールアドレスを入力';
-      checkReady();
-    });
-
     nameSelect.addEventListener('change', function() {
       var val = nameSelect.value;
+      alreadyResponded = false;
+      changeConfirmed = false;
+      var btn = document.getElementById('change_email_btn');
+      btn.textContent = '登録内容を変更する';
+      btn.disabled = false;
       document.getElementById('already_responded_msg').classList.add('d-none');
-      document.getElementById('change_email_note').classList.add('d-none');
-      emailInput.classList.remove('border-warning');
-      emailInput.placeholder = 'example@example.com';
       if (!val) {
         participantId.value = '';
         nameHidden.value = '';
@@ -256,8 +257,11 @@ function checkReady() {
         nameTextGroup.classList.add('d-none');
         var msg = document.getElementById('already_responded_msg');
         if (data && data.responded) {
+          alreadyResponded = true;
+          changeConfirmed = false;
           msg.classList.remove('d-none');
         } else {
+          alreadyResponded = false;
           msg.classList.add('d-none');
         }
       }
