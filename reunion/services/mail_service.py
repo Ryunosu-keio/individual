@@ -1325,6 +1325,41 @@ def send_cancel_confirmation(participant, cancel_reason: str) -> MailLog:
     return log
 
 
+def send_attendance_confirmation(participant) -> MailLog:
+    """会場QR出席登録完了メールを送信する。"""
+    mail_cfg = _get_mail_config()
+    reunion = _get_reunion_info()
+    subject = f"【{reunion['reunion_name']}】会場出席登録を受け付けました"
+    body = (
+        f"{participant.display_name} 様\n\n"
+        f"{reunion['reunion_name']}の会場出席登録を受け付けました。\n"
+        f"登録日時: {datetime.utcnow().strftime('%Y/%m/%d %H:%M')}\n\n"
+        f"会場: {reunion['reunion_venue']}\n"
+        f"ご来場ありがとうございます。\n"
+    )
+
+    log = MailLog(
+        participant_id=participant.id,
+        mail_type="attendance_checkin",
+        sent_at=datetime.utcnow(),
+    )
+
+    try:
+        log.status = _dispatch_send(participant.email, subject, body, mail_cfg)
+        if log.status == "sent":
+            logger.info(f"会場出席登録確認メール送信成功: {participant.email}")
+        db.session.add(log)
+        db.session.commit()
+    except Exception as e:
+        log.status = "failed"
+        log.error_message = str(e)
+        db.session.add(log)
+        db.session.commit()
+        logger.error(f"会場出席登録確認メール送信失敗: {participant.email} - {e}", exc_info=True)
+
+    return log
+
+
 def send_unlock_notice(participant, final_url: str, deadline_str: str) -> MailLog:
     """フォームロック解除通知メールを送信する。deadline_str は 'M月D日' 形式。"""
     mail_cfg = _get_mail_config()

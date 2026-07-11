@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>出席登録完了</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+  <div class="container py-5" style="max-width: 560px;">
+    <div class="card shadow-sm border-success">
+      <div class="card-body p-4 text-center">
+        <h2 class="h4 mb-3 text-success">出席登録が完了しました</h2>
+        <p class="mb-2"><strong>{{ participant.name }}</strong> さんの登録を受け付けました。</p>
+        <p class="text-muted mb-4">登録済みメールアドレスへ確認メールを送信しました。</p>
+        <a href="{{ url_for('attendance_scan') }}" class="btn btn-outline-primary">もう一度登録する</a>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

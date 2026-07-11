@@ -165,6 +165,46 @@ def create_app():
             show_details=show_details,
         )
 
+    @app.route("/attendance/scan", methods=["GET", "POST"])
+    def attendance_scan():
+        from datetime import datetime
+        from flask import flash, render_template, request
+        from models import AttendanceRecord, Participant
+        from services.mail_service import send_attendance_confirmation
+
+        participants = Participant.query.order_by(Participant.name).all()
+
+        if request.method == "POST":
+            participant_id = request.form.get("participant_id", "").strip()
+            if not participant_id:
+                flash("参加者を選択してください。", "warning")
+                return render_template("attendance_scan.html", participants=participants)
+
+            participant = Participant.query.get(participant_id)
+            if not participant:
+                flash("参加者が見つかりませんでした。", "danger")
+                return render_template("attendance_scan.html", participants=participants)
+
+            # 重複チェックを行わず、登録を追加する（当日制限はなし）
+            record = AttendanceRecord(participant_id=participant.id, source="qr")
+            db.session.add(record)
+            record.checked_in_at = datetime.utcnow()
+            record.status = "checked_in"
+            record.source = "qr"
+            db.session.commit()
+
+            try:
+                mail_log = send_attendance_confirmation(participant)
+                record.email_sent = mail_log.status in {"sent", "simulated"}
+                record.email_sent_at = datetime.utcnow()
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
+
+            return render_template("attendance_done.html", participant=participant)
+
+        return render_template("attendance_scan.html", participants=participants)
+
     # -----------------------------------------------
     # エラーハンドラ
     # -----------------------------------------------
