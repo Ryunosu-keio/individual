@@ -28,7 +28,7 @@ from datetime import datetime
 from flask import (Blueprint, render_template, request, redirect,
                    url_for, flash, current_app, jsonify, Response)
 from extensions import db
-from models import Participant, ProvisionalResponse, FinalResponse, Payment, BankImport, MailLog, AppSetting
+from models import Participant, ProvisionalResponse, FinalResponse, Payment, BankImport, MailLog, AppSetting, AttendanceRecord
 from services.token_service import ensure_token, generate_final_url
 from services.mail_service import (send_final_url, send_reminder, send_final_reminder,
                                     MAIL_DEFAULTS, get_daily_send_limit,
@@ -140,6 +140,54 @@ def index():
         "final": _form_locked("final_form_locked"),
     }
     return render_template("admin/index.html", stats=stats, locks=locks)
+
+
+@admin_bp.route("/qr-attendance")
+def qr_attendance():
+    """会場QR出席の管理画面"""
+    participants = Participant.query.order_by(Participant.name).all()
+    records = AttendanceRecord.query.order_by(AttendanceRecord.checked_in_at.desc()).all()
+    qr_url = url_for("attendance_scan", _external=True)
+    total = len(participants)
+    checked_ids = {r.participant_id for r in records if r.status == "checked_in"}
+    checked_count = len(checked_ids)
+    not_checked = max(0, total - checked_count)
+
+    return render_template(
+        "admin/qr_attendance.html",
+        participants=participants,
+        records=records,
+        qr_url=qr_url,
+        total=total,
+        checked_count=checked_count,
+        not_checked=not_checked,
+    )
+
+
+@admin_bp.route('/participant/<int:participant_id>/set-attendance', methods=['POST'])
+def set_attendance(participant_id):
+    """管理画面から参加/不参加を手動で設定する。"""
+    from datetime import datetime
+    status = request.form.get('status', '').strip()
+    p = Participant.query.get(participant_id)
+    if not p:
+        flash('参加者が見つかりません。', 'danger')
+        return redirect(url_for('admin.qr_attendance'))
+
+    if status == 'checked_in':
+        rec = AttendanceRecord(participant_id=participant_id, checked_in_at=datetime.utcnow(), source='admin', status='checked_in')
+        db.session.add(rec)
+        db.session.commit()
+        flash(f'{p.name} を出席に設定しました。', 'success')
+    elif status == 'not_attending':
+        rec = AttendanceRecord(participant_id=participant_id, checked_in_at=datetime.utcnow(), source='admin', status='not_attending')
+        db.session.add(rec)
+        db.session.commit()
+        flash(f'{p.name} を不参加に設定しました。', 'warning')
+    else:
+        flash('不正な操作です。', 'danger')
+
+    return redirect(url_for('admin.qr_attendance'))
 
 
 @admin_bp.route("/toggle-form-lock/<form_type>", methods=["POST"])

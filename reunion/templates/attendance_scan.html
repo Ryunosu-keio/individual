@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>会場出席登録</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+  <div class="container py-5" style="max-width: 560px;">
+    <div class="card shadow-sm">
+      <div class="card-body p-4">
+        <h2 class="h4 mb-3">会場出席登録</h2>
+        <p class="text-muted mb-4">お名前を選択してください。登録完了後、登録済みメールアドレスへ確認メールが届きます。</p>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
+        <form method="post">
+          <div class="mb-3">
+            <label for="name_filter" class="form-label">名前で検索</label>
+            <input id="name_filter" class="form-control mb-2" placeholder="名前の一部を入力すると絞り込まれます">
+            <label for="participant_id" class="form-label">参加者名</label>
+            <select class="form-select" id="participant_id" name="participant_id" required>
+              <option value="">選択してください</option>
+              {% for participant in participants %}
+              <option value="{{ participant.id }}">{{ participant.name }}{% if participant.class_name %}（{{ participant.class_name }}）{% endif %}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <button type="submit" class="btn btn-primary w-100">出席を登録する</button>
+        </form>
+        <script>
+          (function(){
+            const filter = document.getElementById('name_filter');
+            const select = document.getElementById('participant_id');
+            filter.addEventListener('input', function(){
+              const q = this.value.trim().toLowerCase();
+              let firstVisible = null;
+              for (let i=0;i<select.options.length;i++){
+                const opt = select.options[i];
+                if (!q) { opt.hidden = false; if(firstVisible===null && opt.value) firstVisible = opt; continue; }
+                const txt = opt.text.toLowerCase();
+                if (txt.indexOf(q) !== -1) { opt.hidden = false; if(firstVisible===null && opt.value) firstVisible = opt; } else { opt.hidden = true; }
+              }
+              if(firstVisible) select.value = firstVisible.value;
+            });
+          })();
+        </script>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

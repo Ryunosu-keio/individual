@@ -47,6 +47,9 @@ class Participant(db.Model):
     mail_logs = db.relationship(
         "MailLog", backref="participant", lazy=True, cascade="all, delete-orphan"
     )
+    attendance_records = db.relationship(
+        "AttendanceRecord", backref="participant", lazy=True, cascade="all, delete-orphan"
+    )
 
     @property
     def display_name(self) -> str:
@@ -74,6 +77,23 @@ class Participant(db.Model):
 
     def __repr__(self):
         return f"<Participant {self.id}: {self.name} ({self.email})>"
+
+
+class AttendanceRecord(db.Model):
+    """会場QR出席登録履歴"""
+    __tablename__ = "attendance_records"
+
+    id = db.Column(db.Integer, primary_key=True)
+    participant_id = db.Column(db.Integer, db.ForeignKey("participants.id"), nullable=False)
+    checked_in_at = db.Column(db.DateTime, default=datetime.utcnow)
+    source = db.Column(db.String(20), default="qr")
+    email_sent = db.Column(db.Boolean, default=False)
+    email_sent_at = db.Column(db.DateTime, nullable=True)
+    status = db.Column(db.String(20), default="checked_in")
+    notes = db.Column(db.Text, default="")
+
+    def __repr__(self):
+        return f"<AttendanceRecord {self.id}: participant={self.participant_id}>"
 
 
 class ProvisionalResponse(db.Model):
