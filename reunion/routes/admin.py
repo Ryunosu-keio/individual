@@ -499,6 +499,38 @@ def update_memo(participant_id):
     return redirect(url_for("admin.participant_detail", participant_id=participant_id))
 
 
+@admin_bp.route("/participant/<int:participant_id>/update-basic", methods=["POST"])
+def update_basic_info(participant_id):
+    """基本情報（氏名・フリガナ・メール・クラス・出席番号）を更新"""
+    participant = db.session.get(Participant, participant_id)
+    if participant is None:
+        flash("参加者が見つかりません。", "danger")
+        return redirect(url_for("admin.participants"))
+
+    name = request.form.get("name", "").strip()
+    email = request.form.get("email", "").strip()
+    if not name or not email:
+        flash("氏名とメールアドレスは必須です。", "danger")
+        return redirect(url_for("admin.participant_detail", participant_id=participant_id))
+
+    duplicate = Participant.query.filter(
+        Participant.email == email, Participant.id != participant_id
+    ).first()
+    if duplicate:
+        flash(f"メールアドレス {email} は {duplicate.name} さんが既に使用しています。", "danger")
+        return redirect(url_for("admin.participant_detail", participant_id=participant_id))
+
+    participant.name = name
+    participant.name_kana = request.form.get("name_kana", "").strip()
+    participant.email = email
+    participant.class_name = request.form.get("class_name", "").strip()
+    participant.student_number = request.form.get("student_number", "").strip()
+    participant.updated_at = datetime.utcnow()
+    db.session.commit()
+    flash("基本情報を更新しました。", "success")
+    return redirect(url_for("admin.participant_detail", participant_id=participant_id))
+
+
 @admin_bp.route("/participant/<int:participant_id>/clear-responses", methods=["POST"])
 def clear_responses(participant_id):
     """参加者の回答・入金データを全てクリアして未回答状態に戻す"""

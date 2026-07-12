@@ -49,19 +49,62 @@
   <!-- 基本情報 -->
   <div class="col-md-6">
     <div class="card h-100">
-      <div class="card-header fw-bold bg-light">基本情報</div>
+      <div class="card-header fw-bold bg-light d-flex justify-content-between align-items-center">
+        基本情報
+        <button type="button" class="btn btn-outline-primary btn-sm" id="basicEditBtn">
+          <i class="bi bi-pencil me-1"></i>編集
+        </button>
+      </div>
       <div class="card-body">
-        <dl class="row mb-0">
+        <dl class="row mb-0" id="basicInfoView">
           <dt class="col-4">氏名</dt>
           <dd class="col-8">
             {{ participant.display_name }}
           </dd>
+          <dt class="col-4">フリガナ</dt>
+          <dd class="col-8">{{ participant.name_kana or '-' }}</dd>
           <dt class="col-4">メール</dt><dd class="col-8">{{ participant.email }}</dd>
+          <dt class="col-4">クラス</dt><dd class="col-8">{{ participant.class_name or '-' }}</dd>
+          <dt class="col-4">出席番号</dt><dd class="col-8">{{ participant.student_number or '-' }}</dd>
           <dt class="col-4">登録日時</dt>
           <dd class="col-8 small text-muted">{{ participant.created_at | jst }}</dd>
           <dt class="col-4">更新日時</dt>
           <dd class="col-8 small text-muted">{{ participant.updated_at | jst }}</dd>
         </dl>
+        <form method="POST" action="{{ url_for('admin.update_basic_info', participant_id=participant.id) }}"
+              class="d-none" id="basicInfoForm">
+          <div class="mb-2">
+            <label class="form-label form-label-sm fw-bold mb-1">氏名 <span class="text-danger">*</span></label>
+            <input type="text" class="form-control form-control-sm" name="name"
+                   value="{{ participant.name }}" required>
+          </div>
+          <div class="mb-2">
+            <label class="form-label form-label-sm fw-bold mb-1">フリガナ</label>
+            <input type="text" class="form-control form-control-sm" name="name_kana"
+                   value="{{ participant.name_kana or '' }}" placeholder="ヤマダタロウ">
+          </div>
+          <div class="mb-2">
+            <label class="form-label form-label-sm fw-bold mb-1">メールアドレス <span class="text-danger">*</span></label>
+            <input type="email" class="form-control form-control-sm" name="email"
+                   value="{{ participant.email }}" required>
+          </div>
+          <div class="row g-2 mb-3">
+            <div class="col">
+              <label class="form-label form-label-sm fw-bold mb-1">クラス</label>
+              <input type="text" class="form-control form-control-sm" name="class_name"
+                     value="{{ participant.class_name or '' }}" placeholder="31">
+            </div>
+            <div class="col">
+              <label class="form-label form-label-sm fw-bold mb-1">出席番号</label>
+              <input type="text" class="form-control form-control-sm" name="student_number"
+                     value="{{ participant.student_number or '' }}" placeholder="5">
+            </div>
+          </div>
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary btn-sm">保存</button>
+            <button type="button" class="btn btn-outline-secondary btn-sm" id="basicCancelBtn">キャンセル</button>
+          </div>
+        </form>
       </div>
     </div>
   </div>
@@ -371,6 +414,23 @@
 
 {% block extra_js %}
 <script>
+// 基本情報の表示/編集切り替え
+(function() {
+  var view = document.getElementById('basicInfoView');
+  var form = document.getElementById('basicInfoForm');
+  var editBtn = document.getElementById('basicEditBtn');
+  document.getElementById('basicEditBtn').addEventListener('click', function() {
+    view.classList.add('d-none');
+    form.classList.remove('d-none');
+    editBtn.classList.add('d-none');
+  });
+  document.getElementById('basicCancelBtn').addEventListener('click', function() {
+    form.classList.add('d-none');
+    view.classList.remove('d-none');
+    editBtn.classList.remove('d-none');
+  });
+})();
+
 function copyUrl() {
   const input = document.getElementById('finalUrl');
   navigator.clipboard.writeText(input.value).then(() => {
