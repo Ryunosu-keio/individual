@@ -66,6 +66,7 @@
           <dt class="col-4">メール</dt><dd class="col-8">{{ participant.email }}</dd>
           <dt class="col-4">クラス</dt><dd class="col-8">{{ participant.class_name or '-' }}</dd>
           <dt class="col-4">出席番号</dt><dd class="col-8">{{ participant.student_number or '-' }}</dd>
+          <dt class="col-4">ID</dt><dd class="col-8 small text-muted">{{ participant.id }}（システム管理番号）</dd>
           <dt class="col-4">登録日時</dt>
           <dd class="col-8 small text-muted">{{ participant.created_at | jst }}</dd>
           <dt class="col-4">更新日時</dt>

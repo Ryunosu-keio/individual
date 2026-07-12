@@ -85,11 +85,11 @@
   <table class="table table-hover table-sm align-middle">
     <thead class="table-light">
       <tr>
+        <th>組-番</th>
         <th class="th-filter">
           <a href="{{ sort_url('name') }}">氏名 <i class="bi {{ sort_icon('name') }}"></i></a>
         </th>
-        <th class="d-none d-md-table-cell">ID</th>
-        <th class="th-filter">
+        <th class="th-filter d-none d-md-table-cell">
           <div class="dropdown d-inline">
             <a href="#" class="dropdown-toggle {{ 'filter-active' if class_filter != 'all' }}"
                data-bs-toggle="dropdown" data-bs-auto-close="outside">
@@ -107,7 +107,7 @@
           </div>
           <a href="{{ sort_url('class') }}"><i class="bi {{ sort_icon('class') }}"></i></a>
         </th>
-        <th class="th-filter">
+        <th class="th-filter d-none d-md-table-cell">
           <a href="{{ sort_url('number') }}">番号 <i class="bi {{ sort_icon('number') }}"></i></a>
         </th>
         <th class="th-filter">
@@ -197,6 +197,13 @@
       {% set prov = p.latest_provisional %}
       {% set final = p.latest_final %}
       <tr class="participant-row" data-href="{{ url_for('admin.participant_detail', participant_id=p.id) }}">
+        <td class="text-muted small text-nowrap">
+          {%- if p.class_name -%}
+            {{ p.class_name }}-{% if p.student_number and p.student_number.isdigit() %}{{ '%02d' % (p.student_number | int) }}{% else %}{{ p.student_number or '?' }}{% endif %}
+          {%- else -%}
+            -
+          {%- endif -%}
+        </td>
         <td class="text-nowrap">
           {% if p.name_kana %}
           <ruby>{{ p.display_name }}<rt>{{ p.name_kana }}</rt></ruby>
@@ -204,9 +211,8 @@
           {{ p.display_name }}
           {% endif %}
         </td>
-        <td class="text-muted small d-none d-md-table-cell">{{ p.id }}</td>
-        <td class="small text-center">{{ p.class_name or '' }}</td>
-        <td class="small text-center">{{ p.student_number or '' }}</td>
+        <td class="small text-center d-none d-md-table-cell">{{ p.class_name or '' }}</td>
+        <td class="small text-center d-none d-md-table-cell">{{ p.student_number or '' }}</td>
         <td class="small">
           {% if p.role == '教師' %}<span class="badge bg-warning text-dark">教師</span>
           {% elif p.role == '学年主任' %}<span class="badge bg-danger">学年主任</span>
