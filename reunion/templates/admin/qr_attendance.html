@@ -12,6 +12,38 @@
 
   <div class="row g-4">
     <div class="col-lg-5">
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+          <h5 class="mb-3">会場出席登録</h5>
+          <div class="mb-3">
+            <label for="class_select" class="form-label fw-bold">クラス <span class="text-danger">*</span></label>
+            <select class="form-select" id="class_select">
+              <option value="">-- クラスを選択 --</option>
+              <option value="31">31</option>
+              <option value="32">32</option>
+              <option value="33">33</option>
+              <option value="34">34</option>
+              <option value="35">35</option>
+              <option value="36">36</option>
+              <option value="37">37</option>
+              <option value="38">38</option>
+              <option value="39">39</option>
+              <option value="teacher">教職員</option>
+            </select>
+          </div>
+          <div class="mb-3 d-none" id="name_select_group">
+            <label for="name_select" class="form-label fw-bold">お名前 <span class="text-danger">*</span></label>
+            <select class="form-select" id="name_select" disabled>
+              <option value="">-- 名前を選択 --</option>
+            </select>
+          </div>
+          <form method="post" id="checkin_form" action="">
+            <input type="hidden" name="status" value="checked_in">
+            <button type="submit" class="btn btn-success w-100" id="checkin_btn" disabled>出席登録する</button>
+          </form>
+        </div>
+      </div>
+
       <div class="card border-0 shadow-sm">
         <div class="card-body">
           <h5 class="mb-3">QRコード</h5>
@@ -28,6 +60,104 @@
     </div>
 
     <div class="col-lg-7">
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center mb-1">
+            <h5 class="mb-0">クラス別名簿（幹事用）</h5>
+          </div>
+          <p class="text-muted small mb-3">自分のクラスを選ぶと、参加予定・来場済み・まだの人が名前順で確認できます。</p>
+
+          <ul class="nav nav-pills flex-wrap gap-1 mb-3" id="rosterTabs" role="tablist">
+            {% for cls in roster %}
+            <li class="nav-item" role="presentation">
+              <button class="nav-link px-3 py-1 {% if loop.first %}active{% endif %}"
+                      data-bs-toggle="pill" data-bs-target="#roster-{{ cls.key }}" type="button" role="tab">
+                {{ cls.label }}
+              </button>
+            </li>
+            {% endfor %}
+          </ul>
+
+          <div class="tab-content">
+            {% for cls in roster %}
+            <div class="tab-pane fade {% if loop.first %}show active{% endif %}" id="roster-{{ cls.key }}" role="tabpanel">
+              <div class="d-flex flex-wrap gap-2 mb-2 align-items-center">
+                <span class="badge bg-primary-subtle text-primary border">参加予定 {{ cls.attending_count }}</span>
+                <span class="badge bg-success-subtle text-success border">来場済み {{ cls.arrived_count }}</span>
+                <span class="badge bg-warning-subtle text-warning-emphasis border">まだ {{ cls.pending_count }}</span>
+                <div class="btn-group btn-group-sm ms-auto roster-filter" data-target="roster-{{ cls.key }}">
+                  <button type="button" class="btn btn-outline-secondary active" data-filter="all">全員</button>
+                  <button type="button" class="btn btn-outline-secondary" data-filter="attending">参加予定</button>
+                  <button type="button" class="btn btn-outline-secondary" data-filter="arrived">来場済み</button>
+                  <button type="button" class="btn btn-outline-secondary" data-filter="pending">まだ</button>
+                </div>
+              </div>
+              {% if cls.members %}
+              <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0">
+                  <thead>
+                    <tr>
+                      <th>組-番</th>
+                      <th>名前</th>
+                      <th>本出欠</th>
+                      <th>当日</th>
+                      <th>操作</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for m in cls.members %}
+                    {% set p = m.participant %}
+                    <tr class="{% if m.checked_in %}table-success{% elif not m.final_attending %}text-muted{% endif %}"
+                        data-attending="{{ 1 if m.final_attending else 0 }}"
+                        data-arrived="{{ 1 if m.checked_in else 0 }}">
+                      <td class="small text-muted text-nowrap">
+                        {{ p.class_name or '-' }}{% if p.student_number %}-{{ p.student_number }}{% endif %}
+                      </td>
+                      <td>
+                        {{ p.name }}{% if p.role in ['教師', '学年主任'] %} 先生{% endif %}
+                        {% if p.name_kana %}<span class="small text-muted ms-1">{{ p.name_kana }}</span>{% endif %}
+                      </td>
+                      <td>
+                        {% if m.final_attending %}
+                          <span class="badge bg-primary">参加</span>
+                        {% elif m.final_status in ['not_attending', 'cancelled'] %}
+                          <span class="badge bg-secondary">不参加</span>
+                        {% else %}
+                          <span class="badge bg-warning text-dark">未回答</span>
+                        {% endif %}
+                      </td>
+                      <td>
+                        {% if m.checked_in %}
+                          <span class="text-success fw-bold"><i class="bi bi-check-circle-fill me-1"></i>来場済み</span>
+                          {% if m.checked_in_at %}<span class="small text-muted ms-1">{{ m.checked_in_at.strftime('%H:%M') }}</span>{% endif %}
+                        {% elif m.final_attending %}
+                          <span class="text-warning-emphasis"><i class="bi bi-clock me-1"></i>まだ</span>
+                        {% else %}
+                          <span class="text-muted">-</span>
+                        {% endif %}
+                      </td>
+                      <td>
+                        {% if not m.checked_in %}
+                        <form method="post" action="{{ url_for('admin.set_attendance', participant_id=p.id) }}" class="d-inline">
+                          <input type="hidden" name="status" value="checked_in">
+                          <button class="btn btn-sm btn-outline-success" type="submit">出席登録</button>
+                        </form>
+                        {% endif %}
+                      </td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+              {% else %}
+              <div class="text-muted small">このクラスの名簿はありません。</div>
+              {% endif %}
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
       <div class="card border-0 shadow-sm">
         <div class="card-body">
           <h5 class="mb-3">登録結果一覧</h5>
@@ -50,6 +180,7 @@
             <table class="table table-sm align-middle">
               <thead>
                 <tr>
+                  <th>組-番</th>
                   <th>参加者</th>
                   <th>登録時刻</th>
                   <th>状態</th>
@@ -60,7 +191,12 @@
               <tbody>
                 {% for record in records %}
                 <tr>
-                  <td>{{ record.participant.name }}</td>
+                  <td class="small text-muted text-nowrap">
+                    {{ record.participant.class_name or '-' }}{% if record.participant.student_number %}-{{ record.participant.student_number }}{% endif %}
+                  </td>
+                  <td>
+                    {{ record.participant.name }}{% if record.participant.role in ['教師', '学年主任'] %}先生{% endif %}
+                  </td>
                   <td>{{ record.checked_in_at.strftime('%Y/%m/%d %H:%M') }}</td>
                   <td><span class="badge bg-success">登録済み</span></td>
                   <td>{% if record.email_sent %}送信済み{% else %}未送信{% endif %}</td>
@@ -88,3 +224,72 @@
   </div>
 </div>
 {% endblock %}
+
+{% block extra_js %}
+<script>
+  const classSelect     = document.getElementById('class_select');
+  const nameSelectGroup = document.getElementById('name_select_group');
+  const nameSelect      = document.getElementById('name_select');
+  const checkinForm     = document.getElementById('checkin_form');
+  const checkinBtn      = document.getElementById('checkin_btn');
+
+  classSelect.addEventListener('change', async function() {
+    const cls = classSelect.value;
+    nameSelect.innerHTML = '<option value="">読み込み中...</option>';
+    nameSelect.disabled = true;
+    checkinBtn.disabled = true;
+    checkinForm.action = '';
+
+    if (!cls) {
+      nameSelectGroup.classList.add('d-none');
+      return;
+    }
+
+    nameSelectGroup.classList.remove('d-none');
+    const res = await fetch("{{ url_for('forms.api_names') }}?class=" + cls);
+    const names = await res.json();
+
+    nameSelect.innerHTML = '<option value="">-- 名前を選択 --</option>';
+    names.forEach(function(p) {
+      const opt = document.createElement('option');
+      opt.value = p.id;
+      const isTeacher = p.role === '教師' || p.role === '学年主任';
+      opt.textContent = isTeacher ? p.name + ' 先生' : p.name;
+      nameSelect.appendChild(opt);
+    });
+    nameSelect.disabled = false;
+  });
+
+  nameSelect.addEventListener('change', function() {
+    const pid = nameSelect.value;
+    if (pid) {
+      checkinForm.action = '/admin/participant/' + pid + '/set-attendance';
+      checkinBtn.disabled = false;
+    } else {
+      checkinForm.action = '';
+      checkinBtn.disabled = true;
+    }
+  });
+
+  // クラス別名簿の絞り込み（全員 / 参加予定 / 来場済み / まだ）
+  document.querySelectorAll('.roster-filter').forEach(function(group) {
+    const pane = document.getElementById(group.dataset.target);
+    group.querySelectorAll('button[data-filter]').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        group.querySelectorAll('button').forEach(function(b){ b.classList.remove('active'); });
+        btn.classList.add('active');
+        const filter = btn.dataset.filter;
+        pane.querySelectorAll('tbody tr').forEach(function(tr) {
+          const attending = tr.dataset.attending === '1';
+          const arrived = tr.dataset.arrived === '1';
+          let show = true;
+          if (filter === 'attending') show = attending;
+          else if (filter === 'arrived') show = arrived;
+          else if (filter === 'pending') show = attending && !arrived;
+          tr.style.display = show ? '' : 'none';
+        });
+      });
+    });
+  });
+</script>
+{% endblock extra_js %}

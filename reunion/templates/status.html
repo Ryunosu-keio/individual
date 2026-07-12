@@ -157,7 +157,9 @@
       .filter(p => p[type] !== 'no_response')
       .map(p => {
         const displayName = p.name;
+        const classNum = (p.class_name || '-') + (p.number ? '-' + p.number : '');
         return `<div class="person-row" data-prov="${p.prov}" data-final="${p.final}">
+          <span class="text-muted small me-2">${classNum}</span>
           <span class="flex-grow-1">${displayName}</span>
           <span class="badge person-badge ms-2"></span>
         </div>`;

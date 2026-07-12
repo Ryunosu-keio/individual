@@ -110,12 +110,12 @@
     <thead class="table-light">
       <tr id="headerRow">
         <th class="sortable" data-col="id" style="cursor:pointer;white-space:nowrap;">ID <span class="sort-icon text-muted">↕</span></th>
+        <th class="sortable" data-col="class" style="cursor:pointer;white-space:nowrap;">クラス <span class="sort-icon text-muted">↕</span></th>
+        <th class="sortable" data-col="number" style="cursor:pointer;white-space:nowrap;">出席番号 <span class="sort-icon text-muted">↕</span></th>
         <th class="sortable" data-col="name" style="cursor:pointer;white-space:nowrap;">氏名 <span class="sort-icon text-muted">↕</span></th>
         <th class="sortable" data-col="name_kana" style="cursor:pointer;white-space:nowrap;">氏名（カナ）<span class="sort-icon text-muted">↕</span></th>
         <th class="sortable" data-col="email" style="cursor:pointer;white-space:nowrap;">メールアドレス <span class="sort-icon text-muted">↕</span></th>
         <th class="sortable" data-col="role" style="cursor:pointer;white-space:nowrap;">役割 <span class="sort-icon text-muted">↕</span></th>
-        <th class="sortable" data-col="class" style="cursor:pointer;white-space:nowrap;">クラス <span class="sort-icon text-muted">↕</span></th>
-        <th class="sortable" data-col="number" style="cursor:pointer;white-space:nowrap;">出席番号 <span class="sort-icon text-muted">↕</span></th>
         <th class="sortable" data-col="memo" style="cursor:pointer;white-space:nowrap;">幹事メモ <span class="sort-icon text-muted">↕</span></th>
         <th class="sortable" data-col="prov" style="cursor:pointer;white-space:nowrap;">仮出欠 <span class="sort-icon text-muted">↕</span></th>
         <th class="sortable" data-col="final" style="cursor:pointer;white-space:nowrap;">本出欠 <span class="sort-icon text-muted">↕</span></th>
@@ -124,6 +124,8 @@
       </tr>
       <tr id="filterRow" class="table-secondary">
         <td><input type="text" class="form-control form-control-sm" id="f-id" placeholder="検索"></td>
+        <td><input type="text" class="form-control form-control-sm" id="f-class" placeholder="検索"></td>
+        <td><input type="text" class="form-control form-control-sm" id="f-number" placeholder="検索"></td>
         <td><input type="text" class="form-control form-control-sm" id="f-name" placeholder="検索"></td>
         <td><input type="text" class="form-control form-control-sm" id="f-name-kana" placeholder="検索"></td>
         <td><input type="text" class="form-control form-control-sm" id="f-email" placeholder="検索"></td>
@@ -136,8 +138,6 @@
             <option value="幹事">幹事</option>
           </select>
         </td>
-        <td><input type="text" class="form-control form-control-sm" id="f-class" placeholder="検索"></td>
-        <td><input type="text" class="form-control form-control-sm" id="f-number" placeholder="検索"></td>
         <td><input type="text" class="form-control form-control-sm" id="f-memo" placeholder="検索"></td>
         <td>
           <select class="form-select form-select-sm" id="f-prov">
@@ -176,6 +176,8 @@
       {% set role_sort = {'生徒': 0, '教師': 1, '学年主任': 2, '幹事': 3}.get(p.role, 9) %}
       <tr>
         <td data-col="id" data-val="{{ p.id }}" data-sort="{{ p.id }}" class="text-muted small">{{ p.id }}</td>
+        <td data-col="class" data-val="{{ p.class_name or '' }}" class="small text-center">{{ p.class_name or '' }}</td>
+        <td data-col="number" data-val="{{ p.student_number or '' }}" data-sort="{{ p.student_number if p.student_number and p.student_number.isdigit() else '9999' }}" class="small text-center">{{ p.student_number or '' }}</td>
         <td data-col="name" data-val="{{ p.name }}">
           <a href="{{ url_for('admin.participant_detail', participant_id=p.id) }}">{{ p.name }}</a>
         </td>
@@ -189,8 +191,6 @@
           {% elif p.role == '幹事' %}<span class="badge bg-info text-dark">幹事</span>
           {% else %}<span class="badge bg-primary">生徒</span>{% endif %}
         </td>
-        <td data-col="class" data-val="{{ p.class_name or '' }}" class="small text-center">{{ p.class_name or '' }}</td>
-        <td data-col="number" data-val="{{ p.student_number or '' }}" data-sort="{{ p.student_number if p.student_number and p.student_number.isdigit() else '9999' }}" class="small text-center">{{ p.student_number or '' }}</td>
         <td data-col="memo" data-val="{{ p.teacher_memo or '' }}" class="small text-muted">{{ p.teacher_memo or '' }}</td>
         <td data-col="prov" data-val="{{ prov_label }}">
           {% if prov %}

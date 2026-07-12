@@ -41,53 +41,57 @@
 <h4 class="mb-4"><i class="bi bi-speedometer2 me-2"></i>ダッシュボード</h4>
 
 <div class="row g-4 mb-4">
-  <!-- 仮出欠 -->
-  <div class="col-12 col-md-4">
-    <div class="card border-0 shadow-sm h-100 chart-card">
+  <!-- 円グラフ（タップで 仮出欠 / 本出欠 / 入金 を切り替え） -->
+  <div class="col-12 col-md-8 col-lg-6 mx-auto">
+    <div class="card border-0 shadow-sm chart-card">
       <div class="card-body text-center">
-        <h6 class="text-muted mb-3">仮出欠</h6>
-        <div class="chart-wrap">
-          <canvas id="chartProvisional"></canvas>
-          <div class="chart-center">
-            <div class="num">{{ stats.total }}</div>
-            <div class="label">登録者数</div>
+        <div class="d-flex justify-content-center mb-3">
+          <div class="btn-group btn-group-sm" role="group" id="chartTabs">
+            <button type="button" class="btn btn-primary" data-pane="paneProvisional" data-chart="provisional">仮出欠</button>
+            <button type="button" class="btn btn-outline-primary" data-pane="paneFinal" data-chart="final">本出欠</button>
+            <button type="button" class="btn btn-outline-primary" data-pane="panePayment" data-chart="payment">入金</button>
           </div>
         </div>
-        <ul class="chart-legend" id="legendProvisional"></ul>
-      </div>
-    </div>
-  </div>
 
-  <!-- 本出欠 -->
-  <div class="col-12 col-md-4">
-    <div class="card border-0 shadow-sm h-100 chart-card">
-      <div class="card-body text-center">
-        <h6 class="text-muted mb-3">本出欠</h6>
-        <div class="chart-wrap">
-          <canvas id="chartFinal"></canvas>
-          <div class="chart-center">
-            <div class="num">{{ stats.total }}</div>
-            <div class="label">登録者数</div>
+        <!-- 仮出欠 -->
+        <div id="paneProvisional" class="chart-pane">
+          <div class="chart-wrap">
+            <canvas id="chartProvisional"></canvas>
+            <div class="chart-center">
+              <div class="num">{{ stats.total }}</div>
+              <div class="label">登録者数</div>
+            </div>
           </div>
+          <ul class="chart-legend" id="legendProvisional"></ul>
         </div>
-        <ul class="chart-legend" id="legendFinal"></ul>
-      </div>
-    </div>
-  </div>
 
-  <!-- 入金 -->
-  <div class="col-12 col-md-4">
-    <div class="card border-0 shadow-sm h-100 chart-card">
-      <div class="card-body text-center">
-        <h6 class="text-muted mb-3">入金</h6>
-        <div class="chart-wrap">
-          <canvas id="chartPayment"></canvas>
-          <div class="chart-center">
-            <div class="num">{{ stats.paid + stats.unpaid }}</div>
-            <div class="label">対象者数</div>
+        <!-- 本出欠 -->
+        <div id="paneFinal" class="chart-pane d-none">
+          <div class="chart-wrap">
+            <canvas id="chartFinal"></canvas>
+            <div class="chart-center">
+              <div class="num">{{ stats.total }}</div>
+              <div class="label">登録者数</div>
+            </div>
           </div>
+          <ul class="chart-legend" id="legendFinal"></ul>
         </div>
-        <ul class="chart-legend" id="legendPayment"></ul>
+
+        <!-- 入金 -->
+        <div id="panePayment" class="chart-pane d-none">
+          <div class="chart-wrap">
+            <canvas id="chartPayment"></canvas>
+            <div class="chart-center">
+              <div class="num">{{ stats.paid + stats.unpaid }}</div>
+              <div class="label">対象者数</div>
+            </div>
+          </div>
+          <ul class="chart-legend" id="legendPayment"></ul>
+        </div>
+
+        <a href="{{ url_for('status', detail=1) }}" target="_blank" class="btn btn-outline-secondary btn-sm mt-3">
+          <i class="bi bi-bar-chart-fill me-1"></i>参加状況を内訳付きで見る
+        </a>
       </div>
     </div>
   </div>
@@ -362,8 +366,10 @@
     return chart;
   }
 
+  var charts = {};
+
   // 仮出欠
-  createDoughnut('chartProvisional', 'legendProvisional', [
+  charts.provisional = createDoughnut('chartProvisional', 'legendProvisional', [
     { label: '仮参加',   value: {{ stats.provisional_attending }},     color: '#198754', url: URLS.participants + '?status=attending' },
     { label: '仮不参加', value: {{ stats.provisional_not_attending }}, color: '#adb5bd', url: URLS.participants + '?status=not_attending' },
     { label: '仮未定',   value: {{ stats.provisional_undecided }},     color: '#0dcaf0', url: URLS.participants + '?status=undecided' },
@@ -371,17 +377,35 @@
   ]);
 
   // 本出欠
-  createDoughnut('chartFinal', 'legendFinal', [
+  charts.final = createDoughnut('chartFinal', 'legendFinal', [
     { label: '本参加',   value: {{ stats.final_attending }},     color: '#198754', url: URLS.participants + '?final_status=attending' },
     { label: '本不参加', value: {{ stats.final_not_attending }}, color: '#adb5bd', url: URLS.participants + '?final_status=not_attending' },
     { label: '未回答',   value: {{ stats.final_no_response }},   color: '#ffc107', url: URLS.participants + '?final_status=no_response' }
   ]);
 
   // 入金
-  createDoughnut('chartPayment', 'legendPayment', [
+  charts.payment = createDoughnut('chartPayment', 'legendPayment', [
     { label: '入金済み', value: {{ stats.paid }},   color: '#198754', url: URLS.payments + '?status=paid' },
     { label: '未入金',   value: {{ stats.unpaid }}, color: '#dc3545', url: URLS.payments + '?status=unpaid' }
   ]);
+
+  // 円グラフのタブ切り替え
+  var tabButtons = document.querySelectorAll('#chartTabs button');
+  tabButtons.forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      tabButtons.forEach(function(b) {
+        b.classList.remove('btn-primary');
+        b.classList.add('btn-outline-primary');
+        document.getElementById(b.dataset.pane).classList.add('d-none');
+      });
+      btn.classList.remove('btn-outline-primary');
+      btn.classList.add('btn-primary');
+      document.getElementById(btn.dataset.pane).classList.remove('d-none');
+      // 非表示中に生成したチャートはサイズ0のままなので再計算する
+      var chart = charts[btn.dataset.chart];
+      if (chart) chart.resize();
+    });
+  });
 })();
 
   // フォームロックトグル

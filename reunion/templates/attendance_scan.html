@@ -11,7 +11,7 @@
     <div class="card shadow-sm">
       <div class="card-body p-4">
         <h2 class="h4 mb-3">会場出席登録</h2>
-        <p class="text-muted mb-4">お名前を選択してください。登録完了後、登録済みメールアドレスへ確認メールが届きます。</p>
+        <p class="text-muted mb-4">クラスとお名前を選択してください。登録完了後、登録済みメールアドレスへ確認メールが届きます。</p>
 
         {% with messages = get_flashed_messages(with_categories=true) %}
           {% if messages %}
@@ -21,36 +21,71 @@
           {% endif %}
         {% endwith %}
 
-        <form method="post">
-          <div class="mb-3">
-            <label for="name_filter" class="form-label">名前で検索</label>
-            <input id="name_filter" class="form-control mb-2" placeholder="名前の一部を入力すると絞り込まれます">
-            <label for="participant_id" class="form-label">参加者名</label>
-            <select class="form-select" id="participant_id" name="participant_id" required>
-              <option value="">選択してください</option>
-              {% for participant in participants %}
-              <option value="{{ participant.id }}">{{ participant.name }}{% if participant.class_name %}（{{ participant.class_name }}）{% endif %}</option>
-              {% endfor %}
-            </select>
-          </div>
-          <button type="submit" class="btn btn-primary w-100">出席を登録する</button>
+        <div class="mb-3">
+          <label for="class_select" class="form-label fw-bold">クラス <span class="text-danger">*</span></label>
+          <select class="form-select" id="class_select">
+            <option value="">-- クラスを選択 --</option>
+            <option value="31">31</option>
+            <option value="32">32</option>
+            <option value="33">33</option>
+            <option value="34">34</option>
+            <option value="35">35</option>
+            <option value="36">36</option>
+            <option value="37">37</option>
+            <option value="38">38</option>
+            <option value="39">39</option>
+            <option value="teacher">教職員</option>
+          </select>
+        </div>
+        <div class="mb-3 d-none" id="name_select_group">
+          <label for="name_select" class="form-label fw-bold">お名前 <span class="text-danger">*</span></label>
+          <select class="form-select" id="name_select" disabled>
+            <option value="">-- 名前を選択 --</option>
+          </select>
+        </div>
+        <form method="post" id="checkin_form">
+          <input type="hidden" name="participant_id" id="participant_id" value="">
+          <button type="submit" class="btn btn-primary w-100" id="checkin_btn" disabled>出席を登録する</button>
         </form>
+
         <script>
-          (function(){
-            const filter = document.getElementById('name_filter');
-            const select = document.getElementById('participant_id');
-            filter.addEventListener('input', function(){
-              const q = this.value.trim().toLowerCase();
-              let firstVisible = null;
-              for (let i=0;i<select.options.length;i++){
-                const opt = select.options[i];
-                if (!q) { opt.hidden = false; if(firstVisible===null && opt.value) firstVisible = opt; continue; }
-                const txt = opt.text.toLowerCase();
-                if (txt.indexOf(q) !== -1) { opt.hidden = false; if(firstVisible===null && opt.value) firstVisible = opt; } else { opt.hidden = true; }
-              }
-              if(firstVisible) select.value = firstVisible.value;
+          const classSelect     = document.getElementById('class_select');
+          const nameSelectGroup = document.getElementById('name_select_group');
+          const nameSelect      = document.getElementById('name_select');
+          const participantId   = document.getElementById('participant_id');
+          const checkinBtn      = document.getElementById('checkin_btn');
+
+          classSelect.addEventListener('change', async function() {
+            const cls = classSelect.value;
+            nameSelect.innerHTML = '<option value="">読み込み中...</option>';
+            nameSelect.disabled = true;
+            checkinBtn.disabled = true;
+            participantId.value = '';
+
+            if (!cls) {
+              nameSelectGroup.classList.add('d-none');
+              return;
+            }
+
+            nameSelectGroup.classList.remove('d-none');
+            const res = await fetch("{{ url_for('forms.api_names') }}?class=" + cls);
+            const names = await res.json();
+
+            nameSelect.innerHTML = '<option value="">-- 名前を選択 --</option>';
+            names.forEach(function(p) {
+              const opt = document.createElement('option');
+              opt.value = p.id;
+              const isTeacher = p.role === '教師' || p.role === '学年主任';
+              opt.textContent = isTeacher ? p.name + ' 先生' : p.name;
+              nameSelect.appendChild(opt);
             });
-          })();
+            nameSelect.disabled = false;
+          });
+
+          nameSelect.addEventListener('change', function() {
+            participantId.value = nameSelect.value;
+            checkinBtn.disabled = !nameSelect.value;
+          });
         </script>
       </div>
     </div>

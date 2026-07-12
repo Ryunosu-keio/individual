@@ -137,6 +137,7 @@
               <thead class="table-light sticky-top">
                 <tr>
                   <th>#</th>
+                  <th>組-番</th>
                   <th>名前</th>
                   <th>メールアドレス</th>
                 </tr>
@@ -264,8 +265,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
           data.targets.forEach(function(t, i) {
             const roleLabel = t.role && t.role !== '生徒' ? `<span class="badge bg-secondary ms-1">${t.role}</span>` : '';
+            const classNum = (t.class_name || '-') + (t.number ? '-' + t.number : '');
             const tr = document.createElement('tr');
             tr.innerHTML = `<td class="text-muted small">${i + 1}</td>` +
+              `<td class="text-muted small text-nowrap">${classNum}</td>` +
               `<td>${t.name}${roleLabel}</td>` +
               `<td class="small text-muted">${t.email}</td>`;
             tbody.appendChild(tr);

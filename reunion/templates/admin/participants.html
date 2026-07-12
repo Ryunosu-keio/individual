@@ -25,36 +25,34 @@
   <!-- ========== 参加者一覧タブ ========== -->
   <div class="tab-pane fade show active" id="listPane" role="tabpanel">
 
-<div class="d-flex flex-column flex-md-row justify-content-between align-items-start gap-2 mb-3">
-  <div class="d-flex gap-2 align-items-center">
-    <form class="d-flex gap-1" method="GET">
-      <input type="hidden" name="sort" value="{{ sort }}">
-      <input type="hidden" name="order" value="{{ order }}">
-      <input type="hidden" name="status" value="{{ status_filter }}">
-      <input type="hidden" name="final_status" value="{{ final_filter }}">
-      <input type="hidden" name="role" value="{{ role_filter }}">
-      <input type="hidden" name="class_name" value="{{ class_filter }}">
-      <input type="text" class="form-control form-control-sm" name="q"
-             value="{{ q }}" placeholder="氏名・メールで検索" style="width:180px;">
-      <button type="submit" class="btn btn-outline-primary btn-sm"><i class="bi bi-search"></i></button>
-      {% if q %}
-      <a href="{{ url_for('admin.participants', sort=sort, order=order, status=status_filter, final_status=final_filter, role=role_filter, class_name=class_filter) }}"
-         class="btn btn-outline-secondary btn-sm" title="検索クリア"><i class="bi bi-x-lg"></i></a>
-      {% endif %}
-    </form>
-  </div>
-  <div class="d-flex flex-wrap gap-2 align-items-center">
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3">
+  <form class="d-flex gap-1 participant-search" method="GET">
+    <input type="hidden" name="sort" value="{{ sort }}">
+    <input type="hidden" name="order" value="{{ order }}">
+    <input type="hidden" name="status" value="{{ status_filter }}">
+    <input type="hidden" name="final_status" value="{{ final_filter }}">
+    <input type="hidden" name="role" value="{{ role_filter }}">
+    <input type="hidden" name="class_name" value="{{ class_filter }}">
+    <input type="text" class="form-control form-control-sm" name="q"
+           value="{{ q }}" placeholder="氏名・メールで検索" style="width:180px;">
+    <button type="submit" class="btn btn-outline-primary btn-sm"><i class="bi bi-search"></i></button>
+    {% if q %}
+    <a href="{{ url_for('admin.participants', sort=sort, order=order, status=status_filter, final_status=final_filter, role=role_filter, class_name=class_filter) }}"
+       class="btn btn-outline-secondary btn-sm" title="検索クリア"><i class="bi bi-x-lg"></i></a>
+    {% endif %}
+  </form>
+  <div class="participant-actions">
     <a href="{{ url_for('admin.roster_export') }}" class="btn btn-outline-secondary btn-sm">
       <i class="bi bi-download me-1"></i>CSVエクスポート
     </a>
     <a href="{{ url_for('admin.mail_hub') }}?type=final_url" class="btn btn-success btn-sm">
-      <i class="bi bi-envelope-fill me-1"></i>本出欠URL一括送信
+      <i class="bi bi-envelope-fill me-1"></i><span class="d-none d-md-inline">本出欠URL一括送信</span><span class="d-md-none">本出欠URL送信</span>
     </a>
     <a href="{{ url_for('admin.mail_hub') }}?type=reminder" class="btn btn-primary btn-sm">
-      <i class="bi bi-bell-fill me-1"></i>本出欠リマインド一括送信
+      <i class="bi bi-bell-fill me-1"></i><span class="d-none d-md-inline">本出欠リマインド一括送信</span><span class="d-md-none">リマインド送信</span>
     </a>
     <a href="{{ url_for('admin.mail_hub') }}?type=final_reminder" class="btn btn-danger btn-sm">
-      <i class="bi bi-file-earmark-pdf me-1"></i>最終リマインド一括送信
+      <i class="bi bi-file-earmark-pdf me-1"></i><span class="d-none d-md-inline">最終リマインド一括送信</span><span class="d-md-none">最終リマインド</span>
     </a>
   </div>
 </div>
@@ -65,6 +63,17 @@
   .th-filter { white-space:nowrap; }
   .th-filter a { text-decoration:none; color:inherit; }
   .filter-active { color:#0d6efd !important; }
+  /* 氏名などのセル内改行を防ぎ、はみ出す分は横スクロールさせる */
+  #listPane .table td { white-space:nowrap; }
+  /* 操作ボタン: スマホは2×2グリッド、md以上は右寄せ横並び */
+  .participant-actions { display:grid; grid-template-columns:1fr 1fr; gap:.5rem; }
+  .participant-actions .btn { white-space:nowrap; }
+  @media (min-width: 768px) {
+    .participant-actions { display:flex; flex-wrap:wrap; justify-content:flex-end; }
+  }
+  @media (max-width: 767.98px) {
+    .participant-search input[name="q"] { flex:1; width:auto !important; }
+  }
 </style>
 
 <!-- 参加者テーブル -->
@@ -72,10 +81,7 @@
   <table class="table table-hover table-sm align-middle">
     <thead class="table-light">
       <tr>
-        <th>ID</th>
-        <th class="th-filter">
-          <a href="{{ sort_url('name') }}">氏名 <i class="bi {{ sort_icon('name') }}"></i></a>
-        </th>
+        <th class="d-none d-md-table-cell">ID</th>
         <th class="th-filter">
           <div class="dropdown d-inline">
             <a href="#" class="dropdown-toggle {{ 'filter-active' if class_filter != 'all' }}"
@@ -96,6 +102,9 @@
         </th>
         <th class="th-filter">
           <a href="{{ sort_url('number') }}">番号 <i class="bi {{ sort_icon('number') }}"></i></a>
+        </th>
+        <th class="th-filter">
+          <a href="{{ sort_url('name') }}">氏名 <i class="bi {{ sort_icon('name') }}"></i></a>
         </th>
         <th class="th-filter">
           <div class="dropdown d-inline">
@@ -119,7 +128,7 @@
           </div>
           <a href="{{ sort_url('role') }}"><i class="bi {{ sort_icon('role') }}"></i></a>
         </th>
-        <th><a href="{{ sort_url('email') }}" class="text-decoration-none text-dark">メール <i class="bi {{ sort_icon('email') }}"></i></a></th>
+        <th class="d-none d-md-table-cell"><a href="{{ sort_url('email') }}" class="text-decoration-none text-dark">メール <i class="bi {{ sort_icon('email') }}"></i></a></th>
         <th class="th-filter">
           <div class="dropdown d-inline">
             <a href="#" class="dropdown-toggle {{ 'filter-active' if status_filter != 'all' }}"
@@ -174,7 +183,7 @@
           </div>
         </th>
         <th>入金</th>
-        <th><a href="{{ sort_url('created') }}" class="text-decoration-none text-dark">
+        <th class="d-none d-md-table-cell"><a href="{{ sort_url('created') }}" class="text-decoration-none text-dark">
           登録日 <i class="bi {{ sort_icon('created') }}"></i></a></th>
         <th>詳細</th>
       </tr>
@@ -184,19 +193,19 @@
       {% set prov = p.latest_provisional %}
       {% set final = p.latest_final %}
       <tr>
-        <td class="text-muted small">{{ p.id }}</td>
+        <td class="text-muted small d-none d-md-table-cell">{{ p.id }}</td>
+        <td class="small text-center">{{ p.class_name or '' }}</td>
+        <td class="small text-center">{{ p.student_number or '' }}</td>
         <td>
           {{ p.display_name }}
         </td>
-        <td class="small text-center">{{ p.class_name or '' }}</td>
-        <td class="small text-center">{{ p.student_number or '' }}</td>
         <td class="small">
           {% if p.role == '教師' %}<span class="badge bg-warning text-dark">教師</span>
           {% elif p.role == '学年主任' %}<span class="badge bg-danger">学年主任</span>
           {% elif p.role == '幹事' %}<span class="badge bg-info text-dark">幹事</span>
           {% else %}<span class="badge bg-primary">生徒</span>{% endif %}
         </td>
-        <td class="small">
+        <td class="small d-none d-md-table-cell">
           {% if p.email and '@placeholder.local' not in p.email %}{{ p.email }}
           {% else %}<span class="text-muted">未登録</span>{% endif %}
         </td>
@@ -230,7 +239,7 @@
             <span class="text-muted small">-</span>
           {% endif %}
         </td>
-        <td class="small text-muted">{{ p.created_at | jst('%m/%d') }}</td>
+        <td class="small text-muted d-none d-md-table-cell">{{ p.created_at | jst('%m/%d') }}</td>
         <td>
           <a href="{{ url_for('admin.participant_detail', participant_id=p.id) }}"
              class="btn btn-outline-primary btn-sm">詳細</a>
