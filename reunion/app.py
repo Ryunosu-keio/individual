@@ -142,6 +142,7 @@ def create_app():
 
             is_teacher = p.role in TEACHER_ROLES
             info = {"name": p.name + (" 先生" if is_teacher else ""), "prov": ps, "final": fs,
+                    "class_name": p.class_name or "", "number": p.student_number or "",
                     "prov_consent": prov_consent, "final_consent": final_consent,
                     "prov_at": prov.submitted_at.isoformat() if prov else None,
                     "final_at": final.submitted_at.isoformat() if final else None}
@@ -172,18 +173,16 @@ def create_app():
         from models import AttendanceRecord, Participant
         from services.mail_service import send_attendance_confirmation
 
-        participants = Participant.query.order_by(Participant.name).all()
-
         if request.method == "POST":
             participant_id = request.form.get("participant_id", "").strip()
             if not participant_id:
                 flash("参加者を選択してください。", "warning")
-                return render_template("attendance_scan.html", participants=participants)
+                return render_template("attendance_scan.html")
 
             participant = Participant.query.get(participant_id)
             if not participant:
                 flash("参加者が見つかりませんでした。", "danger")
-                return render_template("attendance_scan.html", participants=participants)
+                return render_template("attendance_scan.html")
 
             # 重複チェックを行わず、登録を追加する（当日制限はなし）
             record = AttendanceRecord(participant_id=participant.id, source="qr")
@@ -203,7 +202,7 @@ def create_app():
 
             return render_template("attendance_done.html", participant=participant)
 
-        return render_template("attendance_scan.html", participants=participants)
+        return render_template("attendance_scan.html")
 
     # -----------------------------------------------
     # エラーハンドラ

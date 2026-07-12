@@ -67,6 +67,7 @@
       <table class="table table-hover table-sm align-middle">
         <thead class="table-light">
           <tr>
+            <th>組-番</th>
             <th>氏名</th>
             <th>ステータス</th>
             <th>予定金額</th>
@@ -80,6 +81,9 @@
         <tbody>
           {% for payment in payments %}
           <tr>
+            <td class="small text-muted text-nowrap">
+              {{ payment.participant.class_name or '-' }}{% if payment.participant.student_number %}-{{ payment.participant.student_number }}{% endif %}
+            </td>
             <td>
               <a href="{{ url_for('admin.participant_detail', participant_id=payment.participant_id) }}">
                 {{ payment.participant.name }}
@@ -158,7 +162,7 @@
           </div>
           {% else %}
           <tr>
-            <td colspan="8" class="text-center text-muted py-4">入金レコードがありません</td>
+            <td colspan="9" class="text-center text-muted py-4">入金レコードがありません</td>
           </tr>
           {% endfor %}
         </tbody>

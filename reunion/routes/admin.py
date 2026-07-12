@@ -145,13 +145,64 @@ def index():
 @admin_bp.route("/qr-attendance")
 def qr_attendance():
     """会場QR出席の管理画面"""
-    participants = Participant.query.order_by(Participant.name).all()
+    # 名簿CSVの読み込み順（DB登録順: created_at）を保ちつつクラス順に表示
+    participants = Participant.query.order_by(Participant.class_name, Participant.created_at).all()
     records = AttendanceRecord.query.order_by(AttendanceRecord.checked_in_at.desc()).all()
     qr_url = url_for("attendance_scan", _external=True)
     total = len(participants)
     checked_ids = {r.participant_id for r in records if r.status == "checked_in"}
     checked_count = len(checked_ids)
     not_checked = max(0, total - checked_count)
+
+    # クラス別名簿（幹事用）: 本出欠参加・来場済み・未来場を名前順で一覧化
+    latest_checkin = {}
+    for r in records:  # records は checked_in_at 降順
+        if r.status == "checked_in" and r.participant_id not in latest_checkin:
+            latest_checkin[r.participant_id] = r
+
+    def _member_info(p):
+        final = p.latest_final
+        rec = latest_checkin.get(p.id)
+        return {
+            "participant": p,
+            "final_attending": bool(final and final.status == "attending"),
+            "final_status": final.status if final else None,
+            "checked_in": rec is not None,
+            "checked_in_at": rec.checked_in_at if rec else None,
+        }
+
+    def _kana_key(p):
+        return (p.name_kana or p.name or "")
+
+    roster = []
+    for key in [str(n) for n in range(31, 40)]:
+        members = sorted(
+            [p for p in participants
+             if p.class_name == key and p.role in ("生徒", "幹事")],
+            key=_kana_key,
+        )
+        infos = [_member_info(p) for p in members]
+        roster.append({
+            "key": key,
+            "label": key,
+            "members": infos,
+            "attending_count": sum(1 for m in infos if m["final_attending"]),
+            "arrived_count": sum(1 for m in infos if m["checked_in"]),
+            "pending_count": sum(1 for m in infos if m["final_attending"] and not m["checked_in"]),
+        })
+    teachers = sorted(
+        [p for p in participants if p.role in ("教師", "学年主任")],
+        key=_kana_key,
+    )
+    teacher_infos = [_member_info(p) for p in teachers]
+    roster.append({
+        "key": "teacher",
+        "label": "教職員",
+        "members": teacher_infos,
+        "attending_count": sum(1 for m in teacher_infos if m["final_attending"]),
+        "arrived_count": sum(1 for m in teacher_infos if m["checked_in"]),
+        "pending_count": sum(1 for m in teacher_infos if m["final_attending"] and not m["checked_in"]),
+    })
 
     return render_template(
         "admin/qr_attendance.html",
@@ -161,6 +212,7 @@ def qr_attendance():
         total=total,
         checked_count=checked_count,
         not_checked=not_checked,
+        roster=roster,
     )
 
 
@@ -808,7 +860,8 @@ def api_mail_preview(mail_type):
         "body": body_tmpl,
         "html_body": _text_to_html(body_tmpl),
         "targets": [
-            {"id": p.id, "name": p.name, "email": p.email, "role": p.role or ""}
+            {"id": p.id, "name": p.name, "email": p.email, "role": p.role or "",
+             "class_name": p.class_name or "", "number": p.student_number or ""}
             for p in targets
         ],
         "target_count": len(targets),
