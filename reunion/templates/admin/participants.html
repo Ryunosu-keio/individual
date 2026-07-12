@@ -65,6 +65,8 @@
   .filter-active { color:#0d6efd !important; }
   /* 氏名などのセル内改行を防ぎ、はみ出す分は横スクロールさせる */
   #listPane .table td { white-space:nowrap; }
+  /* カナは氏名の上にルビとして表示 */
+  #listPane .table ruby rt { font-size:.55em; color:#6c757d; letter-spacing:.02em; }
   /* 操作ボタン: スマホは2×2グリッド、md以上は右寄せ横並び */
   .participant-actions { display:grid; grid-template-columns:1fr 1fr; gap:.5rem; }
   .participant-actions .btn { white-space:nowrap; }
@@ -81,6 +83,9 @@
   <table class="table table-hover table-sm align-middle">
     <thead class="table-light">
       <tr>
+        <th class="th-filter">
+          <a href="{{ sort_url('name') }}">氏名 <i class="bi {{ sort_icon('name') }}"></i></a>
+        </th>
         <th class="d-none d-md-table-cell">ID</th>
         <th class="th-filter">
           <div class="dropdown d-inline">
@@ -102,9 +107,6 @@
         </th>
         <th class="th-filter">
           <a href="{{ sort_url('number') }}">番号 <i class="bi {{ sort_icon('number') }}"></i></a>
-        </th>
-        <th class="th-filter">
-          <a href="{{ sort_url('name') }}">氏名 <i class="bi {{ sort_icon('name') }}"></i></a>
         </th>
         <th class="th-filter">
           <div class="dropdown d-inline">
@@ -193,12 +195,16 @@
       {% set prov = p.latest_provisional %}
       {% set final = p.latest_final %}
       <tr>
+        <td class="text-nowrap">
+          {% if p.name_kana %}
+          <ruby>{{ p.display_name }}<rt>{{ p.name_kana }}</rt></ruby>
+          {% else %}
+          {{ p.display_name }}
+          {% endif %}
+        </td>
         <td class="text-muted small d-none d-md-table-cell">{{ p.id }}</td>
         <td class="small text-center">{{ p.class_name or '' }}</td>
         <td class="small text-center">{{ p.student_number or '' }}</td>
-        <td>
-          {{ p.display_name }}
-        </td>
         <td class="small">
           {% if p.role == '教師' %}<span class="badge bg-warning text-dark">教師</span>
           {% elif p.role == '学年主任' %}<span class="badge bg-danger">学年主任</span>
