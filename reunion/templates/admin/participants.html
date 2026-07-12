@@ -67,6 +67,8 @@
   #listPane .table td { white-space:nowrap; }
   /* カナは氏名の上にルビとして表示 */
   #listPane .table ruby rt { font-size:.55em; color:#6c757d; letter-spacing:.02em; }
+  /* 行タップで詳細へ */
+  .participant-row { cursor:pointer; }
   /* 操作ボタン: スマホは2×2グリッド、md以上は右寄せ横並び */
   .participant-actions { display:grid; grid-template-columns:1fr 1fr; gap:.5rem; }
   .participant-actions .btn { white-space:nowrap; }
@@ -194,7 +196,7 @@
       {% for p in participants %}
       {% set prov = p.latest_provisional %}
       {% set final = p.latest_final %}
-      <tr>
+      <tr class="participant-row" data-href="{{ url_for('admin.participant_detail', participant_id=p.id) }}">
         <td class="text-nowrap">
           {% if p.name_kana %}
           <ruby>{{ p.display_name }}<rt>{{ p.name_kana }}</rt></ruby>
@@ -379,6 +381,14 @@
   sessionStorage.setItem('participantListUrl', location.href);
   var ids = [{% for p in participants %}{{ p.id }}{% if not loop.last %},{% endif %}{% endfor %}];
   sessionStorage.setItem('participantListIds', JSON.stringify(ids));
+
+  // 行タップで詳細ページへ（行内のリンク・ボタンのクリックは除く）
+  document.querySelectorAll('.participant-row').forEach(function(tr) {
+    tr.addEventListener('click', function(e) {
+      if (e.target.closest('a, button')) return;
+      window.location.href = tr.dataset.href;
+    });
+  });
 })();
 </script>
 {% endblock %}
