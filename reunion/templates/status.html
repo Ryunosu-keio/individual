@@ -82,7 +82,7 @@
     <div>
       <button class="cls-btn" data-cls-idx="{{ loop.index0 }}">
         <span>{{ cls.label }}</span>
-        <span class="cnt">{{ cls.people|length }}名</span>
+        <span class="cnt" id="cls-cnt-{{ loop.index0 }}">{{ cls.people|length }}名</span>
       </button>
       <div class="cls-body" id="cls-body-{{ loop.index0 }}"></div>
     </div>
@@ -96,7 +96,7 @@
   <div class="d-flex flex-column gap-2 mb-2">
     <button class="cls-btn" id="teacher-btn">
       <span>先生・その他</span>
-      <span class="cnt">{{ teachers|length }}名</span>
+      <span class="cnt" id="teacher-cnt">{{ teachers|length }}名</span>
     </button>
   </div>
   <div class="cls-body mb-4" id="teacher-body"></div>
@@ -191,9 +191,20 @@
     });
   }
 
+  function updateCounts(type) {
+    const answeredOf = people => people.filter(p => p[type] !== 'no_response').length;
+    CLASS_DATA.forEach((cls, idx) => {
+      const el = document.getElementById('cls-cnt-' + idx);
+      if (el) el.textContent = '回答済み：' + answeredOf(cls.people) + '名/' + cls.people.length + '名';
+    });
+    const tEl = document.getElementById('teacher-cnt');
+    if (tEl) tEl.textContent = '回答済み：' + answeredOf(TEACHER_DATA) + '名/' + TEACHER_DATA.length + '名';
+  }
+
   function update(type) {
     currentType = type;
     const cfg = CFG[type];
+    updateCounts(type);
 
     chart.data.labels                       = cfg.segs.map(s => s.label);
     chart.data.datasets[0].data            = cfg.segs.map(s => cfg.data[s.key] || 0);
