@@ -63,7 +63,11 @@
           </dd>
           <dt class="col-4">フリガナ</dt>
           <dd class="col-8">{{ participant.name_kana or '-' }}</dd>
-          <dt class="col-4">メール</dt><dd class="col-8">{{ participant.email }}</dd>
+          <dt class="col-4">メール</dt>
+          <dd class="col-8">
+            {% if participant.email and '@placeholder.local' not in participant.email %}{{ participant.email }}
+            {% else %}<span class="text-muted">未登録</span>{% endif %}
+          </dd>
           <dt class="col-4">クラス</dt><dd class="col-8">{{ participant.class_name or '-' }}</dd>
           <dt class="col-4">出席番号</dt><dd class="col-8">{{ participant.student_number or '-' }}</dd>
           <dt class="col-4">ID</dt><dd class="col-8 small text-muted">{{ participant.id }}（システム管理番号）</dd>
@@ -85,9 +89,11 @@
                    value="{{ participant.name_kana or '' }}" placeholder="ヤマダタロウ">
           </div>
           <div class="mb-2">
-            <label class="form-label form-label-sm fw-bold mb-1">メールアドレス <span class="text-danger">*</span></label>
+            <label class="form-label form-label-sm fw-bold mb-1">メールアドレス</label>
+            {% set has_real_email = participant.email and '@placeholder.local' not in participant.email %}
             <input type="email" class="form-control form-control-sm" name="email"
-                   value="{{ participant.email }}" required>
+                   value="{{ participant.email if has_real_email else '' }}"
+                   placeholder="未登録の場合は空欄のまま">
           </div>
           <div class="row g-2 mb-3">
             <div class="col">
