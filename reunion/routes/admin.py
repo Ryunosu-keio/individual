@@ -518,9 +518,16 @@ def update_basic_info(participant_id):
 
     name = request.form.get("name", "").strip()
     email = request.form.get("email", "").strip()
-    if not name or not email:
-        flash("氏名とメールアドレスは必須です。", "danger")
+    if not name:
+        flash("氏名は必須です。", "danger")
         return redirect(url_for("admin.participant_detail", participant_id=participant_id))
+
+    if not email:
+        # メール未登録: 名簿取込と同形式のダミーメールを生成して保持する
+        class_ = request.form.get("class_name", "").strip()
+        email = f"__no_email_{name}_{class_}_{participant.role}@placeholder.local"
+        if Participant.query.filter(Participant.email == email, Participant.id != participant_id).first():
+            email = f"__no_email_{participant_id}_{name}@placeholder.local"
 
     duplicate = Participant.query.filter(
         Participant.email == email, Participant.id != participant_id
