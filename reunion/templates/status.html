@@ -148,13 +148,17 @@
   const CLASS_DATA   = {{ sorted_classes | tojson }};
   const TEACHER_DATA = {{ teachers       | tojson }};
 
-  function sortByResponse(people, type) {
-    return [...people].sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ja'));
+  function sortByNumber(people) {
+    return [...people].sort((a, b) => {
+      const na = /^\d+$/.test(a.number || '') ? parseInt(a.number, 10) : 9999;
+      const nb = /^\d+$/.test(b.number || '') ? parseInt(b.number, 10) : 9999;
+      if (na !== nb) return na - nb;
+      return (a.name || '').localeCompare(b.name || '', 'ja');
+    });
   }
 
   function makeRows(people, type) {
-    return sortByResponse(people, type)
-      .filter(p => p[type] !== 'no_response')
+    return sortByNumber(people)
       .map(p => {
         const displayName = p.name;
         const classNum = (p.class_name || '-') + (p.number ? '-' + p.number : '');
