@@ -3,6 +3,7 @@ config.py - アプリ設定管理
 .env ファイルから設定を読み込み、Flaskアプリに渡す
 """
 import os
+from datetime import timedelta
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -16,6 +17,13 @@ class Config:
     # -----------------------------------------------
     SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key-please-change")
     FLASK_ENV = os.getenv("FLASK_ENV", "development")
+
+    # -----------------------------------------------
+    # 管理画面ログイン
+    # 未設定の場合は管理画面にログインできない（fail-closed）
+    # -----------------------------------------------
+    ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "")
+    PERMANENT_SESSION_LIFETIME = timedelta(days=30)
 
     # -----------------------------------------------
     # データベース設定
