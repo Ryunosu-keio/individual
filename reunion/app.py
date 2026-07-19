@@ -112,13 +112,20 @@ def create_app():
     # -----------------------------------------------
     # 管理画面ログイン
     # -----------------------------------------------
+    def _safe_next(nxt):
+        """サイト内の相対パスのみ許可（オープンリダイレクト防止）"""
+        if nxt and nxt.startswith("/") and not nxt.startswith("//"):
+            return nxt
+        return url_for("admin.index")
+
     @app.route("/login", methods=["GET", "POST"])
     def login():
         import hmac
         from flask import render_template, request, session, flash
 
         if session.get("admin_authed"):
-            return redirect(url_for("admin.index"))
+            # ログイン済みでも next があればそこへ戻す
+            return redirect(_safe_next(request.args.get("next", "")))
 
         if request.method == "POST":
             admin_password = app.config.get("ADMIN_PASSWORD", "")
@@ -128,16 +135,11 @@ def create_app():
             elif hmac.compare_digest(password, admin_password):
                 session.permanent = True
                 session["admin_authed"] = True
-                nxt = request.form.get("next", "")
-                # オープンリダイレクト防止: サイト内の相対パスのみ許可
-                if not nxt.startswith("/") or nxt.startswith("//"):
-                    nxt = url_for("admin.index")
-                return redirect(nxt)
+                return redirect(_safe_next(request.form.get("next", "")))
             else:
                 flash("パスワードが違います。", "danger")
 
-        from flask import request as req
-        return render_template("login.html", next=req.args.get("next", "") or req.form.get("next", ""))
+        return render_template("login.html", next=request.args.get("next", "") or request.form.get("next", ""))
 
     @app.route("/logout")
     def logout():
@@ -161,7 +163,8 @@ def create_app():
         show_details = request.args.get("detail", "").lower() in {"1", "true", "yes", "on"}
         # 名前入りの詳細表示はログイン必須（集計のみの表示は公開）
         if show_details and not session.get("admin_authed"):
-            return redirect(url_for("login", next=request.full_path))
+            from urllib.parse import quote
+            return redirect(url_for("login") + "?next=" + quote(request.full_path, safe=""))
 
         participants = Participant.query.all()
         prov_stats  = {"attending": 0, "not_attending": 0, "undecided": 0, "no_response": 0}

@@ -46,8 +46,9 @@ admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 def require_admin_auth():
     """管理画面全体にログインを必須にする"""
     from flask import session
+    from urllib.parse import quote
     if not session.get("admin_authed"):
-        return redirect(url_for("login", next=request.full_path))
+        return redirect(url_for("login") + "?next=" + quote(request.full_path, safe=""))
 
 
 # -----------------------------------------------
