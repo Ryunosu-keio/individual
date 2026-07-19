@@ -19,10 +19,12 @@ class Config:
     FLASK_ENV = os.getenv("FLASK_ENV", "development")
 
     # -----------------------------------------------
-    # 管理画面ログイン
-    # 未設定の場合は管理画面にログインできない（fail-closed）
+    # ログインパスワード（未設定の場合はログインできない fail-closed）
+    #   ADMIN_PASSWORD:  管理画面（/admin）用
+    #   STATUS_PASSWORD: 参加状況の詳細表示（/status?detail=1）閲覧用
     # -----------------------------------------------
     ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "")
+    STATUS_PASSWORD = os.getenv("STATUS_PASSWORD", "")
     PERMANENT_SESSION_LIFETIME = timedelta(days=30)
 
     # -----------------------------------------------
