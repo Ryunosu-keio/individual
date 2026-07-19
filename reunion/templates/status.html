@@ -149,9 +149,11 @@
   const TEACHER_DATA = {{ teachers       | tojson }};
 
   function sortByNumber(people) {
+    const numOf = v => /^\d+$/.test(v || '') ? parseInt(v, 10) : 9999;
     return [...people].sort((a, b) => {
-      const na = /^\d+$/.test(a.number || '') ? parseInt(a.number, 10) : 9999;
-      const nb = /^\d+$/.test(b.number || '') ? parseInt(b.number, 10) : 9999;
+      const ca = numOf(a.class_name), cb = numOf(b.class_name);
+      if (ca !== cb) return ca - cb;   // クラス順（先生一覧: 30→39）
+      const na = numOf(a.number), nb = numOf(b.number);
       if (na !== nb) return na - nb;
       return (a.name || '').localeCompare(b.name || '', 'ja');
     });
