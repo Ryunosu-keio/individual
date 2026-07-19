@@ -109,9 +109,46 @@ def create_app():
     def index():
         return redirect(url_for("admin.index"))
 
+    # -----------------------------------------------
+    # 管理画面ログイン
+    # -----------------------------------------------
+    @app.route("/login", methods=["GET", "POST"])
+    def login():
+        import hmac
+        from flask import render_template, request, session, flash
+
+        if session.get("admin_authed"):
+            return redirect(url_for("admin.index"))
+
+        if request.method == "POST":
+            admin_password = app.config.get("ADMIN_PASSWORD", "")
+            password = request.form.get("password", "")
+            if not admin_password:
+                flash("ADMIN_PASSWORD が未設定のためログインできません。サーバーの環境変数（.env）に設定してください。", "danger")
+            elif hmac.compare_digest(password, admin_password):
+                session.permanent = True
+                session["admin_authed"] = True
+                nxt = request.form.get("next", "")
+                # オープンリダイレクト防止: サイト内の相対パスのみ許可
+                if not nxt.startswith("/") or nxt.startswith("//"):
+                    nxt = url_for("admin.index")
+                return redirect(nxt)
+            else:
+                flash("パスワードが違います。", "danger")
+
+        from flask import request as req
+        return render_template("login.html", next=req.args.get("next", "") or req.form.get("next", ""))
+
+    @app.route("/logout")
+    def logout():
+        from flask import session, flash
+        session.pop("admin_authed", None)
+        flash("ログアウトしました。", "success")
+        return redirect(url_for("login"))
+
     @app.route("/status")
     def status():
-        from flask import render_template, request
+        from flask import render_template, request, session
         from models import Participant
 
         def _class_label(cls):
@@ -122,6 +159,9 @@ def create_app():
         TEACHER_ROLES = {"教師", "学年主任", "副担任"}
 
         show_details = request.args.get("detail", "").lower() in {"1", "true", "yes", "on"}
+        # 名前入りの詳細表示はログイン必須（集計のみの表示は公開）
+        if show_details and not session.get("admin_authed"):
+            return redirect(url_for("login", next=request.full_path))
 
         participants = Participant.query.all()
         prov_stats  = {"attending": 0, "not_attending": 0, "undecided": 0, "no_response": 0}

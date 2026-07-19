@@ -42,6 +42,14 @@ logger = logging.getLogger(__name__)
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 
 
+@admin_bp.before_request
+def require_admin_auth():
+    """管理画面全体にログインを必須にする"""
+    from flask import session
+    if not session.get("admin_authed"):
+        return redirect(url_for("login", next=request.full_path))
+
+
 # -----------------------------------------------
 # ダッシュボード
 # -----------------------------------------------
