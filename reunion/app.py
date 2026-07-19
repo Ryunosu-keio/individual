@@ -112,20 +112,22 @@ def create_app():
     # -----------------------------------------------
     # 管理画面ログイン
     # -----------------------------------------------
-    def _safe_next(nxt):
+    def _safe_next(nxt, default):
         """サイト内の相対パスのみ許可（オープンリダイレクト防止）"""
         if nxt and nxt.startswith("/") and not nxt.startswith("//"):
             return nxt
-        return url_for("admin.index")
+        return default
 
     @app.route("/login", methods=["GET", "POST"])
     def login():
+        """管理画面（/admin）用ログイン"""
         import hmac
         from flask import render_template, request, session, flash
 
+        default_next = url_for("admin.index")
         if session.get("admin_authed"):
             # ログイン済みでも next があればそこへ戻す
-            return redirect(_safe_next(request.args.get("next", "")))
+            return redirect(_safe_next(request.args.get("next", ""), default_next))
 
         if request.method == "POST":
             admin_password = app.config.get("ADMIN_PASSWORD", "")
@@ -135,18 +137,49 @@ def create_app():
             elif hmac.compare_digest(password, admin_password):
                 session.permanent = True
                 session["admin_authed"] = True
-                return redirect(_safe_next(request.form.get("next", "")))
+                return redirect(_safe_next(request.form.get("next", ""), default_next))
             else:
                 flash("パスワードが違います。", "danger")
 
         return render_template("login.html", next=request.args.get("next", "") or request.form.get("next", ""))
 
+    @app.route("/status/login", methods=["GET", "POST"])
+    def status_login():
+        """参加状況の詳細表示（/status?detail=1）閲覧用ログイン"""
+        import hmac
+        from flask import render_template, request, session, flash
+
+        default_next = url_for("status", detail=1)
+        if session.get("status_authed") or session.get("admin_authed"):
+            return redirect(_safe_next(request.args.get("next", ""), default_next))
+
+        if request.method == "POST":
+            status_password = app.config.get("STATUS_PASSWORD", "")
+            admin_password = app.config.get("ADMIN_PASSWORD", "")
+            password = request.form.get("password", "")
+            if not status_password:
+                flash("STATUS_PASSWORD が未設定のためログインできません。サーバーの環境変数（.env）に設定してください。", "danger")
+            elif hmac.compare_digest(password, status_password):
+                session.permanent = True
+                session["status_authed"] = True
+                return redirect(_safe_next(request.form.get("next", ""), default_next))
+            elif admin_password and hmac.compare_digest(password, admin_password):
+                # 管理者パスワードでも閲覧可能
+                session.permanent = True
+                session["admin_authed"] = True
+                return redirect(_safe_next(request.form.get("next", ""), default_next))
+            else:
+                flash("パスワードが違います。", "danger")
+
+        return render_template("status_login.html", next=request.args.get("next", "") or request.form.get("next", ""))
+
     @app.route("/logout")
     def logout():
         from flask import session, flash
-        session.pop("admin_authed", None)
+        was_admin = session.pop("admin_authed", None)
+        session.pop("status_authed", None)
         flash("ログアウトしました。", "success")
-        return redirect(url_for("login"))
+        return redirect(url_for("login" if was_admin else "status_login"))
 
     @app.route("/status")
     def status():
@@ -162,9 +195,9 @@ def create_app():
 
         show_details = request.args.get("detail", "").lower() in {"1", "true", "yes", "on"}
         # 名前入りの詳細表示はログイン必須（集計のみの表示は公開）
-        if show_details and not session.get("admin_authed"):
+        if show_details and not (session.get("status_authed") or session.get("admin_authed")):
             from urllib.parse import quote
-            return redirect(url_for("login") + "?next=" + quote(request.full_path, safe=""))
+            return redirect(url_for("status_login") + "?next=" + quote(request.full_path, safe=""))
 
         participants = Participant.query.all()
         prov_stats  = {"attending": 0, "not_attending": 0, "undecided": 0, "no_response": 0}
