@@ -22,7 +22,11 @@
       "Bash(venv/bin/pip install *)",
       "Bash(venv/bin/python -c ' *)",
       "Bash(git commit -m ' *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Bash(grep -E '\\\\.\\(py|html\\)$')",
+      "Bash(git -C /Users/ryunosuke/code/individual/reunion status)",
+      "Bash(git -C /Users/ryunosuke/code/individual/reunion diff --stat)",
+      "Bash(git merge *)"
     ]
   }
 }
