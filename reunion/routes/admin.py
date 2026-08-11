@@ -2130,19 +2130,47 @@ def roster_export():
 
 @admin_bp.route("/final-form-preview")
 def final_form_preview():
-    """トークンを持つ代表者の本出欠フォーム実URLにリダイレクト"""
-    participant = (
-        Participant.query
-        .filter(Participant.token.isnot(None))
-        .order_by(Participant.class_name, Participant.student_number)
-        .first()
-    )
-    if not participant:
-        flash("本出欠URLが発行済みの参加者がいません。先にトークンを発行してください。", "warning")
-        return redirect(url_for("admin.participants"))
+    """本出欠フォームをサンプル参加者でプレビュー表示（実在の参加者の画面は使わない）"""
+    from utils import decompose_voiced
+    from routes.forms import _is_final_form_locked
+    from services.mail_service import _format_deadline_jp
 
-    base_url = current_app.config.get("APP_BASE_URL", request.host_url.rstrip("/"))
-    return redirect(f"{base_url}/form/final/{participant.token}")
+    class _PreviewParticipant:
+        name = "見本 太郎"
+        name_kana = "ミホンタロウ"
+        class_name = "31"
+        student_number = "5"
+        role = "生徒"
+        display_name = "見本 太郎"
+        display_name_kana = "ミホンタロウ"
+
+    transfer_keys = [
+        "transfer_bank", "transfer_branch", "transfer_branch_number",
+        "transfer_account_type", "transfer_account_number", "transfer_account_name", "transfer_deadline",
+        "reunion_fee",
+    ]
+    transfer_info = {}
+    for s in AppSetting.query.filter(AppSetting.key.in_(transfer_keys)).all():
+        transfer_info[s.key] = s.value
+
+    default_transfer_name = normalize_transfer_name("3105ミホンタロウ")
+    fd = AppSetting.query.filter_by(key="final_deadline").first()
+    final_deadline_jp = _format_deadline_jp(fd.value) if fd and fd.value else ""
+
+    return render_template(
+        "final_form.html",
+        participant=_PreviewParticipant(),
+        existing=None,
+        token="preview",
+        transfer_info=transfer_info,
+        default_transfer_name=default_transfer_name,
+        default_transfer_name_alt=decompose_voiced(default_transfer_name),
+        locked=_is_final_form_locked(),
+        can_cancel=False,
+        is_teacher=False,
+        final_deadline_jp=final_deadline_jp,
+        preview=True,
+    )
 
 
 GUIDE_DEFAULTS = {
