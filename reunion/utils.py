@@ -38,3 +38,28 @@ def decompose_voiced(name: str) -> str:
     if not name:
         return name
     return "".join(_VOICED_TO_BASE.get(ch, ch) for ch in name)
+
+
+# 全角カタカナ・全角数字 → 半角（濁点は独立記号のまま残す）
+_FULL_TO_HALF = str.maketrans(
+    "アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲンー・０１２３４５６７８９",
+    "ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜｦﾝｰ･0123456789",
+)
+
+# 全角の濁点・半濁点記号 → 半角
+_FULL_TO_HALF_MARK = str.maketrans("゛゜", "ﾞﾟ")
+
+
+def to_halfwidth_transfer_name(name: str, halfwidth_mark: bool = True) -> str:
+    """振込名義を半角表記に変換する。
+
+    半角カタカナには濁点合字が存在しないため、必ず基底文字＋濁点記号になる。
+    halfwidth_mark=True  → 濁点も半角（ﾔﾏﾀﾞ：濁点が半角1文字分）
+    halfwidth_mark=False → 濁点は全角のまま（ﾔﾏﾀ゛：濁点が半角2文字分）
+    """
+    if not name:
+        return name
+    result = decompose_voiced(name).translate(_FULL_TO_HALF)
+    if halfwidth_mark:
+        result = result.translate(_FULL_TO_HALF_MARK)
+    return result

@@ -326,6 +326,36 @@ def _is_final_form_locked() -> bool:
 
 
 
+def _build_transfer_name_patterns(base_name: str) -> list:
+    """振込名義の表記ゆれ4パターン（全角/半角 × 濁点1文字/2文字）を作る。
+
+    銀行の依頼人名欄は許容文字がまちまちなので、コピーして貼れる候補を用意する。
+    """
+    from utils import to_halfwidth_transfer_name
+    candidates = [
+        {"width": "zen", "key": "zen1", "label": "濁点・半濁点が1文字", "value": base_name},
+        {"width": "zen", "key": "zen2", "label": "濁点・半濁点が2文字", "value": decompose_voiced(base_name)},
+        {"width": "han", "key": "han1", "label": "濁点・半濁点が1文字",
+         "value": to_halfwidth_transfer_name(base_name, halfwidth_mark=True)},
+        {"width": "han", "key": "han2", "label": "濁点・半濁点が2文字",
+         "value": to_halfwidth_transfer_name(base_name, halfwidth_mark=False)},
+    ]
+
+    # 濁点・半濁点を含まない名前は1文字版と2文字版が同じになるので重複を除く
+    patterns = []
+    seen = set()
+    for pat in candidates:
+        if pat["value"] in seen:
+            continue
+        seen.add(pat["value"])
+        patterns.append(pat)
+    for width in ("zen", "han"):
+        same_width = [p for p in patterns if p["width"] == width]
+        if len(same_width) == 1:
+            same_width[0]["label"] = ""
+    return patterns
+
+
 @forms_bp.route("/final/<token>", methods=["GET", "POST"])
 def final(token):
     """本出欠フォーム（トークン付きURL）"""
@@ -356,6 +386,7 @@ def final(token):
         f"{student_id}{kana}" if kana else student_id
     )
     default_transfer_name_alt = decompose_voiced(default_transfer_name)
+    transfer_name_patterns = _build_transfer_name_patterns(default_transfer_name)
 
     is_teacher = participant.role in ("教師", "学年主任", "副担任")
     locked = _is_final_form_locked()
@@ -373,6 +404,7 @@ def final(token):
                                transfer_info=transfer_info,
                                default_transfer_name=default_transfer_name,
                                default_transfer_name_alt=default_transfer_name_alt,
+                               transfer_name_patterns=transfer_name_patterns,
                                locked=locked,
                                can_cancel=can_cancel,
                                is_teacher=is_teacher,
@@ -434,6 +466,7 @@ def final(token):
                                transfer_info=transfer_info,
                                default_transfer_name=default_transfer_name,
                                default_transfer_name_alt=default_transfer_name_alt,
+                               transfer_name_patterns=transfer_name_patterns,
                                locked=False,
                                can_cancel=False,
                                is_teacher=is_teacher)

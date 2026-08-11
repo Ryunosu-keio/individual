@@ -2132,7 +2132,7 @@ def roster_export():
 def final_form_preview():
     """本出欠フォームをサンプル参加者でプレビュー表示（実在の参加者の画面は使わない）"""
     from utils import decompose_voiced
-    from routes.forms import _is_final_form_locked
+    from routes.forms import _is_final_form_locked, _build_transfer_name_patterns
     from services.mail_service import _format_deadline_jp
 
     class _PreviewParticipant:
@@ -2165,6 +2165,7 @@ def final_form_preview():
         transfer_info=transfer_info,
         default_transfer_name=default_transfer_name,
         default_transfer_name_alt=decompose_voiced(default_transfer_name),
+        transfer_name_patterns=_build_transfer_name_patterns(default_transfer_name),
         locked=_is_final_form_locked(),
         can_cancel=False,
         is_teacher=False,
