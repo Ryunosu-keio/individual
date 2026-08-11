@@ -345,12 +345,17 @@
                       以下の情報を参照して振込してください。各項目の<i class="bi bi-clipboard"></i>ボタンでコピーできます。
                     </p>
 
-                    <!-- STEP 2: 振込先 -->
+                    <!-- STEP 2: 振込先・振込名義・金額（アプリにより入力順が異なるため番号は付けない） -->
                     <div class="step-block">
                       <div class="step-header">
                         <span class="step-badge">2</span>
-                        振込先を入力する
+                        振込内容を入力する
                       </div>
+                      <p class="small text-muted mb-2">
+                        入力欄の順番はご利用のアプリによって異なります。下の項目をそれぞれコピーして貼り付けてください。
+                      </p>
+
+                      <div class="fw-bold small mt-3 mb-1"><i class="bi bi-bank me-1"></i>振込先</div>
                       <table class="table table-sm table-borderless mb-0" style="font-size: 0.9rem">
                         {% if transfer_info.get('transfer_bank') %}
                         <tr>
@@ -416,60 +421,55 @@
                         </tr>
                         {% endif %}
                       </table>
-                    </div>
 
-                    <!-- STEP 3: 振込名義 -->
-                    <div class="step-block transfer-name-highlight">
-                      <div class="step-header">
-                        <span class="step-badge">3</span>
-                        振込名義を入力する
+                      <!-- 振込名義 -->
+                      <div class="fw-bold small mt-4 mb-1">
+                        <i class="bi bi-person-vcard me-1"></i>振込名義（依頼人名）
+                        <span class="badge bg-danger ms-1">コピー必須</span>
                       </div>
                       <p class="small text-muted mb-2">
-                        銀行の振込画面で「依頼人名」欄に入力してください。銀行によって表示が異なる場合があるため<strong>どちらかコピーして</strong>貼り付けてください。
+                        銀行によって入力できる文字が異なります。<strong>ご利用の銀行で入力できる表記をコピー</strong>して貼り付けてください。
                       </p>
-                      <div class="mb-2">
-                        <div class="form-text mb-1">パターンA（濁点合字）</div>
+
+                      <div class="btn-group btn-group-sm w-100 mb-2" role="group">
+                        <input type="radio" class="btn-check" name="nameWidth" id="widthZen" value="zen" checked>
+                        <label class="btn btn-outline-secondary" for="widthZen">全角</label>
+                        <input type="radio" class="btn-check" name="nameWidth" id="widthHan" value="han">
+                        <label class="btn btn-outline-secondary" for="widthHan">半角</label>
+                      </div>
+
+                      {% for pat in transfer_name_patterns %}
+                      <div class="mb-2 name-pattern" data-width="{{ pat.width }}">
+                        {% if pat.label %}<div class="form-text mb-1">{{ pat.label }}</div>{% endif %}
                         <div class="copy-field transfer-name-highlight">
-                          <span class="value fs-5" id="myTransferName">{{ default_transfer_name }}</span>
-                          <button type="button" class="btn btn-outline-primary btn-sm"
-                                  onclick="copyText(this.querySelector('i') || this, document.getElementById('myTransferName').textContent)">
+                          <span class="value fs-5" id="tn-{{ pat.key }}">{{ pat.value }}</span>
+                          <button type="button" class="btn btn-outline-primary btn-sm copy-name-btn"
+                                  data-target="tn-{{ pat.key }}">
                             <i class="bi bi-clipboard me-1"></i>コピー
                           </button>
                         </div>
                       </div>
-                      {% if default_transfer_name_alt != default_transfer_name %}
-                      <div class="mb-1">
-                        <div class="form-text mb-1">パターンB（濁点分離）</div>
-                        <div class="copy-field transfer-name-highlight">
-                          <span class="value fs-5" id="myTransferNameAlt">{{ default_transfer_name_alt }}</span>
-                          <button type="button" class="btn btn-outline-primary btn-sm"
-                                  onclick="copyText(this.querySelector('i') || this, document.getElementById('myTransferNameAlt').textContent)">
-                            <i class="bi bi-clipboard me-1"></i>コピー
-                          </button>
-                        </div>
-                      </div>
-                      {% endif %}
+                      {% endfor %}
+
                       <div class="form-text mt-1">
                         ※ 学籍番号＋カナ氏名の形式です。照合に使うため必ずいずれかをそのまま入力してください。
                       </div>
-                    </div>
-                    <input type="hidden" name="transfer_name" id="transfer_name"
-                           value="{{ default_transfer_name }}" />
+                      <input type="hidden" name="transfer_name" id="transfer_name"
+                             value="{{ default_transfer_name }}" />
 
-                    <!-- STEP 4: 金額 -->
-                    {% if transfer_info.get('reunion_fee') %}
-                    <div class="step-block mb-0">
-                      <div class="step-header">
-                        <span class="step-badge">4</span>
-                        金額を入力する
+                      <!-- 金額 -->
+                      {% if transfer_info.get('reunion_fee') %}
+                      <div class="fw-bold small mt-4 mb-1">
+                        <i class="bi bi-cash me-1"></i>振込金額
+                        <span class="badge bg-danger ms-1">コピー必須</span>
                       </div>
                       <div class="copy-field">
-                        <small class="text-muted me-1">振込金額</small>
-                        <span class="value">{{ transfer_info.get('reunion_fee', '').replace('円', '').strip() }}</span>
-                        <i class="bi bi-clipboard copy-btn"
-                           onclick="copyText(this, '{{ transfer_info.get('reunion_fee', '').replace('円', '').replace(',', '').strip() }}')"
-                           title="金額をコピー"></i>
-                        <span class="text-muted">円</span>
+                        <span class="value" id="feeAmount">{{ transfer_info.get('reunion_fee', '').replace('円', '').strip() }}</span>
+                        <span class="text-muted me-2">円</span>
+                        <button type="button" class="btn btn-outline-primary btn-sm" id="copyFeeBtn"
+                                data-value="{{ transfer_info.get('reunion_fee', '').replace('円', '').replace(',', '').strip() }}">
+                          <i class="bi bi-clipboard me-1"></i>コピー
+                        </button>
                       </div>
                       {% if transfer_info.get('transfer_deadline') %}
                       <div class="mt-2 small">
@@ -477,19 +477,24 @@
                         振込期限: <strong class="text-danger">{{ transfer_info.get('transfer_deadline', '') }}</strong>
                       </div>
                       {% endif %}
+                      {% endif %}
                     </div>
-                    {% endif %}
 
                   </div><!-- /振込情報まとめ -->
 
-                  <!-- 振込確認チェック -->
+                  <!-- 振込確認チェック（名義・金額の両方をコピーするまで操作不可） -->
                   <div class="mt-3 p-2 bg-white border rounded">
+                    <div class="alert alert-warning py-2 small mb-2" id="copyGateNotice">
+                      <i class="bi bi-lock-fill me-1"></i>
+                      上の<strong>振込名義</strong>と<strong>振込金額</strong>のコピーボタンを押すと、下のチェックができるようになります。
+                    </div>
                     <div class="form-check mb-2">
                       <input
                         class="form-check-input"
                         type="checkbox"
                         id="transferNameConfirm"
                         name="transfer_name_confirm"
+                        disabled
                       />
                       <label
                         class="form-check-label fw-bold"
@@ -504,6 +509,7 @@
                         type="checkbox"
                         id="transferDone"
                         name="transfer_done"
+                        disabled
                       />
                       <label
                         class="form-check-label fw-bold"
@@ -572,6 +578,64 @@
         });
       }
 
+      // ---- 振込名義の全角/半角切替 ----
+      function applyNameWidth() {
+        var checked = document.querySelector('input[name="nameWidth"]:checked');
+        var width = checked ? checked.value : 'zen';
+        document.querySelectorAll('.name-pattern').forEach(function (el) {
+          el.style.display = el.dataset.width === width ? '' : 'none';
+        });
+      }
+      document.querySelectorAll('input[name="nameWidth"]').forEach(function (r) {
+        r.addEventListener('change', applyNameWidth);
+      });
+      applyNameWidth();
+
+      // ---- 名義・金額をコピーするまでチェックボックスを解放しない ----
+      var feeBtn = document.getElementById('copyFeeBtn');
+      var copied = { name: false, fee: !feeBtn };  // 金額表示がない場合は金額コピー不要
+      function refreshCopyGate() {
+        var ok = copied.name && copied.fee;
+        ['transferNameConfirm', 'transferDone'].forEach(function (id) {
+          var cb = document.getElementById(id);
+          if (!cb) return;
+          cb.disabled = !ok;
+          if (!ok) cb.checked = false;
+        });
+        var notice = document.getElementById('copyGateNotice');
+        if (notice) {
+          if (ok) {
+            notice.className = 'alert alert-success py-2 small mb-2';
+            notice.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i>コピーを確認しました。振込後に下のチェックを入れてください。';
+          } else {
+            var need = [];
+            if (!copied.name) need.push('振込名義');
+            if (!copied.fee) need.push('振込金額');
+            notice.className = 'alert alert-warning py-2 small mb-2';
+            notice.innerHTML = '<i class="bi bi-lock-fill me-1"></i><strong>' + need.join('</strong>と<strong>') +
+              '</strong>のコピーボタンを押すと、下のチェックができるようになります。';
+          }
+        }
+      }
+      document.querySelectorAll('.copy-name-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var value = document.getElementById(btn.dataset.target).textContent.trim();
+          copyText(btn, value);
+          // 実際にコピーした表記を送信して照合に使う
+          document.getElementById('transfer_name').value = value;
+          copied.name = true;
+          refreshCopyGate();
+        });
+      });
+      if (feeBtn) {
+        feeBtn.addEventListener('click', function () {
+          copyText(feeBtn, feeBtn.dataset.value);
+          copied.fee = true;
+          refreshCopyGate();
+        });
+      }
+      refreshCopyGate();
+
       var ua = navigator.userAgent;
       var isAndroid = /Android/i.test(ua);
       var isIOS = /iPhone|iPad|iPod/i.test(ua);
@@ -602,7 +666,9 @@
         var attending = document.getElementById("attending").checked;
         if (attending && !isTeacher) {
           if (!document.getElementById("transferNameConfirm").checked) {
-            alert("振込名義に学籍番号を含めてから送信してください。");
+            alert(
+              "振込名義と振込金額のコピーボタンを押し、チェックを入れてから送信してください。"
+            );
             return false;
           }
           if (!document.getElementById("transferDone").checked) {
