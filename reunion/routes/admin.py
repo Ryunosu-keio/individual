@@ -2136,13 +2136,13 @@ def final_form_preview():
     from services.mail_service import _format_deadline_jp
 
     class _PreviewParticipant:
-        name = "見本 太郎"
-        name_kana = "ミホンタロウ"
+        name = "山田 太郎"
+        name_kana = "ヤマダタロウ"
         class_name = "31"
         student_number = "5"
         role = "生徒"
-        display_name = "見本 太郎"
-        display_name_kana = "ミホンタロウ"
+        display_name = "山田 太郎"
+        display_name_kana = "ヤマダタロウ"
 
     transfer_keys = [
         "transfer_bank", "transfer_branch", "transfer_branch_number",
@@ -2153,7 +2153,7 @@ def final_form_preview():
     for s in AppSetting.query.filter(AppSetting.key.in_(transfer_keys)).all():
         transfer_info[s.key] = s.value
 
-    default_transfer_name = normalize_transfer_name("3105ミホンタロウ")
+    default_transfer_name = normalize_transfer_name("3105ヤマダタロウ")
     fd = AppSetting.query.filter_by(key="final_deadline").first()
     final_deadline_jp = _format_deadline_jp(fd.value) if fd and fd.value else ""
 
