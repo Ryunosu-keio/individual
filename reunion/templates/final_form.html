@@ -339,20 +339,14 @@
                     </div>
                   </div>
 
-                  <!-- STEP 2〜4: 振込情報（まとめて大枠） -->
-                  <div class="border rounded p-3" style="background:#f8fff8;">
-                    <p class="small text-muted mb-3">
-                      以下の情報を参照して振込してください。各項目の<i class="bi bi-clipboard"></i>ボタンでコピーできます。
-                    </p>
-
-                    <!-- STEP 2: 振込先・振込名義・金額（アプリにより入力順が異なるため番号は付けない） -->
+                  <!-- STEP 2: 振込先・振込名義・金額 -->
                     <div class="step-block">
                       <div class="step-header">
                         <span class="step-badge">2</span>
                         振込内容を入力する
                       </div>
                       <p class="small text-muted mb-2">
-                        入力欄の順番はご利用のアプリによって異なります。下の項目をそれぞれコピーして貼り付けてください。
+                        以下の情報を参照して振込してください。各項目の<i class="bi bi-clipboard"></i>ボタンでコピーできます。
                       </p>
 
                       <div class="fw-bold small mt-3 mb-1"><i class="bi bi-bank me-1"></i>振込先</div>
@@ -420,67 +414,61 @@
                           </td>
                         </tr>
                         {% endif %}
+                        <tr>
+                          <td class="text-muted align-top" style="width: 7em">
+                            振込名義
+                            <span class="badge bg-danger d-block mt-1" style="width: fit-content">コピー必須</span>
+                          </td>
+                          <td>
+                            <div class="btn-group btn-group-sm w-100 mb-2" role="group">
+                              <input type="radio" class="btn-check" name="nameWidth" id="widthZen" value="zen" checked>
+                              <label class="btn btn-outline-secondary" for="widthZen">全角</label>
+                              <input type="radio" class="btn-check" name="nameWidth" id="widthHan" value="han">
+                              <label class="btn btn-outline-secondary" for="widthHan">半角</label>
+                            </div>
+
+                            {% for pat in transfer_name_patterns %}
+                            <div class="mb-2 name-pattern" data-width="{{ pat.width }}">
+                              {% if pat.label %}<div class="form-text mb-1">{{ pat.label }}</div>{% endif %}
+                              <div class="copy-field transfer-name-highlight">
+                                <span class="value fs-5" id="tn-{{ pat.key }}">{{ pat.value }}</span>
+                                <button type="button" class="btn btn-outline-primary btn-sm copy-name-btn"
+                                        data-target="tn-{{ pat.key }}">
+                                  <i class="bi bi-clipboard me-1"></i>コピー
+                                </button>
+                              </div>
+                            </div>
+                            {% endfor %}
+                            <input type="hidden" name="transfer_name" id="transfer_name"
+                                   value="{{ default_transfer_name }}" />
+                          </td>
+                        </tr>
+                        {% if transfer_info.get('reunion_fee') %}
+                        <tr>
+                          <td class="text-muted align-top">
+                            振込金額
+                            <span class="badge bg-danger d-block mt-1" style="width: fit-content">コピー必須</span>
+                          </td>
+                          <td>
+                            <div class="copy-field">
+                              <span class="value" id="feeAmount">{{ transfer_info.get('reunion_fee', '').replace('円', '').strip() }}</span>
+                              <span class="text-muted me-2">円</span>
+                              <button type="button" class="btn btn-outline-primary btn-sm" id="copyFeeBtn"
+                                      data-value="{{ transfer_info.get('reunion_fee', '').replace('円', '').replace(',', '').strip() }}">
+                                <i class="bi bi-clipboard me-1"></i>コピー
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                        {% endif %}
+                        {% if transfer_info.get('transfer_deadline') %}
+                        <tr>
+                          <td class="text-muted">振込期限</td>
+                          <td><strong class="text-danger">{{ transfer_info.get('transfer_deadline', '') }}</strong></td>
+                        </tr>
+                        {% endif %}
                       </table>
-
-                      <!-- 振込名義 -->
-                      <div class="fw-bold small mt-4 mb-1">
-                        <i class="bi bi-person-vcard me-1"></i>振込名義（依頼人名）
-                        <span class="badge bg-danger ms-1">コピー必須</span>
-                      </div>
-                      <p class="small text-muted mb-2">
-                        銀行によって入力できる文字が異なります。<strong>ご利用の銀行で入力できる表記をコピー</strong>して貼り付けてください。
-                      </p>
-
-                      <div class="btn-group btn-group-sm w-100 mb-2" role="group">
-                        <input type="radio" class="btn-check" name="nameWidth" id="widthZen" value="zen" checked>
-                        <label class="btn btn-outline-secondary" for="widthZen">全角</label>
-                        <input type="radio" class="btn-check" name="nameWidth" id="widthHan" value="han">
-                        <label class="btn btn-outline-secondary" for="widthHan">半角</label>
-                      </div>
-
-                      {% for pat in transfer_name_patterns %}
-                      <div class="mb-2 name-pattern" data-width="{{ pat.width }}">
-                        {% if pat.label %}<div class="form-text mb-1">{{ pat.label }}</div>{% endif %}
-                        <div class="copy-field transfer-name-highlight">
-                          <span class="value fs-5" id="tn-{{ pat.key }}">{{ pat.value }}</span>
-                          <button type="button" class="btn btn-outline-primary btn-sm copy-name-btn"
-                                  data-target="tn-{{ pat.key }}">
-                            <i class="bi bi-clipboard me-1"></i>コピー
-                          </button>
-                        </div>
-                      </div>
-                      {% endfor %}
-
-                      <div class="form-text mt-1">
-                        ※ 学籍番号＋カナ氏名の形式です。照合に使うため必ずいずれかをそのまま入力してください。
-                      </div>
-                      <input type="hidden" name="transfer_name" id="transfer_name"
-                             value="{{ default_transfer_name }}" />
-
-                      <!-- 金額 -->
-                      {% if transfer_info.get('reunion_fee') %}
-                      <div class="fw-bold small mt-4 mb-1">
-                        <i class="bi bi-cash me-1"></i>振込金額
-                        <span class="badge bg-danger ms-1">コピー必須</span>
-                      </div>
-                      <div class="copy-field">
-                        <span class="value" id="feeAmount">{{ transfer_info.get('reunion_fee', '').replace('円', '').strip() }}</span>
-                        <span class="text-muted me-2">円</span>
-                        <button type="button" class="btn btn-outline-primary btn-sm" id="copyFeeBtn"
-                                data-value="{{ transfer_info.get('reunion_fee', '').replace('円', '').replace(',', '').strip() }}">
-                          <i class="bi bi-clipboard me-1"></i>コピー
-                        </button>
-                      </div>
-                      {% if transfer_info.get('transfer_deadline') %}
-                      <div class="mt-2 small">
-                        <i class="bi bi-exclamation-triangle-fill text-warning me-1"></i>
-                        振込期限: <strong class="text-danger">{{ transfer_info.get('transfer_deadline', '') }}</strong>
-                      </div>
-                      {% endif %}
-                      {% endif %}
                     </div>
-
-                  </div><!-- /振込情報まとめ -->
 
                   <!-- 振込確認チェック（名義・金額の両方をコピーするまで操作不可） -->
                   <div class="mt-3 p-2 bg-white border rounded">
