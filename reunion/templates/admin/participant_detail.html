@@ -194,6 +194,45 @@
     </div>
   </div>
 
+  <!-- 当日ステータス -->
+  <div class="col-md-6">
+    <div class="card h-100">
+      <div class="card-header fw-bold bg-light">当日ステータス</div>
+      <div class="card-body">
+        {% set ds = participant.day_status %}
+        {% set rec = participant.latest_attendance %}
+        <dl class="row mb-2">
+          <dt class="col-5">現在の状態</dt>
+          <dd class="col-7">
+            {% if ds == 'checked_in' %}<span class="badge bg-success">来場</span>
+            {% elif ds == 'late' %}<span class="badge bg-info text-dark">遅刻</span>
+            {% elif ds == 'absent' %}<span class="badge bg-danger">当日欠席</span>
+            {% else %}<span class="badge bg-light text-muted border">未来場</span>{% endif %}
+          </dd>
+          {% if rec %}
+          <dt class="col-5">記録日時</dt>
+          <dd class="col-7 small text-muted">{{ rec.checked_in_at | jst }}</dd>
+          <dt class="col-5">記録元</dt>
+          <dd class="col-7 small text-muted">
+            {% if rec.source == 'qr' %}<i class="bi bi-qr-code me-1"></i>QR読み込み
+            {% else %}<i class="bi bi-hand-index me-1"></i>手動設定{% endif %}
+          </dd>
+          {% endif %}
+        </dl>
+        <form method="POST" action="{{ url_for('admin.set_attendance', participant_id=participant.id) }}"
+              class="d-flex gap-1 flex-wrap align-items-center">
+          <input type="hidden" name="next" value="{{ url_for('admin.participant_detail', participant_id=participant.id) }}">
+          <span class="small fw-bold me-1">手動変更:</span>
+          <button name="status" value="checked_in" class="btn btn-success btn-sm">来場</button>
+          <button name="status" value="late" class="btn btn-info btn-sm">遅刻</button>
+          <button name="status" value="absent" class="btn btn-danger btn-sm">当日欠席</button>
+          <button name="status" value="none" class="btn btn-outline-secondary btn-sm"
+                  onclick="return confirm('当日の記録を全て削除して「未来場」に戻します。よろしいですか？')">未来場に戻す</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
   <!-- 入金状況 -->
   <div class="col-md-6">
     <div class="card h-100">

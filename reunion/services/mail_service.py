@@ -1397,3 +1397,142 @@ def send_unlock_notice(participant, final_url: str, deadline_str: str) -> MailLo
         logger.error(f"ロック解除通知送信失敗: {participant.email} - {e}", exc_info=True)
         raise
     return log
+
+
+# -----------------------------------------------
+# メール変数の検証
+#   テンプレートで使っている {変数} が未設定（空欄）または「未定」のまま
+#   送信されるのを防ぐ。変数設定画面（/admin/settings/reunion）で埋める値が対象。
+# -----------------------------------------------
+
+# 変数名 → 変数設定画面での項目名
+MAIL_SETTING_VAR_LABELS = {
+    "reunion_name":                  "同窓会名",
+    "reunion_date":                  "開催日",
+    "reunion_time":                  "開催時間",
+    "reunion_venue":                 "会場",
+    "reunion_fee":                   "参加費",
+    "dress_code":                    "服装",
+    "belongings":                    "持ち物",
+    "organizer_name":                "幹事名",
+    "provisional_deadline":          "仮出欠の回答期限",
+    "final_deadline":                "本出欠の回答期限",
+    "final_deadline_short":          "本出欠の回答期限",
+    "final_reminder_deadline":       "最終リマインドの回答期限",
+    "final_reminder_deadline_short": "最終リマインドの回答期限",
+    "transfer_bank":                 "振込先 銀行名",
+    "transfer_branch":               "振込先 支店名",
+    "transfer_branch_number":        "振込先 支店番号",
+    "transfer_account_type":         "振込先 口座種別",
+    "transfer_account_number":       "振込先 口座番号",
+    "transfer_account_name":         "振込先 口座名義",
+    "transfer_deadline":             "振込期限",
+}
+
+# 送信時に自動で埋まる変数（検証対象外）
+MAIL_RUNTIME_VARS = {
+    "name", "final_url", "provisional_url", "status", "status_url",
+    "deadline", "cancel_reason", "verify_url", "token", "base_url",
+}
+
+# 入っていても「未設定」と見なす値
+UNSET_VALUE_MARKERS = ("未定", "未設定", "TBD", "tbd", "???")
+
+_VAR_PATTERN = r"\{([a-zA-Z_][a-zA-Z0-9_]*)\}"
+
+
+def _is_unset_value(value: str) -> str:
+    """未設定なら理由（'blank' / '未定'）を、問題なければ空文字を返す"""
+    v = (value or "").strip()
+    if not v:
+        return "blank"
+    for marker in UNSET_VALUE_MARKERS:
+        if marker in v:
+            return marker
+    return ""
+
+
+def find_unset_mail_vars(*templates: str) -> list:
+    """
+    テンプレート中で実際に使われている変数のうち、値が空欄または「未定」のものを返す。
+
+    戻り値: [{"var": 変数名, "label": 項目名, "reason": "blank" | "未定", "value": 現在値}, ...]
+    テンプレートに書かれているが存在しない変数は reason="unknown" で返す
+    （置換されず {foo} のまま送信されてしまうため）。
+    """
+    import re
+
+    reunion = _get_reunion_info()
+    seen = set()
+    problems = []
+
+    for tmpl in templates:
+        if not tmpl:
+            continue
+        for var in re.findall(_VAR_PATTERN, tmpl):
+            if var in seen or var in MAIL_RUNTIME_VARS:
+                continue
+            seen.add(var)
+
+            if var not in MAIL_SETTING_VAR_LABELS:
+                problems.append({
+                    "var": var, "label": var, "reason": "unknown", "value": "",
+                })
+                continue
+
+            value = reunion.get(var, "")
+            reason = _is_unset_value(value)
+            if reason:
+                problems.append({
+                    "var": var,
+                    "label": MAIL_SETTING_VAR_LABELS[var],
+                    "reason": reason,
+                    "value": (value or "").strip(),
+                })
+
+    # 変数設定画面の項目順に並べる
+    order = list(MAIL_SETTING_VAR_LABELS.keys())
+    problems.sort(key=lambda p: order.index(p["var"]) if p["var"] in order else 999)
+    return problems
+
+
+def format_unset_mail_vars(problems: list) -> str:
+    """find_unset_mail_vars の結果を1行のメッセージにする"""
+    parts = []
+    for p in problems:
+        if p["reason"] == "unknown":
+            parts.append(f"{{{p['var']}}}（存在しない変数）")
+        elif p["reason"] == "blank":
+            parts.append(f"{p['label']}（空欄）")
+        else:
+            parts.append(f"{p['label']}（{p['value']}）")
+    return "、".join(parts)
+
+
+def get_mail_template_keys(mail_type: str, teacher: bool = False) -> tuple:
+    """メール種別・宛先種別から (件名キー, 本文キー) を返す"""
+    suffix = "_teacher" if teacher else ""
+    base = {
+        "final_url":       "mail_final_url",
+        "reminder":        "mail_reminder",
+        "final_reminder":  "mail_final_reminder",
+        "unlock_notice":   "mail_unlock_notice",
+    }.get(mail_type)
+    if base is None:
+        return None, None
+    s_key = f"{base}_subject{suffix}"
+    b_key = f"{base}_body{suffix}"
+    # 先生用テンプレートが定義されていない種別は共通テンプレートを使う
+    if s_key not in MAIL_DEFAULTS:
+        s_key, b_key = f"{base}_subject", f"{base}_body"
+    return s_key, b_key
+
+
+def check_mail_vars(mail_type: str, teacher: bool = False) -> list:
+    """指定メール種別のテンプレートについて未設定変数を洗い出す"""
+    s_key, b_key = get_mail_template_keys(mail_type, teacher)
+    if s_key is None:
+        return []
+    subject = _get_template(s_key, MAIL_DEFAULTS.get(s_key, ""))
+    body    = _get_template(b_key, MAIL_DEFAULTS.get(b_key, ""))
+    return find_unset_mail_vars(subject, body)

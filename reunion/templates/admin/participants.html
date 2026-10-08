@@ -33,26 +33,18 @@
     <input type="hidden" name="final_status" value="{{ final_filter }}">
     <input type="hidden" name="role" value="{{ role_filter }}">
     <input type="hidden" name="class_name" value="{{ class_filter }}">
+    <input type="hidden" name="day_status" value="{{ day_filter }}">
     <input type="text" class="form-control form-control-sm" name="q"
            value="{{ q }}" placeholder="氏名・メールで検索" style="width:180px;">
     <button type="submit" class="btn btn-outline-primary btn-sm"><i class="bi bi-search"></i></button>
     {% if q %}
-    <a href="{{ url_for('admin.participants', sort=sort, order=order, status=status_filter, final_status=final_filter, role=role_filter, class_name=class_filter) }}"
+    <a href="{{ url_for('admin.participants', sort=sort, order=order, status=status_filter, final_status=final_filter, role=role_filter, class_name=class_filter, day_status=day_filter) }}"
        class="btn btn-outline-secondary btn-sm" title="検索クリア"><i class="bi bi-x-lg"></i></a>
     {% endif %}
   </form>
   <div class="participant-actions">
     <a href="{{ url_for('admin.roster_export') }}" class="btn btn-outline-secondary btn-sm">
       <i class="bi bi-download me-1"></i>CSVエクスポート
-    </a>
-    <a href="{{ url_for('admin.mail_hub') }}?type=final_url" class="btn btn-success btn-sm">
-      <i class="bi bi-envelope-fill me-1"></i><span class="d-none d-md-inline">本出欠URL一括送信</span><span class="d-md-none">本出欠URL送信</span>
-    </a>
-    <a href="{{ url_for('admin.mail_hub') }}?type=reminder" class="btn btn-primary btn-sm">
-      <i class="bi bi-bell-fill me-1"></i><span class="d-none d-md-inline">本出欠リマインド一括送信</span><span class="d-md-none">リマインド送信</span>
-    </a>
-    <a href="{{ url_for('admin.mail_hub') }}?type=final_reminder" class="btn btn-danger btn-sm">
-      <i class="bi bi-file-earmark-pdf me-1"></i><span class="d-none d-md-inline">最終リマインド一括送信</span><span class="d-md-none">最終リマインド</span>
     </a>
   </div>
 </div>
@@ -69,6 +61,10 @@
   #listPane .table ruby rt { font-size:.55em; color:#6c757d; letter-spacing:.02em; }
   /* 行タップで詳細へ */
   .participant-row { cursor:pointer; }
+  /* 当日ステータスのドロップダウンは行タップの対象外（default:cursor） */
+  .day-status-cell { cursor:default; }
+  .day-status-cell .dropdown-menu form { margin:0; }
+  .day-status-cell .dropdown-menu .dropdown-item { font-size:.85rem; }
   /* 操作ボタン: スマホは2×2グリッド、md以上は右寄せ横並び */
   .participant-actions { display:grid; grid-template-columns:1fr 1fr; gap:.5rem; }
   .participant-actions .btn { white-space:nowrap; }
@@ -98,10 +94,10 @@
             </a>
             <ul class="dropdown-menu">
               <li><a class="dropdown-item {{ 'active' if class_filter == 'all' }}"
-                     href="{{ url_for('admin.participants', q=q, sort=sort, order=order, status=status_filter, final_status=final_filter, role=role_filter, class_name='all') }}">全て</a></li>
+                     href="{{ url_for('admin.participants', q=q, sort=sort, order=order, status=status_filter, final_status=final_filter, role=role_filter, class_name='all', day_status=day_filter) }}">全て</a></li>
               {% for c in classes %}
               <li><a class="dropdown-item {{ 'active' if class_filter == c }}"
-                     href="{{ url_for('admin.participants', q=q, sort=sort, order=order, status=status_filter, final_status=final_filter, role=role_filter, class_name=c) }}">{{ c }}</a></li>
+                     href="{{ url_for('admin.participants', q=q, sort=sort, order=order, status=status_filter, final_status=final_filter, role=role_filter, class_name=c, day_status=day_filter) }}">{{ c }}</a></li>
               {% endfor %}
             </ul>
           </div>
@@ -119,15 +115,15 @@
             </a>
             <ul class="dropdown-menu">
               <li><a class="dropdown-item {{ 'active' if role_filter == 'all' }}"
-                     href="{{ url_for('admin.participants', q=q, sort=sort, order=order, status=status_filter, final_status=final_filter, role='all', class_name=class_filter) }}">全て</a></li>
+                     href="{{ url_for('admin.participants', q=q, sort=sort, order=order, status=status_filter, final_status=final_filter, role='all', class_name=class_filter, day_status=day_filter) }}">全て</a></li>
               <li><a class="dropdown-item {{ 'active' if role_filter == '生徒' }}"
-                     href="{{ url_for('admin.participants', q=q, sort=sort, order=order, status=status_filter, final_status=final_filter, role='生徒', class_name=class_filter) }}">生徒</a></li>
+                     href="{{ url_for('admin.participants', q=q, sort=sort, order=order, status=status_filter, final_status=final_filter, role='生徒', class_name=class_filter, day_status=day_filter) }}">生徒</a></li>
               <li><a class="dropdown-item {{ 'active' if role_filter == '教師' }}"
-                     href="{{ url_for('admin.participants', q=q, sort=sort, order=order, status=status_filter, final_status=final_filter, role='教師', class_name=class_filter) }}">教師</a></li>
+                     href="{{ url_for('admin.participants', q=q, sort=sort, order=order, status=status_filter, final_status=final_filter, role='教師', class_name=class_filter, day_status=day_filter) }}">教師</a></li>
               <li><a class="dropdown-item {{ 'active' if role_filter == '学年主任' }}"
-                     href="{{ url_for('admin.participants', q=q, sort=sort, order=order, status=status_filter, final_status=final_filter, role='学年主任', class_name=class_filter) }}">学年主任</a></li>
+                     href="{{ url_for('admin.participants', q=q, sort=sort, order=order, status=status_filter, final_status=final_filter, role='学年主任', class_name=class_filter, day_status=day_filter) }}">学年主任</a></li>
               <li><a class="dropdown-item {{ 'active' if role_filter == '幹事' }}"
-                     href="{{ url_for('admin.participants', q=q, sort=sort, order=order, status=status_filter, final_status=final_filter, role='幹事', class_name=class_filter) }}">幹事</a></li>
+                     href="{{ url_for('admin.participants', q=q, sort=sort, order=order, status=status_filter, final_status=final_filter, role='幹事', class_name=class_filter, day_status=day_filter) }}">幹事</a></li>
             </ul>
           </div>
           <a href="{{ sort_url('role') }}"><i class="bi {{ sort_icon('role') }}"></i></a>
@@ -148,15 +144,15 @@
             </a>
             <ul class="dropdown-menu">
               <li><a class="dropdown-item {{ 'active' if status_filter == 'all' }}"
-                     href="{{ url_for('admin.participants', q=q, sort=sort, order=order, status='all', final_status=final_filter, role=role_filter, class_name=class_filter) }}">全て</a></li>
+                     href="{{ url_for('admin.participants', q=q, sort=sort, order=order, status='all', final_status=final_filter, role=role_filter, class_name=class_filter, day_status=day_filter) }}">全て</a></li>
               <li><a class="dropdown-item {{ 'active' if status_filter == 'attending' }}"
-                     href="{{ url_for('admin.participants', q=q, sort=sort, order=order, status='attending', final_status=final_filter, role=role_filter, class_name=class_filter) }}">参加</a></li>
+                     href="{{ url_for('admin.participants', q=q, sort=sort, order=order, status='attending', final_status=final_filter, role=role_filter, class_name=class_filter, day_status=day_filter) }}">参加</a></li>
               <li><a class="dropdown-item {{ 'active' if status_filter == 'not_attending' }}"
-                     href="{{ url_for('admin.participants', q=q, sort=sort, order=order, status='not_attending', final_status=final_filter, role=role_filter, class_name=class_filter) }}">不参加</a></li>
+                     href="{{ url_for('admin.participants', q=q, sort=sort, order=order, status='not_attending', final_status=final_filter, role=role_filter, class_name=class_filter, day_status=day_filter) }}">不参加</a></li>
               <li><a class="dropdown-item {{ 'active' if status_filter == 'undecided' }}"
-                     href="{{ url_for('admin.participants', q=q, sort=sort, order=order, status='undecided', final_status=final_filter, role=role_filter, class_name=class_filter) }}">未定</a></li>
+                     href="{{ url_for('admin.participants', q=q, sort=sort, order=order, status='undecided', final_status=final_filter, role=role_filter, class_name=class_filter, day_status=day_filter) }}">未定</a></li>
               <li><a class="dropdown-item {{ 'active' if status_filter == 'no_response' }}"
-                     href="{{ url_for('admin.participants', q=q, sort=sort, order=order, status='no_response', final_status=final_filter, role=role_filter, class_name=class_filter) }}">未回答</a></li>
+                     href="{{ url_for('admin.participants', q=q, sort=sort, order=order, status='no_response', final_status=final_filter, role=role_filter, class_name=class_filter, day_status=day_filter) }}">未回答</a></li>
             </ul>
           </div>
         </th>
@@ -174,17 +170,35 @@
             </a>
             <ul class="dropdown-menu">
               <li><a class="dropdown-item {{ 'active' if final_filter == 'all' }}"
-                     href="{{ url_for('admin.participants', q=q, sort=sort, order=order, status=status_filter, final_status='all', role=role_filter, class_name=class_filter) }}">全て</a></li>
+                     href="{{ url_for('admin.participants', q=q, sort=sort, order=order, status=status_filter, final_status='all', role=role_filter, class_name=class_filter, day_status=day_filter) }}">全て</a></li>
               <li><a class="dropdown-item {{ 'active' if final_filter == 'attending' }}"
-                     href="{{ url_for('admin.participants', q=q, sort=sort, order=order, status=status_filter, final_status='attending', role=role_filter, class_name=class_filter) }}">参加</a></li>
+                     href="{{ url_for('admin.participants', q=q, sort=sort, order=order, status=status_filter, final_status='attending', role=role_filter, class_name=class_filter, day_status=day_filter) }}">参加</a></li>
               <li><a class="dropdown-item {{ 'active' if final_filter == 'not_attending' }}"
-                     href="{{ url_for('admin.participants', q=q, sort=sort, order=order, status=status_filter, final_status='not_attending', role=role_filter, class_name=class_filter) }}">不参加</a></li>
+                     href="{{ url_for('admin.participants', q=q, sort=sort, order=order, status=status_filter, final_status='not_attending', role=role_filter, class_name=class_filter, day_status=day_filter) }}">不参加</a></li>
               <li><a class="dropdown-item {{ 'active' if final_filter == 'cancelled' }}"
-                     href="{{ url_for('admin.participants', q=q, sort=sort, order=order, status=status_filter, final_status='cancelled', role=role_filter, class_name=class_filter) }}">直前キャンセル</a></li>
+                     href="{{ url_for('admin.participants', q=q, sort=sort, order=order, status=status_filter, final_status='cancelled', role=role_filter, class_name=class_filter, day_status=day_filter) }}">直前キャンセル</a></li>
               <li><a class="dropdown-item {{ 'active' if final_filter == 'no_response' }}"
-                     href="{{ url_for('admin.participants', q=q, sort=sort, order=order, status=status_filter, final_status='no_response', role=role_filter, class_name=class_filter) }}">未回答</a></li>
+                     href="{{ url_for('admin.participants', q=q, sort=sort, order=order, status=status_filter, final_status='no_response', role=role_filter, class_name=class_filter, day_status=day_filter) }}">未回答</a></li>
             </ul>
           </div>
+        </th>
+        <th class="th-filter">
+          <div class="dropdown d-inline">
+            <a href="#" class="dropdown-toggle {{ 'filter-active' if day_filter != 'all' }}"
+               data-bs-toggle="dropdown" data-bs-auto-close="outside">
+              当日{% if day_filter != 'all' %}<small>({{ day_status_labels.get(day_filter, day_filter) }})</small>{% endif %}
+              <i class="bi bi-funnel-fill" style="font-size:.7em;"></i>
+            </a>
+            <ul class="dropdown-menu">
+              <li><a class="dropdown-item {{ 'active' if day_filter == 'all' }}"
+                     href="{{ url_for('admin.participants', q=q, sort=sort, order=order, status=status_filter, final_status=final_filter, role=role_filter, class_name=class_filter, day_status='all') }}">全て</a></li>
+              {% for key, label in day_status_labels.items() %}
+              <li><a class="dropdown-item {{ 'active' if day_filter == key }}"
+                     href="{{ url_for('admin.participants', q=q, sort=sort, order=order, status=status_filter, final_status=final_filter, role=role_filter, class_name=class_filter, day_status=key) }}">{{ label }}</a></li>
+              {% endfor %}
+            </ul>
+          </div>
+          <a href="{{ sort_url('day') }}"><i class="bi {{ sort_icon('day') }}"></i></a>
         </th>
         <th>入金</th>
         <th class="d-none d-md-table-cell"><a href="{{ sort_url('created') }}" class="text-decoration-none text-dark">
@@ -241,6 +255,36 @@
             <span class="badge bg-light text-muted border">未回答</span>
           {% endif %}
         </td>
+        <td class="day-status-cell">
+          {% set ds = p.day_status %}
+          <div class="dropdown">
+            <a href="#" class="text-decoration-none" data-bs-toggle="dropdown" title="クリックで手動変更">
+              {% if ds == 'checked_in' %}<span class="badge bg-success">来場</span>
+              {% elif ds == 'late' %}<span class="badge bg-info text-dark">遅刻</span>
+              {% elif ds == 'absent' %}<span class="badge bg-danger">当日欠席</span>
+              {% else %}<span class="badge bg-light text-muted border">未来場</span>{% endif %}
+              <i class="bi bi-caret-down-fill text-muted" style="font-size:.6em;"></i>
+            </a>
+            <ul class="dropdown-menu">
+              <li><h6 class="dropdown-header">当日ステータスを変更</h6></li>
+              {% for key, label in day_status_labels.items() %}
+              <li>
+                <form method="POST" action="{{ url_for('admin.set_attendance', participant_id=p.id) }}">
+                  <input type="hidden" name="next" value="{{ request.full_path }}">
+                  <button type="submit" name="status" value="{{ key }}"
+                          class="dropdown-item {{ 'active' if ds == key }}">{{ label }}</button>
+                </form>
+              </li>
+              {% endfor %}
+            </ul>
+          </div>
+          {% if p.latest_attendance and p.latest_attendance.checked_in_at %}
+          <div class="text-muted" style="font-size:.7rem;">
+            {{ p.latest_attendance.checked_in_at | jst('%m/%d %H:%M') }}
+            {% if p.latest_attendance.source == 'qr' %}<i class="bi bi-qr-code" title="QR読み込み"></i>{% endif %}
+          </div>
+          {% endif %}
+        </td>
         <td>
           {% set final = p.latest_final %}
           {% if final and final.status in ('not_attending', 'cancelled') %}
@@ -261,7 +305,7 @@
       </tr>
       {% else %}
       <tr>
-        <td colspan="11" class="text-center text-muted py-4">参加者が見つかりません</td>
+        <td colspan="12" class="text-center text-muted py-4">参加者が見つかりません</td>
       </tr>
       {% endfor %}
     </tbody>

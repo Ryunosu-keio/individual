@@ -42,24 +42,30 @@
           <option value="final_reminder">3. 最終リマインド送信（本出欠「参加」の方へ）</option>
         </select>
       </div>
-      <div class="col-md-3">
-        <div id="teacherToggleArea" class="d-none">
-          <label class="form-label fw-bold">プレビュー対象</label>
-          <div class="d-flex gap-3">
+      <div class="col-md-6">
+        <div id="segmentArea" class="d-none">
+          <label class="form-label fw-bold">送信範囲</label>
+          <div class="d-flex flex-wrap gap-3">
+            {% for key, seg in segments.items() %}
             <div class="form-check">
-              <input class="form-check-input" type="radio" name="teacherToggle" id="toggleStudent" value="0" checked>
-              <label class="form-check-label" for="toggleStudent">生徒用</label>
+              <input class="form-check-input" type="radio" name="segment"
+                     id="segment-{{ key }}" value="{{ key }}"
+                     {{ 'checked' if key == default_segment }}>
+              <label class="form-check-label" for="segment-{{ key }}">{{ seg.label }}</label>
             </div>
-            <div class="form-check">
-              <input class="form-check-input" type="radio" name="teacherToggle" id="toggleTeacher" value="1">
-              <label class="form-check-label" for="toggleTeacher">先生用</label>
-            </div>
+            {% endfor %}
+          </div>
+          <div class="form-text">
+            1日の送信上限があるため、クラスを前半・後半に分けて送ります。先生は文面が別なので独立した枠です。
           </div>
         </div>
       </div>
-      <div class="col-md-3">
+    </div>
+
+    <div class="row g-3 mt-2">
+      <div class="col-12">
         <div id="sendStatus" class="d-none">
-          <div class="d-flex gap-3">
+          <div class="d-flex flex-wrap gap-3">
             <span class="badge bg-primary fs-6 px-3 py-2">
               対象: <span id="targetCount">0</span>件
             </span>
@@ -70,9 +76,19 @@
           </div>
         </div>
       </div>
-      </div>
     </div>
   </div>
+</div>
+
+<!-- メール変数の未設定エラー -->
+<div id="unsetVarsAlert" class="alert alert-danger d-none">
+  <div class="fw-bold mb-1">
+    <i class="bi bi-exclamation-octagon-fill me-1"></i>メール変数が未設定のため送信できません
+  </div>
+  <ul id="unsetVarsList" class="mb-2 ps-4 small"></ul>
+  <a href="{{ url_for('admin.settings_reunion') }}" class="btn btn-danger btn-sm">
+    <i class="bi bi-sliders me-1"></i>変数設定を開く
+  </a>
 </div>
 
 <!-- ローディング -->
@@ -96,15 +112,26 @@
             <label class="form-label fw-bold text-muted small">件名</label>
             <div id="previewSubject" class="form-control bg-light"></div>
           </div>
-          <div id="attachmentInfo" class="d-none mb-2">
-            <span class="badge bg-success">
-              <i class="bi bi-paperclip me-1"></i>添付あり: <span id="attachmentName"></span>（<span id="attachmentSize"></span> KB）
-            </span>
+          <div id="attachmentInfo" class="d-none mb-3">
+            <div class="border rounded bg-light-subtle p-2 small">
+              <div class="fw-bold mb-1">
+                <i class="bi bi-paperclip me-1"></i>添付される案内PDF
+              </div>
+              <div class="d-flex flex-wrap align-items-center gap-2">
+                <span class="badge bg-success"><span id="attachmentName"></span></span>
+                <span class="text-muted"><span id="attachmentSize"></span> KB</span>
+                <span class="text-muted">／ アップロード: <span id="attachmentUploadedAt"></span></span>
+                <a id="attachmentLink" href="#" target="_blank" class="btn btn-outline-secondary btn-sm py-0">
+                  <i class="bi bi-box-arrow-up-right me-1"></i>中身を確認
+                </a>
+              </div>
+            </div>
           </div>
           <div id="attachmentMissing" class="d-none mb-2">
             <span class="badge bg-warning text-dark">
               <i class="bi bi-exclamation-triangle me-1"></i>PDFが未アップロードのため添付なしで送信されます
             </span>
+            <a href="{{ url_for('admin.settings_mail') }}" class="small ms-1">案内PDFをアップロード</a>
           </div>
           <div class="mb-3">
             <label class="form-label fw-bold text-muted small">本文</label>
@@ -157,6 +184,7 @@
               <span id="sendDescription"></span>
             </p>
             <form id="sendForm" method="POST">
+              <input type="hidden" name="segment" id="sendSegment" value="{{ default_segment }}">
               <button type="submit" class="btn btn-success btn-lg w-100" id="sendButton">
                 <i class="bi bi-send me-2"></i>
                 <span id="sendButtonText">送信する</span>
@@ -173,16 +201,19 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
   const mailTypeSelect = document.getElementById('mailType');
-  const previewArea = document.getElementById('previewArea');
-  const loading = document.getElementById('loading');
-  const sendStatus = document.getElementById('sendStatus');
+  const previewArea    = document.getElementById('previewArea');
+  const loading        = document.getElementById('loading');
+  const sendStatus     = document.getElementById('sendStatus');
   const sendButtonArea = document.getElementById('sendButtonArea');
-  const noTargets = document.getElementById('noTargets');
-  const targetList = document.getElementById('targetList');
-  const teacherToggleArea = document.getElementById('teacherToggleArea');
+  const noTargets      = document.getElementById('noTargets');
+  const targetList     = document.getElementById('targetList');
+  const segmentArea    = document.getElementById('segmentArea');
+  const unsetVarsAlert = document.getElementById('unsetVarsAlert');
+  const unsetVarsList  = document.getElementById('unsetVarsList');
 
-  // 先生用テンプレートが存在するメール種別
-  const HAS_TEACHER = ['final_url', 'reminder', 'final_reminder'];
+  const SEGMENT_LABELS = {
+    {% for key, seg in segments.items() %}'{{ key }}': '{{ seg.short }}'{{ ',' if not loop.last }}{% endfor %}
+  };
 
   const SEND_URLS = {
     'final_url': '{{ url_for("admin.send_final_url_bulk") }}',
@@ -191,41 +222,63 @@ document.addEventListener('DOMContentLoaded', function() {
   };
 
   const SEND_LABELS = {
-    'final_url': '本出欠URLを一括送信',
-    'reminder': 'リマインドメールを一括送信',
-    'final_reminder': '最終リマインドメールを一括送信',
+    'final_url': '本出欠URLを送信',
+    'reminder': 'リマインドメールを送信',
+    'final_reminder': '最終リマインドメールを送信',
   };
 
-  function getTeacher() {
-    const el = document.querySelector('input[name="teacherToggle"]:checked');
-    return el ? el.value : '0';
+  function getSegment() {
+    const el = document.querySelector('input[name="segment"]:checked');
+    return el ? el.value : '{{ default_segment }}';
+  }
+
+  function renderUnsetVars(problems) {
+    unsetVarsList.innerHTML = '';
+    if (!problems || problems.length === 0) {
+      unsetVarsAlert.classList.add('d-none');
+      return false;
+    }
+    problems.forEach(function(pb) {
+      const li = document.createElement('li');
+      if (pb.reason === 'unknown') {
+        li.textContent = '{' + pb.var + '} — テンプレートに存在しない変数が書かれています';
+      } else if (pb.reason === 'blank') {
+        li.textContent = pb.label + ' — 空欄です（変数: {' + pb.var + '}）';
+      } else {
+        li.textContent = pb.label + ' — 「' + pb.value + '」のままです（変数: {' + pb.var + '}）';
+      }
+      unsetVarsList.appendChild(li);
+    });
+    unsetVarsAlert.classList.remove('d-none');
+    return true;
   }
 
   function loadPreview(mailType) {
     if (!mailType) {
       previewArea.classList.add('d-none');
       sendStatus.classList.add('d-none');
-      teacherToggleArea.classList.add('d-none');
+      segmentArea.classList.add('d-none');
+      unsetVarsAlert.classList.add('d-none');
       return;
     }
 
     previewArea.classList.add('d-none');
     loading.classList.remove('d-none');
     sendStatus.classList.add('d-none');
+    segmentArea.classList.remove('d-none');
 
-    if (HAS_TEACHER.includes(mailType)) {
-      teacherToggleArea.classList.remove('d-none');
-    } else {
-      teacherToggleArea.classList.add('d-none');
-    }
+    const segment = getSegment();
+    document.getElementById('sendSegment').value = segment;
 
-    const teacher = getTeacher();
-    const url = `{{ url_for("admin.api_mail_preview", mail_type="__TYPE__") }}`.replace('__TYPE__', mailType) + `?teacher=${teacher}`;
+    const url = `{{ url_for("admin.api_mail_preview", mail_type="__TYPE__") }}`.replace('__TYPE__', mailType)
+                + `?segment=${encodeURIComponent(segment)}`;
 
     fetch(url)
       .then(res => res.json())
       .then(data => {
         loading.classList.add('d-none');
+
+        const hasUnsetVars = renderUnsetVars(data.unset_vars);
 
         document.getElementById('previewSubject').textContent = data.subject;
 
@@ -235,6 +288,8 @@ document.addEventListener('DOMContentLoaded', function() {
           if (data.attachment) {
             document.getElementById('attachmentName').textContent = data.attachment.filename;
             document.getElementById('attachmentSize').textContent = data.attachment.size_kb;
+            document.getElementById('attachmentUploadedAt').textContent = data.attachment.uploaded_at || '不明';
+            document.getElementById('attachmentLink').href = data.attachment.url;
             attachmentInfo.classList.remove('d-none');
             attachmentMissing.classList.add('d-none');
           } else {
@@ -278,29 +333,33 @@ document.addEventListener('DOMContentLoaded', function() {
 
           const sendCount = Math.min(data.target_count, data.remaining_today);
           const remaining = data.target_count - sendCount;
-          let desc = `${sendCount}件を送信します。`;
+          let desc = `${data.segment_label} の ${sendCount}件を送信します。`;
           if (remaining > 0) {
             desc += `（本日上限のため残り${remaining}件は次回送信）`;
           }
           document.getElementById('sendDescription').textContent = desc;
-          document.getElementById('sendButtonText').textContent =
-            SEND_LABELS[mailType] + `（${sendCount}件）`;
 
+          const sendButton = document.getElementById('sendButton');
           const sendForm = document.getElementById('sendForm');
           sendForm.action = SEND_URLS[mailType];
+          sendButtonArea.classList.remove('d-none');
 
-          if (data.remaining_today <= 0) {
-            document.getElementById('sendButton').disabled = true;
-            document.getElementById('sendButton').textContent = '本日の送信上限に達しています';
-            sendButtonArea.classList.remove('d-none');
+          if (hasUnsetVars) {
+            sendButton.disabled = true;
+            sendButton.textContent = 'メール変数が未設定のため送信できません';
+          } else if (data.remaining_today <= 0) {
+            sendButton.disabled = true;
+            sendButton.textContent = '本日の送信上限に達しています';
           } else {
-            document.getElementById('sendButton').disabled = false;
-            sendButtonArea.classList.remove('d-none');
+            sendButton.disabled = false;
+            document.getElementById('sendButtonText').textContent =
+              SEND_LABELS[mailType] + `（${SEGMENT_LABELS[data.segment]} ${sendCount}件）`;
           }
 
           sendForm.onsubmit = function(e) {
             return confirm(
               `${SEND_LABELS[mailType]}を実行します。\n\n` +
+              `送信範囲: ${data.segment_label}\n` +
               `送信対象: ${data.target_count}件\n` +
               `今回送信: ${sendCount}件\n` +
               `本日残り: ${data.remaining_today}件\n\n` +
@@ -318,24 +377,27 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   mailTypeSelect.addEventListener('change', function() {
-    // 先生トグルをリセット
-    document.getElementById('toggleStudent').checked = true;
     loadPreview(this.value);
   });
 
-  // URLパラメータ ?type=XXX があれば自動選択
+  document.querySelectorAll('input[name="segment"]').forEach(function(radio) {
+    radio.addEventListener('change', function() {
+      loadPreview(mailTypeSelect.value);
+    });
+  });
+
+  // URLパラメータ ?type=XXX&segment=YYY があれば自動選択
   var params = new URLSearchParams(window.location.search);
+  var segParam = params.get('segment');
+  if (segParam) {
+    var segRadio = document.getElementById('segment-' + segParam);
+    if (segRadio) segRadio.checked = true;
+  }
   var typeParam = params.get('type');
   if (typeParam && mailTypeSelect.querySelector('option[value="' + typeParam + '"]')) {
     mailTypeSelect.value = typeParam;
     loadPreview(typeParam);
   }
-
-  document.querySelectorAll('input[name="teacherToggle"]').forEach(function(radio) {
-    radio.addEventListener('change', function() {
-      loadPreview(mailTypeSelect.value);
-    });
-  });
 });
 </script>
 {% endblock %}

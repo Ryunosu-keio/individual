@@ -24,15 +24,18 @@ URL:
 import csv
 import io
 import logging
+import os
 from datetime import datetime
 from flask import (Blueprint, render_template, request, redirect,
                    url_for, flash, current_app, jsonify, Response)
 from extensions import db
-from models import Participant, ProvisionalResponse, FinalResponse, Payment, BankImport, MailLog, AppSetting, AttendanceRecord
+from models import (Participant, ProvisionalResponse, FinalResponse, Payment, BankImport,
+                    MailLog, AppSetting, AttendanceRecord, DAY_STATUS_LABELS, DAY_STATUS_NONE)
 from services.token_service import ensure_token, generate_final_url
 from services.mail_service import (send_final_url, send_reminder, send_final_reminder,
                                     MAIL_DEFAULTS, get_daily_send_limit,
-                                    get_today_sent_count, get_remaining_today)
+                                    get_today_sent_count, get_remaining_today,
+                                    check_mail_vars, format_unset_mail_vars)
 from services.csv_service import parse_bank_csv, save_bank_imports
 from services.matching_service import run_auto_matching, confirm_match, unmatch
 from utils import normalize_transfer_name
@@ -40,6 +43,117 @@ from utils import normalize_transfer_name
 logger = logging.getLogger(__name__)
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
+
+
+# -----------------------------------------------
+# 送信範囲（セグメント）
+#   1日の送信上限があるため、クラスを前半・後半に分けて送る。
+#   先生はクラスを持つが（担任は31〜39）、文面が生徒用と別なので独立した枠にする。
+# -----------------------------------------------
+TEACHER_ROLES = ("教師", "学年主任")
+
+MAIL_SEGMENTS = {
+    "first_half": {
+        "label": "前半クラス（31〜35組）",
+        "short": "前半クラス",
+        "classes": [str(n) for n in range(31, 36)],
+        "teacher": False,
+    },
+    "second_half": {
+        "label": "後半クラス（36〜39組）",
+        "short": "後半クラス",
+        "classes": [str(n) for n in range(36, 40)],
+        "teacher": False,
+    },
+    "teacher": {
+        "label": "先生（教師・学年主任）",
+        "short": "先生",
+        "classes": None,
+        "teacher": True,
+    },
+}
+DEFAULT_SEGMENT = "first_half"
+
+
+def _resolve_segment(value: str) -> str:
+    """リクエストのsegment値を検証して正規化する"""
+    return value if value in MAIL_SEGMENTS else DEFAULT_SEGMENT
+
+
+def _in_segment(p, segment: str) -> bool:
+    """参加者が指定セグメントに含まれるか"""
+    seg = MAIL_SEGMENTS[segment]
+    is_teacher = (p.role or "") in TEACHER_ROLES
+    if seg["teacher"]:
+        return is_teacher
+    return (not is_teacher) and (p.class_name or "") in seg["classes"]
+
+
+def _filter_segment(participants, segment: str) -> list:
+    """参加者リストを指定セグメントで絞り込む"""
+    return [p for p in participants if _in_segment(p, segment)]
+
+
+# -----------------------------------------------
+# 案内PDF（最終リマインドの添付ファイル）
+# -----------------------------------------------
+PDF_PATH_KEY        = "reunion_guide_pdf"
+PDF_NAME_KEY        = "reunion_guide_pdf_name"         # アップロード時の元ファイル名
+PDF_UPLOADED_AT_KEY = "reunion_guide_pdf_uploaded_at"  # アップロード日時（ISO文字列）
+
+
+def _get_guide_pdf_info():
+    """
+    最終リマインドに添付する案内PDFの情報を返す。
+    未設定またはファイルが存在しない場合は None。
+
+    戻り値: {"path", "filename", "display_name", "size_kb", "uploaded_at"}
+    """
+    setting = AppSetting.query.filter_by(key=PDF_PATH_KEY).first()
+    pdf_path = setting.value if (setting and setting.value) else None
+    if not pdf_path:
+        default_pdf = os.path.join(current_app.root_path, "static", "uploads", "reunion_guide.pdf")
+        pdf_path = default_pdf if os.path.isfile(default_pdf) else None
+    if not pdf_path or not os.path.isfile(pdf_path):
+        return None
+
+    name_setting = AppSetting.query.filter_by(key=PDF_NAME_KEY).first()
+    display_name = name_setting.value if (name_setting and name_setting.value) else os.path.basename(pdf_path)
+
+    at_setting = AppSetting.query.filter_by(key=PDF_UPLOADED_AT_KEY).first()
+    uploaded_at = None
+    if at_setting and at_setting.value:
+        try:
+            uploaded_at = datetime.fromisoformat(at_setting.value)
+        except ValueError:
+            uploaded_at = None
+    if uploaded_at is None:
+        # 設定が無い場合はファイルの更新時刻で代用（UTC換算してjstフィルタに合わせる）
+        from datetime import timezone, timedelta
+        mtime = datetime.fromtimestamp(os.path.getmtime(pdf_path), tz=timezone.utc)
+        uploaded_at = mtime.replace(tzinfo=None)
+
+    return {
+        "path": pdf_path,
+        "filename": os.path.basename(pdf_path),
+        "display_name": display_name,
+        "size_kb": round(os.path.getsize(pdf_path) / 1024, 1),
+        "uploaded_at": uploaded_at,
+    }
+
+
+def _pdf_attachment_json(pdf) -> dict:
+    """案内PDF情報をJSONレスポンス用に整形する（日時はJST）"""
+    from datetime import timedelta
+    uploaded_at = ""
+    if pdf["uploaded_at"]:
+        uploaded_at = (pdf["uploaded_at"] + timedelta(hours=9)).strftime("%Y/%m/%d %H:%M")
+    return {
+        "filename": pdf["display_name"],
+        "size_kb": pdf["size_kb"],
+        "uploaded_at": uploaded_at,
+        "url": url_for("admin.settings_pdf_view"),
+    }
 
 
 @admin_bp.before_request
@@ -159,25 +273,21 @@ def qr_attendance():
     records = AttendanceRecord.query.order_by(AttendanceRecord.checked_in_at.desc()).all()
     qr_url = url_for("attendance_scan", _external=True)
     total = len(participants)
-    checked_ids = {r.participant_id for r in records if r.status == "checked_in"}
-    checked_count = len(checked_ids)
+    checked_count = sum(1 for p in participants if p.arrived)
     not_checked = max(0, total - checked_count)
 
     # クラス別名簿（幹事用）: 本出欠参加・来場済み・未来場を名前順で一覧化
-    latest_checkin = {}
-    for r in records:  # records は checked_in_at 降順
-        if r.status == "checked_in" and r.participant_id not in latest_checkin:
-            latest_checkin[r.participant_id] = r
-
     def _member_info(p):
         final = p.latest_final
-        rec = latest_checkin.get(p.id)
+        rec = p.latest_attendance
         return {
             "participant": p,
             "final_attending": bool(final and final.status == "attending"),
             "final_status": final.status if final else None,
-            "checked_in": rec is not None,
+            "checked_in": p.arrived,
             "checked_in_at": rec.checked_in_at if rec else None,
+            "day_status": p.day_status,
+            "day_status_label": p.day_status_label,
         }
 
     def _kana_key(p):
@@ -222,33 +332,62 @@ def qr_attendance():
         checked_count=checked_count,
         not_checked=not_checked,
         roster=roster,
+        day_status_labels=AttendanceRecord.DAY_STATUS_LABELS,
     )
+
+
+def _safe_next_url(default_endpoint: str) -> str:
+    """フォームの next パラメータを検証して戻り先URLを返す（オープンリダイレクト防止）"""
+    nxt = request.form.get('next', '').strip()
+    if nxt.startswith('/') and not nxt.startswith('//'):
+        return nxt
+    return url_for(default_endpoint)
 
 
 @admin_bp.route('/participant/<int:participant_id>/set-attendance', methods=['POST'])
 def set_attendance(participant_id):
-    """管理画面から参加/不参加を手動で設定する。"""
-    from datetime import datetime
+    """
+    当日ステータスを手動で設定する。
+
+    status: checked_in=来場 / late=遅刻 / absent=当日欠席 / none=未来場に戻す
+    履歴として AttendanceRecord を1件追加し、最新レコードが現在の状態になる。
+    none の場合は手動で付けた履歴ではなく「記録なし」に戻すため全件削除する。
+    """
     status = request.form.get('status', '').strip()
-    p = Participant.query.get(participant_id)
+    back = _safe_next_url('admin.qr_attendance')
+
+    p = db.session.get(Participant, participant_id)
     if not p:
         flash('参加者が見つかりません。', 'danger')
-        return redirect(url_for('admin.qr_attendance'))
+        return redirect(back)
 
-    if status == 'checked_in':
-        rec = AttendanceRecord(participant_id=participant_id, checked_in_at=datetime.utcnow(), source='admin', status='checked_in')
-        db.session.add(rec)
+    if status == DAY_STATUS_NONE:
+        deleted = len(p.attendance_records)
+        for rec in list(p.attendance_records):
+            db.session.delete(rec)
         db.session.commit()
-        flash(f'{p.name} を出席に設定しました。', 'success')
-    elif status == 'not_attending':
-        rec = AttendanceRecord(participant_id=participant_id, checked_in_at=datetime.utcnow(), source='admin', status='not_attending')
-        db.session.add(rec)
-        db.session.commit()
-        flash(f'{p.name} を不参加に設定しました。', 'warning')
-    else:
-        flash('不正な操作です。', 'danger')
+        if deleted:
+            flash(f'{p.name} の当日ステータスを「未来場」に戻しました。', 'info')
+        else:
+            flash(f'{p.name} は既に「未来場」です。', 'info')
+        return redirect(back)
 
-    return redirect(url_for('admin.qr_attendance'))
+    if status not in AttendanceRecord.DAY_STATUS_LABELS:
+        flash('不正な当日ステータスです。', 'danger')
+        return redirect(back)
+
+    db.session.add(AttendanceRecord(
+        participant_id=participant_id,
+        checked_in_at=datetime.utcnow(),
+        source='admin',
+        status=status,
+    ))
+    db.session.commit()
+
+    label = AttendanceRecord.DAY_STATUS_LABELS[status]
+    category = 'success' if status in AttendanceRecord.ARRIVED_STATUSES else 'warning'
+    flash(f'{p.name} の当日ステータスを「{label}」に設定しました。', category)
+    return redirect(back)
 
 
 @admin_bp.route("/toggle-form-lock/<form_type>", methods=["POST"])
@@ -289,6 +428,7 @@ def participants():
     final_filter   = request.args.get("final_status", "all")
     role_filter    = request.args.get("role", "all")
     class_filter   = request.args.get("class_name", "all")
+    day_filter     = request.args.get("day_status", "all")
     sort           = request.args.get("sort", "class")
     order          = request.args.get("order", "asc")
 
@@ -315,6 +455,9 @@ def participants():
     def _role_order(p):
         return {"生徒": 0, "教師": 1, "学年主任": 2, "幹事": 3}.get(p.role, 4)
 
+    def _day_order(p):
+        return {"checked_in": 0, "late": 1, "absent": 2, DAY_STATUS_NONE: 3}.get(p.day_status, 4)
+
     sort_key_map = {
         "class":   lambda p: (p.class_name or "", _role_order(p), _num(p)),
         "name":    lambda p: (p.name or "",),
@@ -322,6 +465,7 @@ def participants():
         "role":    lambda p: (_role_order(p), p.class_name or "", _num(p)),
         "created": lambda p: (p.created_at,),
         "email":   lambda p: (p.email or "",),
+        "day":     lambda p: (_day_order(p), p.class_name or "", _num(p)),
     }
     key_func = sort_key_map.get(sort, sort_key_map["class"])
     all_participants.sort(key=key_func, reverse=(order == "desc"))
@@ -348,6 +492,10 @@ def participants():
                 filtered.append(p)
         all_participants = filtered
 
+    # 当日ステータスで絞り込み（Python側）
+    if day_filter != "all":
+        all_participants = [p for p in all_participants if p.day_status == day_filter]
+
     # クラス一覧（絞り込み用）
     classes = [r[0] for r in db.session.query(Participant.class_name)
                .filter(Participant.class_name != "")
@@ -358,6 +506,7 @@ def participants():
         return url_for("admin.participants", q=q, status=status_filter,
                        final_status=final_filter,
                        role=role_filter, class_name=class_filter,
+                       day_status=day_filter,
                        sort=col, order=new_order)
 
     def sort_icon(col):
@@ -372,6 +521,8 @@ def participants():
                            final_filter=final_filter,
                            role_filter=role_filter,
                            class_filter=class_filter,
+                           day_filter=day_filter,
+                           day_status_labels=DAY_STATUS_LABELS,
                            sort=sort, order=order,
                            classes=classes,
                            sort_url=sort_url,
@@ -397,7 +548,8 @@ def participant_detail(participant_id):
     return render_template("admin/participant_detail.html",
                            participant=participant,
                            final_url=final_url,
-                           mail_logs=mail_logs)
+                           mail_logs=mail_logs,
+                           day_status_labels=AttendanceRecord.DAY_STATUS_LABELS)
 
 
 @admin_bp.route("/participant/<int:participant_id>/set-provisional-status", methods=["POST"])
@@ -713,6 +865,18 @@ def auto_send():
         flash("送信対象者がいません。全フェーズ完了済みです。", "info")
         return redirect(url_for("admin.index"))
 
+    # これから送るテンプレート（フェーズ×宛先種別）に未設定変数が残っていないか確認する
+    roles = {
+        pid: role for pid, role in
+        db.session.query(Participant.id, Participant.role)
+                  .filter(Participant.id.in_({j["pid"] for j in all_jobs})).all()
+    }
+    combos = {(j["phase"], roles.get(j["pid"]) in TEACHER_ROLES) for j in all_jobs}
+    for phase, teacher in sorted(combos):
+        guard = _guard_mail_vars(phase, teacher, url_for("admin.index"))
+        if guard:
+            return guard
+
     remaining = get_remaining_today()
     if remaining <= 0:
         flash("本日の送信上限に達しています。", "warning")
@@ -723,13 +887,8 @@ def auto_send():
 
     pdf_path = None
     if any(j["phase"] == "final_reminder" for j in batch):
-        pdf_setting = AppSetting.query.filter_by(key="reunion_guide_pdf").first()
-        if pdf_setting and pdf_setting.value:
-            pdf_path = pdf_setting.value
-        else:
-            default_pdf = os.path.join(current_app.root_path, "static", "uploads", "reunion_guide.pdf")
-            if os.path.isfile(default_pdf):
-                pdf_path = default_pdf
+        pdf = _get_guide_pdf_info()
+        pdf_path = pdf["path"] if pdf else None
 
     def bulk_send():
         with app.app_context():
@@ -776,7 +935,9 @@ def auto_send():
 @admin_bp.route("/mail-hub")
 def mail_hub():
     """メール送信ハブ画面"""
-    return render_template("admin/mail_hub.html")
+    return render_template("admin/mail_hub.html",
+                           segments=MAIL_SEGMENTS,
+                           default_segment=DEFAULT_SEGMENT)
 
 
 @admin_bp.route("/api/mail-preview/<mail_type>")
@@ -784,7 +945,8 @@ def api_mail_preview(mail_type):
     """メール種別ごとのプレビュー・対象者リストをJSON返却"""
     from services.mail_service import MAIL_DEFAULTS, _get_template, _get_reunion_info, _get_mail_config
 
-    is_teacher = request.args.get("teacher", "0") == "1"
+    segment = _resolve_segment(request.args.get("segment", DEFAULT_SEGMENT))
+    is_teacher = MAIL_SEGMENTS[segment]["teacher"]
     reunion = _get_reunion_info()
     base_url = current_app.config.get("APP_BASE_URL", "http://localhost:5000")
 
@@ -856,9 +1018,10 @@ def api_mail_preview(mail_type):
     if from_addr:
         body_tmpl = body_tmpl.rstrip("\n") + f"\nE-mail: {from_addr}\n"
 
-    participants = Participant.query.filter(
-        ~Participant.email.like("%@placeholder.local"),
-    ).all()
+    participants = _filter_segment(
+        Participant.query.filter(~Participant.email.like("%@placeholder.local")).all(),
+        segment,
+    )
 
     targets = []
     if mail_type == "final_url":
@@ -887,23 +1050,21 @@ def api_mail_preview(mail_type):
 
     remaining = get_remaining_today()
 
-    import os
-    pdf_setting = AppSetting.query.filter_by(key="reunion_guide_pdf").first()
-    pdf_path = pdf_setting.value if pdf_setting and pdf_setting.value else None
-    if not pdf_path:
-        default_pdf = os.path.join(current_app.root_path, "static", "uploads", "reunion_guide.pdf")
-        if os.path.isfile(default_pdf):
-            pdf_path = default_pdf
     attachment_info = None
-    if mail_type == "final_reminder" and pdf_path and os.path.isfile(pdf_path):
-        attachment_info = {
-            "filename": os.path.basename(pdf_path),
-            "size_kb": round(os.path.getsize(pdf_path) / 1024, 1),
-        }
+    if mail_type == "final_reminder":
+        pdf = _get_guide_pdf_info()
+        if pdf:
+            attachment_info = _pdf_attachment_json(pdf)
+
+    unset_vars = check_mail_vars(mail_type, teacher=is_teacher)
 
     from services.mail_service import _text_to_html
     return jsonify({
         "label": info["label"],
+        "segment": segment,
+        "segment_label": MAIL_SEGMENTS[segment]["label"],
+        "unset_vars": unset_vars,
+        "unset_vars_message": format_unset_mail_vars(unset_vars),
         "subject": subject_tmpl,
         "body": body_tmpl,
         "html_body": _text_to_html(body_tmpl),
@@ -1002,20 +1163,11 @@ def api_mail_preview_individual(participant_id, mail_type):
     if from_addr:
         body_tmpl = body_tmpl.rstrip("\n") + f"\nE-mail: {from_addr}\n"
 
-    import os
     attachment_info = None
     if mail_type == "final_reminder":
-        pdf_setting = AppSetting.query.filter_by(key="reunion_guide_pdf").first()
-        pdf_path = pdf_setting.value if pdf_setting and pdf_setting.value else None
-        if not pdf_path:
-            default_pdf = os.path.join(current_app.root_path, "static", "uploads", "reunion_guide.pdf")
-            if os.path.isfile(default_pdf):
-                pdf_path = default_pdf
-        if pdf_path and os.path.isfile(pdf_path):
-            attachment_info = {
-                "filename": os.path.basename(pdf_path),
-                "size_kb": round(os.path.getsize(pdf_path) / 1024, 1),
-            }
+        pdf = _get_guide_pdf_info()
+        if pdf:
+            attachment_info = _pdf_attachment_json(pdf)
 
     return jsonify({
         "subject": subject_tmpl,
@@ -1039,6 +1191,11 @@ def send_final_url_single(participant_id):
         flash("参加者が見つかりません。", "danger")
         return redirect(url_for("admin.participants"))
 
+    guard = _guard_mail_vars("final_url", participant.role in TEACHER_ROLES,
+                             url_for("admin.participant_detail", participant_id=participant_id))
+    if guard:
+        return guard
+
     base_url = current_app.config.get("APP_BASE_URL", "http://localhost:5000")
     final_url = generate_final_url(participant, base_url)
 
@@ -1055,17 +1212,43 @@ def send_final_url_single(participant_id):
     return redirect(url_for("admin.participant_detail", participant_id=participant_id))
 
 
+def _guard_mail_vars(mail_type: str, teacher: bool, back_url: str):
+    """
+    テンプレートで使う変数に未設定（空欄）・「未定」が残っていれば
+    送信を中止してリダイレクトレスポンスを返す。問題なければ None。
+    """
+    problems = check_mail_vars(mail_type, teacher=teacher)
+    if not problems:
+        return None
+    flash(
+        "メール変数が未設定のため送信を中止しました: "
+        f"{format_unset_mail_vars(problems)}。"
+        "「変数設定」タブで値を入力してから送信してください。",
+        "danger",
+    )
+    return redirect(back_url)
+
+
 @admin_bp.route("/send-final-url-bulk", methods=["POST"])
 def send_final_url_bulk():
-    """本出欠URLを一括送信（仮出欠回答済み＆URL未送信の全員・段階送信）"""
+    """本出欠URLを一括送信（仮出欠回答済み＆URL未送信・セグメント単位・段階送信）"""
     import threading
     import time
 
+    segment = _resolve_segment(request.form.get("segment", DEFAULT_SEGMENT))
+    seg = MAIL_SEGMENTS[segment]
+    back = url_for("admin.mail_hub", type="final_url", segment=segment)
+
+    guard = _guard_mail_vars("final_url", seg["teacher"], back)
+    if guard:
+        return guard
+
     base_url = current_app.config.get("APP_BASE_URL", "http://localhost:5000")
 
-    participants = Participant.query.filter(
-        ~Participant.email.like("%@placeholder.local"),
-    ).all()
+    participants = _filter_segment(
+        Participant.query.filter(~Participant.email.like("%@placeholder.local")).all(),
+        segment,
+    )
 
     targets = []
     for p in participants:
@@ -1079,13 +1262,13 @@ def send_final_url_bulk():
             targets.append(p)
 
     if not targets:
-        flash("送信対象の参加者がいません（全員送信済みです）。", "info")
-        return redirect(url_for("admin.participants"))
+        flash(f"{seg['short']}に送信対象の参加者がいません（全員送信済みです）。", "info")
+        return redirect(back)
 
     remaining = get_remaining_today()
     if remaining <= 0:
         flash("本日の送信上限に達しています。明日以降に再度送信してください。", "warning")
-        return redirect(url_for("admin.participants"))
+        return redirect(back)
 
     batch = targets[:remaining]
     daily_limit = get_daily_send_limit()
@@ -1115,11 +1298,11 @@ def send_final_url_bulk():
     thread.start()
 
     remaining_after = len(targets) - len(batch)
-    msg = f"第{stage}段階: {len(batch)} 件の送信を開始しました。"
+    msg = f"{seg['short']} 第{stage}段階: {len(batch)} 件の送信を開始しました。"
     if remaining_after > 0:
         msg += f"（残り {remaining_after} 件は次回送信してください）"
     flash(msg, "info")
-    return redirect(url_for("admin.participants"))
+    return redirect(back)
 
 
 @admin_bp.route("/send-reminder/<int:participant_id>", methods=["POST"])
@@ -1129,6 +1312,11 @@ def send_reminder_single(participant_id):
     if participant is None:
         flash("参加者が見つかりません。", "danger")
         return redirect(url_for("admin.participants"))
+
+    guard = _guard_mail_vars("reminder", participant.role in TEACHER_ROLES,
+                             url_for("admin.participant_detail", participant_id=participant_id))
+    if guard:
+        return guard
 
     base_url = current_app.config.get("APP_BASE_URL", "http://localhost:5000")
     final_url = generate_final_url(participant, base_url)
@@ -1153,10 +1341,13 @@ def send_final_reminder_single(participant_id):
         flash("参加者が見つかりません。", "danger")
         return redirect(url_for("admin.participants"))
 
-    pdf_path = None
-    s = AppSetting.query.filter_by(key="reunion_guide_pdf").first()
-    if s and s.value and os.path.isfile(s.value):
-        pdf_path = s.value
+    guard = _guard_mail_vars("final_reminder", participant.role in TEACHER_ROLES,
+                             url_for("admin.participant_detail", participant_id=participant_id))
+    if guard:
+        return guard
+
+    pdf = _get_guide_pdf_info()
+    pdf_path = pdf["path"] if pdf else None
 
     try:
         log = send_final_reminder(participant, attachment_path=pdf_path)
@@ -1202,15 +1393,24 @@ def send_unlock_notice_single(participant_id):
 
 @admin_bp.route("/send-reminder-bulk", methods=["POST"])
 def send_reminder_bulk():
-    """リマインドメールを一括送信（本出欠URL送信済み＆本出欠未回答の参加者）"""
+    """リマインドメールを一括送信（本出欠URL送信済み＆本出欠未回答・セグメント単位）"""
     import threading
     import time
 
+    segment = _resolve_segment(request.form.get("segment", DEFAULT_SEGMENT))
+    seg = MAIL_SEGMENTS[segment]
+    back = url_for("admin.mail_hub", type="reminder", segment=segment)
+
+    guard = _guard_mail_vars("reminder", seg["teacher"], back)
+    if guard:
+        return guard
+
     base_url = current_app.config.get("APP_BASE_URL", "http://localhost:5000")
 
-    participants = Participant.query.filter(
-        ~Participant.email.like("%@placeholder.local"),
-    ).all()
+    participants = _filter_segment(
+        Participant.query.filter(~Participant.email.like("%@placeholder.local")).all(),
+        segment,
+    )
     targets = [
         p for p in participants
         if any(ml.mail_type == "final_url" and ml.status in ("sent", "simulated") for ml in p.mail_logs)
@@ -1218,13 +1418,13 @@ def send_reminder_bulk():
     ]
 
     if not targets:
-        flash("リマインド送信対象の参加者がいません。", "info")
-        return redirect(url_for("admin.participants"))
+        flash(f"{seg['short']}にリマインド送信対象の参加者がいません。", "info")
+        return redirect(back)
 
     remaining = get_remaining_today()
     if remaining <= 0:
         flash("本日の送信上限に達しています。明日以降に再度送信してください。", "warning")
-        return redirect(url_for("admin.participants"))
+        return redirect(back)
 
     batch = targets[:remaining]
     app = current_app._get_current_object()
@@ -1251,22 +1451,31 @@ def send_reminder_bulk():
     thread.start()
 
     remaining_after = len(targets) - len(batch)
-    msg = f"{len(batch)} 件のリマインド送信を開始しました。"
+    msg = f"{seg['short']}: {len(batch)} 件のリマインド送信を開始しました。"
     if remaining_after > 0:
         msg += f"（残り {remaining_after} 件は次回送信してください）"
     flash(msg, "info")
-    return redirect(url_for("admin.participants"))
+    return redirect(back)
 
 
 @admin_bp.route("/send-final-reminder-bulk", methods=["POST"])
 def send_final_reminder_bulk():
-    """最終リマインドメールを一括送信（本出欠参加者にPDF添付）"""
+    """最終リマインドメールを一括送信（本出欠参加者にPDF添付・セグメント単位）"""
     import threading
     import time
 
-    participants = Participant.query.filter(
-        ~Participant.email.like("%@placeholder.local"),
-    ).all()
+    segment = _resolve_segment(request.form.get("segment", DEFAULT_SEGMENT))
+    seg = MAIL_SEGMENTS[segment]
+    back = url_for("admin.mail_hub", type="final_reminder", segment=segment)
+
+    guard = _guard_mail_vars("final_reminder", seg["teacher"], back)
+    if guard:
+        return guard
+
+    participants = _filter_segment(
+        Participant.query.filter(~Participant.email.like("%@placeholder.local")).all(),
+        segment,
+    )
 
     targets = []
     for p in participants:
@@ -1280,26 +1489,19 @@ def send_final_reminder_bulk():
                 targets.append(p)
 
     if not targets:
-        flash("最終リマインド送信対象の参加者がいません。", "info")
-        return redirect(url_for("admin.participants"))
+        flash(f"{seg['short']}に最終リマインド送信対象の参加者がいません。", "info")
+        return redirect(back)
 
     remaining = get_remaining_today()
     if remaining <= 0:
         flash("本日の送信上限に達しています。明日以降に再度送信してください。", "warning")
-        return redirect(url_for("admin.participants"))
+        return redirect(back)
 
     batch = targets[:remaining]
 
-    # PDF添付ファイルのパス
-    pdf_setting = AppSetting.query.filter_by(key="reunion_guide_pdf").first()
-    pdf_path = None
-    if pdf_setting and pdf_setting.value:
-        pdf_path = pdf_setting.value
-    else:
-        import os
-        default_pdf = os.path.join(current_app.root_path, "static", "uploads", "reunion_guide.pdf")
-        if os.path.isfile(default_pdf):
-            pdf_path = default_pdf
+    # PDF添付ファイル
+    pdf = _get_guide_pdf_info()
+    pdf_path = pdf["path"] if pdf else None
 
     app = current_app._get_current_object()
     jobs = [p.id for p in batch]
@@ -1325,15 +1527,15 @@ def send_final_reminder_bulk():
     thread.start()
 
     remaining_after = len(targets) - len(batch)
-    msg = f"{len(batch)} 件の最終リマインド送信を開始しました。"
-    if pdf_path:
-        msg += "（PDF添付あり）"
+    msg = f"{seg['short']}: {len(batch)} 件の最終リマインド送信を開始しました。"
+    if pdf:
+        msg += f"（PDF添付: {pdf['display_name']}）"
     else:
         msg += "（PDF未設定のため添付なし）"
     if remaining_after > 0:
         msg += f"（残り {remaining_after} 件は次回送信してください）"
     flash(msg, "info")
-    return redirect(url_for("admin.participants"))
+    return redirect(back)
 
 
 # -----------------------------------------------
@@ -1595,13 +1797,24 @@ def settings_mail():
     for key in KEYS:
         if key not in settings or not settings[key]:
             settings[key] = defaults.get(key, "")
-    return render_template("admin/settings_mail.html", settings=settings)
+    return render_template("admin/settings_mail.html",
+                           settings=settings,
+                           pdf=_get_guide_pdf_info())
+
+
+def _set_setting(key: str, value: str) -> None:
+    """AppSetting を1件upsertする（commitは呼び出し側）"""
+    setting = AppSetting.query.filter_by(key=key).first()
+    if setting:
+        setting.value = value
+        setting.updated_at = datetime.utcnow()
+    else:
+        db.session.add(AppSetting(key=key, value=value))
 
 
 @admin_bp.route("/settings/pdf-upload", methods=["POST"])
 def settings_pdf_upload():
-    """案内PDFをアップロードする"""
-    import os
+    """案内PDFをアップロードする（元のファイル名とアップロード日時も記録）"""
     if "pdf_file" not in request.files:
         flash("ファイルを選択してください。", "danger")
         return redirect(url_for("admin.settings_mail"))
@@ -1611,19 +1824,59 @@ def settings_pdf_upload():
         flash("PDFファイルを選択してください。", "danger")
         return redirect(url_for("admin.settings_mail"))
 
+    original_name = os.path.basename(file.filename)
+
     upload_dir = os.path.join(current_app.root_path, "static", "uploads")
     os.makedirs(upload_dir, exist_ok=True)
     save_path = os.path.join(upload_dir, "reunion_guide.pdf")
     file.save(save_path)
 
-    setting = AppSetting.query.filter_by(key="reunion_guide_pdf").first()
-    if setting:
-        setting.value = save_path
-    else:
-        db.session.add(AppSetting(key="reunion_guide_pdf", value=save_path))
+    _set_setting(PDF_PATH_KEY, save_path)
+    _set_setting(PDF_NAME_KEY, original_name)
+    _set_setting(PDF_UPLOADED_AT_KEY, datetime.utcnow().isoformat())
     db.session.commit()
 
-    flash("案内PDFをアップロードしました。", "success")
+    size_kb = round(os.path.getsize(save_path) / 1024, 1)
+    flash(f"案内PDFをアップロードしました: {original_name}（{size_kb} KB）", "success")
+    return redirect(url_for("admin.settings_mail"))
+
+
+@admin_bp.route("/settings/pdf-view")
+def settings_pdf_view():
+    """現在保存されている案内PDFをブラウザで開く"""
+    from flask import send_file
+    pdf = _get_guide_pdf_info()
+    if not pdf:
+        flash("案内PDFはまだアップロードされていません。", "warning")
+        return redirect(url_for("admin.settings_mail"))
+    return send_file(
+        pdf["path"],
+        mimetype="application/pdf",
+        as_attachment=False,
+        download_name=pdf["display_name"],
+    )
+
+
+@admin_bp.route("/settings/pdf-delete", methods=["POST"])
+def settings_pdf_delete():
+    """保存されている案内PDFを削除する（最終リマインドが添付なしになる）"""
+    pdf = _get_guide_pdf_info()
+    if not pdf:
+        flash("削除する案内PDFがありません。", "warning")
+        return redirect(url_for("admin.settings_mail"))
+
+    try:
+        os.remove(pdf["path"])
+    except OSError as e:
+        logger.error(f"案内PDFの削除に失敗: {pdf['path']} - {e}", exc_info=True)
+        flash(f"PDFの削除に失敗しました: {e}", "danger")
+        return redirect(url_for("admin.settings_mail"))
+
+    for key in (PDF_PATH_KEY, PDF_NAME_KEY, PDF_UPLOADED_AT_KEY):
+        _set_setting(key, "")
+    db.session.commit()
+
+    flash(f"案内PDF（{pdf['display_name']}）を削除しました。最終リマインドは添付なしで送信されます。", "warning")
     return redirect(url_for("admin.settings_mail"))
 
 
