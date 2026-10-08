@@ -75,12 +75,48 @@ class Participant(db.Model):
             return sorted(self.final_responses, key=lambda r: r.submitted_at, reverse=True)[0]
         return None
 
+    @property
+    def latest_attendance(self):
+        """最新の当日出席レコードを返す（無ければ None）"""
+        if self.attendance_records:
+            return sorted(
+                self.attendance_records,
+                key=lambda r: (r.checked_in_at or datetime.min, r.id),
+                reverse=True,
+            )[0]
+        return None
+
+    @property
+    def day_status(self) -> str:
+        """当日ステータス: checked_in / late / absent / none"""
+        rec = self.latest_attendance
+        return rec.day_status if rec else DAY_STATUS_NONE
+
+    @property
+    def day_status_label(self) -> str:
+        return DAY_STATUS_LABELS.get(self.day_status, self.day_status)
+
+    @property
+    def arrived(self) -> bool:
+        """会場に来た扱いか（来場 or 遅刻）"""
+        return self.day_status in AttendanceRecord.ARRIVED_STATUSES
+
     def __repr__(self):
         return f"<Participant {self.id}: {self.name} ({self.email})>"
 
 
 class AttendanceRecord(db.Model):
-    """会場QR出席登録履歴"""
+    """
+    会場QR出席登録履歴
+
+    status が当日ステータスの実体。1人につき複数レコードが積まれ、
+    最新（checked_in_at が最大）のものが現在の当日ステータスになる。
+      checked_in     : 来場（QRスキャン or 手動）
+      late           : 遅刻（手動のみ）
+      absent         : 当日欠席（手動のみ）
+      not_attending  : 旧「不参加」。absent と同一視する（後方互換）
+    レコードが無い場合は「未来場」（DAY_STATUS_NONE）として扱う。
+    """
     __tablename__ = "attendance_records"
 
     id = db.Column(db.Integer, primary_key=True)
@@ -92,8 +128,40 @@ class AttendanceRecord(db.Model):
     status = db.Column(db.String(20), default="checked_in")
     notes = db.Column(db.Text, default="")
 
+    # 手動設定で選択できる当日ステータス（表示順）
+    DAY_STATUS_LABELS = {
+        "checked_in": "来場",
+        "late": "遅刻",
+        "absent": "当日欠席",
+    }
+    # 旧データの "not_attending" を "absent" に読み替える
+    LEGACY_STATUS_MAP = {"not_attending": "absent"}
+    # 会場に来た扱いにするステータス
+    ARRIVED_STATUSES = ("checked_in", "late")
+
+    @property
+    def day_status(self) -> str:
+        """旧値を正規化した当日ステータス"""
+        s = self.LEGACY_STATUS_MAP.get(self.status, self.status)
+        return s if s in self.DAY_STATUS_LABELS else "checked_in"
+
+    @property
+    def day_status_label(self) -> str:
+        return self.DAY_STATUS_LABELS.get(self.day_status, self.day_status)
+
     def __repr__(self):
-        return f"<AttendanceRecord {self.id}: participant={self.participant_id}>"
+        return f"<AttendanceRecord {self.id}: participant={self.participant_id} status={self.status}>"
+
+
+# 当日ステータス: 記録が無い状態を表す擬似ステータス
+DAY_STATUS_NONE = "none"
+# 参加者一覧のフィルタ・バッジで使う全ステータス（表示順）
+DAY_STATUS_LABELS = {
+    "checked_in": "来場",
+    "late": "遅刻",
+    "absent": "当日欠席",
+    DAY_STATUS_NONE: "未来場",
+}
 
 
 class ProvisionalResponse(db.Model):

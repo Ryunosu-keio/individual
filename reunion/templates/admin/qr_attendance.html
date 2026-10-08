@@ -144,22 +144,30 @@
                         {% endif %}
                       </td>
                       <td>
-                        {% if m.checked_in %}
-                          <span class="text-success fw-bold"><i class="bi bi-check-circle-fill me-1"></i>来場済み</span>
-                          {% if m.checked_in_at %}<span class="small text-muted ms-1">{{ m.checked_in_at.strftime('%H:%M') }}</span>{% endif %}
+                        {% if m.day_status == 'checked_in' %}
+                          <span class="text-success fw-bold"><i class="bi bi-check-circle-fill me-1"></i>来場</span>
+                        {% elif m.day_status == 'late' %}
+                          <span class="text-info-emphasis fw-bold"><i class="bi bi-clock-history me-1"></i>遅刻</span>
+                        {% elif m.day_status == 'absent' %}
+                          <span class="text-danger fw-bold"><i class="bi bi-x-circle-fill me-1"></i>当日欠席</span>
                         {% elif m.final_attending %}
-                          <span class="text-warning-emphasis"><i class="bi bi-clock me-1"></i>まだ</span>
+                          <span class="text-warning-emphasis"><i class="bi bi-clock me-1"></i>未来場</span>
                         {% else %}
                           <span class="text-muted">-</span>
                         {% endif %}
+                        {% if m.checked_in_at %}<span class="small text-muted ms-1">{{ m.checked_in_at | jst('%H:%M') }}</span>{% endif %}
                       </td>
-                      <td>
-                        {% if not m.checked_in %}
-                        <form method="post" action="{{ url_for('admin.set_attendance', participant_id=p.id) }}" class="d-inline">
-                          <input type="hidden" name="status" value="checked_in">
-                          <button class="btn btn-sm btn-outline-success" type="submit">出席登録</button>
-                        </form>
-                        {% endif %}
+                      <td class="text-nowrap">
+                        <div class="btn-group btn-group-sm" role="group">
+                          {% for key, label in day_status_labels.items() %}
+                          <form method="post" action="{{ url_for('admin.set_attendance', participant_id=p.id) }}" class="d-inline">
+                            <input type="hidden" name="next" value="{{ request.full_path }}">
+                            <button name="status" value="{{ key }}" type="submit"
+                                    class="btn btn-sm {{ 'btn-secondary' if m.day_status == key else 'btn-outline-secondary' }}"
+                                    {{ 'disabled' if m.day_status == key }}>{{ label }}</button>
+                          </form>
+                          {% endfor %}
+                        </div>
                       </td>
                     </tr>
                     {% endfor %}
@@ -214,18 +222,27 @@
                   <td>
                     {{ record.participant.name }}{% if record.participant.role in ['教師', '学年主任'] %}先生{% endif %}
                   </td>
-                  <td>{{ record.checked_in_at.strftime('%Y/%m/%d %H:%M') }}</td>
-                  <td><span class="badge bg-success">登録済み</span></td>
-                  <td>{% if record.email_sent %}送信済み{% else %}未送信{% endif %}</td>
+                  <td>{{ record.checked_in_at | jst('%Y/%m/%d %H:%M') }}</td>
                   <td>
-                    <form method="post" action="{{ url_for('admin.set_attendance', participant_id=record.participant.id) }}" style="display:inline-block;">
-                      <input type="hidden" name="status" value="checked_in">
-                      <button class="btn btn-sm btn-outline-success" type="submit">出席</button>
-                    </form>
-                    <form method="post" action="{{ url_for('admin.set_attendance', participant_id=record.participant.id) }}" style="display:inline-block; margin-left:6px;">
-                      <input type="hidden" name="status" value="not_attending">
-                      <button class="btn btn-sm btn-outline-secondary" type="submit">不参加</button>
-                    </form>
+                    {% if record.day_status == 'checked_in' %}<span class="badge bg-success">来場</span>
+                    {% elif record.day_status == 'late' %}<span class="badge bg-info text-dark">遅刻</span>
+                    {% else %}<span class="badge bg-danger">当日欠席</span>{% endif %}
+                    <span class="small text-muted ms-1">
+                      {% if record.source == 'qr' %}<i class="bi bi-qr-code" title="QR読み込み"></i>
+                      {% else %}<i class="bi bi-hand-index" title="手動設定"></i>{% endif %}
+                    </span>
+                  </td>
+                  <td>{% if record.email_sent %}送信済み{% else %}未送信{% endif %}</td>
+                  <td class="text-nowrap">
+                    <div class="btn-group btn-group-sm" role="group">
+                      {% for key, label in day_status_labels.items() %}
+                      <form method="post" action="{{ url_for('admin.set_attendance', participant_id=record.participant.id) }}" class="d-inline">
+                        <input type="hidden" name="next" value="{{ request.full_path }}">
+                        <button name="status" value="{{ key }}" type="submit"
+                                class="btn btn-sm btn-outline-secondary">{{ label }}</button>
+                      </form>
+                      {% endfor %}
+                    </div>
                   </td>
                 </tr>
                 {% endfor %}

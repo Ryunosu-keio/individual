@@ -171,6 +171,42 @@
       </div>
       <div class="card-body">
         <p class="text-muted small">最終リマインドメールに添付する案内PDFを設定します。</p>
+
+        <!-- 保存済みPDFの状態 -->
+        {% if pdf %}
+        <div class="border rounded bg-success-subtle p-2 mb-3">
+          <div class="fw-bold small mb-1">
+            <i class="bi bi-file-earmark-pdf-fill text-danger me-1"></i>現在保存されているPDF
+          </div>
+          <dl class="row mb-2 small">
+            <dt class="col-5">ファイル名</dt>
+            <dd class="col-7 text-break">{{ pdf.display_name }}</dd>
+            <dt class="col-5">サイズ</dt>
+            <dd class="col-7">{{ pdf.size_kb }} KB</dd>
+            <dt class="col-5">アップロード</dt>
+            <dd class="col-7">{{ pdf.uploaded_at | jst if pdf.uploaded_at else '不明' }}</dd>
+          </dl>
+          <div class="d-flex gap-2 flex-wrap">
+            <a href="{{ url_for('admin.settings_pdf_view') }}" target="_blank"
+               class="btn btn-outline-primary btn-sm">
+              <i class="bi bi-eye me-1"></i>中身を確認
+            </a>
+            <form method="POST" action="{{ url_for('admin.settings_pdf_delete') }}"
+                  onsubmit="return confirm('保存されている案内PDF「{{ pdf.display_name }}」を削除します。\n最終リマインドは添付なしで送信されるようになります。よろしいですか？')">
+              <button type="submit" class="btn btn-outline-danger btn-sm">
+                <i class="bi bi-trash me-1"></i>削除
+              </button>
+            </form>
+          </div>
+        </div>
+        {% else %}
+        <div class="alert alert-warning small py-2 mb-3">
+          <i class="bi bi-exclamation-triangle me-1"></i>
+          案内PDFは<strong>まだアップロードされていません</strong>。
+          このままでは最終リマインドが添付なしで送信されます。
+        </div>
+        {% endif %}
+
         <div class="mb-3">
           <div class="d-flex gap-2 mb-1">
             <a href="{{ url_for('admin.settings_reunion_guide') }}" class="btn btn-outline-primary btn-sm">
@@ -184,10 +220,10 @@
         </div>
         <form method="POST" action="{{ url_for('admin.settings_pdf_upload') }}" enctype="multipart/form-data">
           <div class="mb-2">
-            <input type="file" class="form-control form-control-sm" name="pdf_file" accept=".pdf">
+            <input type="file" class="form-control form-control-sm" name="pdf_file" accept=".pdf" required>
           </div>
           <button type="submit" class="btn btn-outline-primary btn-sm">
-            <i class="bi bi-upload me-1"></i>PDFをアップロード
+            <i class="bi bi-upload me-1"></i>{{ 'PDFを差し替える' if pdf else 'PDFをアップロード' }}
           </button>
         </form>
         <div class="mt-2 small text-muted">
