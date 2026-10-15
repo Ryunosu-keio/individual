@@ -38,7 +38,7 @@ from services.mail_service import (send_final_url, send_reminder, send_final_rem
                                     check_mail_vars, format_unset_mail_vars)
 from services.csv_service import parse_bank_csv, save_bank_imports
 from services.matching_service import run_auto_matching, confirm_match, unmatch
-from utils import normalize_transfer_name
+from utils import normalize_transfer_name, MAJOR_BANKS, OTHER_BANK_VALUE
 
 logger = logging.getLogger(__name__)
 
@@ -1968,8 +1968,18 @@ def settings_reunion():
     ]
 
     if request.method == "POST":
+        # 振込先銀行はプルダウン（主要6行）＋「その他」の手入力の組み合わせ
+        bank_choice = request.form.get("transfer_bank_choice", "").strip()
+        if bank_choice == OTHER_BANK_VALUE:
+            bank_value = request.form.get("transfer_bank_other", "").strip()
+        else:
+            bank_value = bank_choice
+
         for key in KEYS:
-            val = request.form.get(key, "").strip()
+            if key == "transfer_bank":
+                val = bank_value
+            else:
+                val = request.form.get(key, "").strip()
             s = AppSetting.query.filter_by(key=key).first()
             if s:
                 s.value = val
@@ -1991,7 +2001,16 @@ def settings_reunion():
     for key in KEYS:
         if key not in settings or not settings[key]:
             settings[key] = defaults.get(key, "")
-    return render_template("admin/settings_reunion.html", settings=settings)
+
+    # 主要6行に無い銀行名が入っている場合は「その他」を選択状態にする
+    current_bank = settings.get("transfer_bank", "")
+    bank_is_other = bool(current_bank) and current_bank not in MAJOR_BANKS
+
+    return render_template("admin/settings_reunion.html",
+                           settings=settings,
+                           major_banks=MAJOR_BANKS,
+                           other_bank_value=OTHER_BANK_VALUE,
+                           bank_is_other=bank_is_other)
 
 
 # -----------------------------------------------

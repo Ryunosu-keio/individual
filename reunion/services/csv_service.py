@@ -7,6 +7,14 @@ services/csv_service.py - 銀行CSVの取込・パース処理
 
 銀行によってCSVのフォーマットが異なる。
 よくある列名のパターンを複数定義し、自動マッチングする。
+
+三井住友銀行（SMBC）の明細CSV（2026年8月〜の取引銀行）:
+  エンコーディング: cp932
+  ヘッダー: 年月日,お引出し,お預入れ,お取り扱い内容,残高,メモ,ラベル
+  入出金が別列に分かれており、入金は「お預入れ」列に入る。
+  「お引出し」のみの行（出金）は入金額0として自動スキップされる。
+  摘要は「パソコン振替　ﾖﾐｶﾞﾅ」のようにプレフィックス＋全角スペース＋名義。
+  プレフィックスの除去は services/matching_service.py で行う。
 """
 import csv
 import io
@@ -23,18 +31,30 @@ DATE_COLUMN_CANDIDATES = [
 ]
 
 # 振込名義列として認識する列名
+# 「お取り扱い内容」は三井住友銀行の表記。送り仮名の有無でゆれるため両方登録する。
 NAME_COLUMN_CANDIDATES = [
     "振込名義", "振込人名", "名義", "name", "相手名", "摘要", "振込人",
-    "お取り扱い内容", "取扱内容", "内容", "適用",
+    "お取り扱い内容", "お取扱い内容", "お取扱内容", "取扱内容", "取り扱い内容",
+    "内容", "適用",
     "お取引内容", "取引内容", "取引摘要",
 ]
 
 # 入金金額列として認識する列名
+# 「お預入れ」は三井住友銀行の表記。
 AMOUNT_COLUMN_CANDIDATES = [
     "入金額", "入金", "金額", "amount", "入金金額", "お受取金額",
-    "お預入れ", "預入", "預入金額",
-    "お預り金額", "預り金額", "お預かり金額", "お預入金額", "預入金額",
+    "お預入れ", "お預け入れ", "預入れ", "預入", "預入金額",
+    "お預り金額", "預り金額", "お預かり金額", "お預入金額",
 ]
+
+# 出金列として認識する列名（入金列と取り違えないよう明示的に除外する）
+WITHDRAWAL_COLUMN_CANDIDATES = [
+    "お引出し", "お引き出し", "引出し", "引出", "出金", "出金額", "お支払金額",
+    "支払金額", "お引落し金額",
+]
+
+# 摘要がこれらを含む行は振込ではないため取込まない（利息の入金など）
+NON_TRANSFER_KEYWORDS = ["利息"]
 
 
 def _find_column(headers: list, candidates: list) -> Optional[int]:
@@ -101,9 +121,10 @@ def parse_bank_csv(file_content: bytes, filename: str = "") -> list:
     """
     records = []
 
-    # エンコーディングを自動判別（UTF-8 → Shift_JIS の順で試す）
+    # エンコーディングを自動判別
+    # cp932 は shift_jis の上位互換（NEC特殊文字・IBM拡張文字を含む）なので先に試す。
     text = None
-    for encoding in ["utf-8-sig", "shift_jis", "cp932", "utf-8"]:
+    for encoding in ["utf-8-sig", "cp932", "shift_jis", "utf-8"]:
         try:
             text = file_content.decode(encoding)
             break
@@ -138,6 +159,12 @@ def parse_bank_csv(file_content: bytes, filename: str = "") -> list:
     date_idx = _find_column(headers, DATE_COLUMN_CANDIDATES)
     name_idx = _find_column(headers, NAME_COLUMN_CANDIDATES)
     amount_idx = _find_column(headers, AMOUNT_COLUMN_CANDIDATES)
+    withdrawal_idx = _find_column(headers, WITHDRAWAL_COLUMN_CANDIDATES)
+
+    # 入金列と出金列が同じ列に解決された場合は入金列を見つけられていない
+    # （「金額」1列だけの明細で出金列名と衝突したケース）
+    if amount_idx is not None and amount_idx == withdrawal_idx:
+        amount_idx = None
 
     if name_idx is None or amount_idx is None:
         raise ValueError(
@@ -146,7 +173,15 @@ def parse_bank_csv(file_content: bytes, filename: str = "") -> list:
             f"「振込名義」「金額」に相当する列が必要です。"
         )
 
+    logger.info(
+        f"CSV列を検出: 日付={date_idx} 名義={name_idx} 入金={amount_idx} "
+        f"出金={withdrawal_idx} (ファイル: {filename})"
+    )
+
     # データ行を処理
+    skipped_outgoing = 0   # 出金・入金なしの行
+    skipped_non_transfer = 0  # 利息など振込でない入金
+
     for row_num, row in enumerate(rows[header_row_idx + 1:], start=header_row_idx + 2):
         if not row or all(cell.strip() == "" for cell in row):
             continue  # 空行はスキップ
@@ -158,8 +193,15 @@ def parse_bank_csv(file_content: bytes, filename: str = "") -> list:
             if date_idx is not None and date_idx < len(row):
                 raw_date = _parse_date(row[date_idx])
 
-            # 金額が0以下の行（出金など）はスキップ
+            # 入金額が0以下の行はスキップ
+            # 三井住友のように入出金が別列の明細では、出金行は入金列が空になる
             if raw_amount <= 0:
+                skipped_outgoing += 1
+                continue
+
+            # 利息の入金など、振込ではない行はスキップ
+            if any(kw in raw_name for kw in NON_TRANSFER_KEYWORDS):
+                skipped_non_transfer += 1
                 continue
 
             records.append({
@@ -173,7 +215,11 @@ def parse_bank_csv(file_content: bytes, filename: str = "") -> list:
             logger.warning(f"行 {row_num} の解析をスキップ: {e}")
             continue
 
-    logger.info(f"CSVパース完了: {len(records)} 件取込 (ファイル: {filename})")
+    logger.info(
+        f"CSVパース完了: {len(records)} 件取込 / "
+        f"{skipped_outgoing} 件スキップ(出金・入金なし) / "
+        f"{skipped_non_transfer} 件スキップ(利息など) (ファイル: {filename})"
+    )
     return records
 
 
