@@ -168,10 +168,27 @@
         <div class="card-body">
 
           <div class="mb-3">
-            <label class="form-label fw-bold">振込先銀行</label>
-            <input type="text" class="form-control" name="transfer_bank"
-                   value="{{ settings.get('transfer_bank', '') }}"
-                   placeholder="〇〇銀行">
+            <label class="form-label fw-bold" for="transferBankChoice">振込先銀行</label>
+            <select class="form-select" name="transfer_bank_choice" id="transferBankChoice">
+              <option value="">-- 選択してください --</option>
+              {% for bank in major_banks %}
+              <option value="{{ bank }}"
+                      {{ 'selected' if not bank_is_other and settings.get('transfer_bank', '') == bank }}>
+                {{ bank }}
+              </option>
+              {% endfor %}
+              <option value="{{ other_bank_value }}" {{ 'selected' if bank_is_other }}>
+                その他（手入力）
+              </option>
+            </select>
+            <input type="text" class="form-control mt-2 {{ '' if bank_is_other else 'd-none' }}"
+                   name="transfer_bank_other" id="transferBankOther"
+                   value="{{ settings.get('transfer_bank', '') if bank_is_other else '' }}"
+                   placeholder="〇〇銀行（地方銀行・信用金庫など）">
+            <div class="form-text">
+              メール・本出欠フォームの <code>{transfer_bank}</code> に入ります。
+              6行以外の場合は「その他」を選んで入力してください。
+            </div>
           </div>
 
           <div class="row mb-3">
@@ -232,4 +249,30 @@
   </div>
 
 </form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+  // 振込先銀行: 「その他」を選んだときだけ手入力欄を出す
+  var choice = document.getElementById('transferBankChoice');
+  var other  = document.getElementById('transferBankOther');
+  if (!choice || !other) return;
+
+  var OTHER = {{ other_bank_value | tojson }};
+
+  function sync() {
+    var isOther = choice.value === OTHER;
+    other.classList.toggle('d-none', !isOther);
+    other.required = isOther;
+    if (isOther) {
+      other.focus();
+    } else {
+      other.value = '';
+    }
+  }
+
+  choice.addEventListener('change', sync);
+})();
+</script>
 {% endblock %}

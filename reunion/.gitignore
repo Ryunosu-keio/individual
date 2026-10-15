@@ -7,3 +7,6 @@ logs/
 data/roster.csv
 *.xlsx
 **/*.xlsx
+
+# 銀行明細CSV（給与・取引履歴を含む実データのためコミットしない）
+meisai*.csv
