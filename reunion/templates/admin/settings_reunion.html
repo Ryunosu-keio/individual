@@ -102,10 +102,19 @@
           </div>
 
           <div class="mb-3">
-            <label class="form-label fw-bold">会費</label>
-            <input type="text" class="form-control" name="reunion_fee"
-                   value="{{ settings.get('reunion_fee', '') }}"
-                   placeholder="10,000円">
+            <label class="form-label fw-bold" for="reunionFee">会費（円）</label>
+            <div class="input-group">
+              <input type="number" class="form-control" name="reunion_fee" id="reunionFee"
+                     value="{{ settings.get('reunion_fee', '') }}"
+                     min="0" step="1" inputmode="numeric" placeholder="10000">
+              <span class="input-group-text">円</span>
+            </div>
+            <div class="form-text">
+              <strong>数字のみ</strong>で入力してください（「円」「〜」「未定」は入れない）。
+              この金額が<strong>入金照合の予定金額</strong>になり、
+              振込額がこの金額以上なら「支払済み」と判定されます。
+              メールでは <code>{reunion_fee}</code> に桁区切り（例: 10,000）で入ります。
+            </div>
           </div>
 
           <div class="mb-3">

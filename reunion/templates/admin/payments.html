@@ -25,6 +25,49 @@
   <!-- ========== 入金一覧タブ ========== -->
   <div class="tab-pane fade show active" id="listPane" role="tabpanel">
 
+    <!-- 照合の基準になる会費 -->
+    {% if reunion_fee > 0 %}
+    <div class="alert alert-light border d-flex flex-wrap align-items-center gap-2 py-2">
+      <span>
+        <i class="bi bi-info-circle me-1"></i>
+        照合の基準となる会費は
+        <strong>{{ reunion_fee_display }} 円</strong>
+        （<a href="{{ url_for('admin.settings_reunion') }}">変数設定</a>）。
+        振込額がこの金額以上なら「支払済み」と判定されます。
+      </span>
+      {% if no_expected_count or mismatched_fee_count %}
+      <form method="POST" action="{{ url_for('admin.payments_apply_fee') }}" class="ms-auto"
+            onsubmit="return confirm('全 {{ payments | length }} 件の予定金額を {{ reunion_fee_display }} 円 に揃え、入金額から支払ステータスを再判定します。よろしいですか？')">
+        <button type="submit" class="btn btn-outline-primary btn-sm">
+          <i class="bi bi-arrow-repeat me-1"></i>予定金額を会費で揃える
+        </button>
+      </form>
+      {% endif %}
+    </div>
+    {% else %}
+    <div class="alert alert-danger">
+      <div class="fw-bold mb-1">
+        <i class="bi bi-exclamation-octagon-fill me-1"></i>会費が未設定のため、入金が自動で「支払済み」になりません
+      </div>
+      <div class="small mb-2">
+        予定金額が決まらないため、入金があっても「一部支払い」のままになります。
+        「変数設定」で会費を数字で入力してください。
+      </div>
+      <a href="{{ url_for('admin.settings_reunion') }}" class="btn btn-danger btn-sm">
+        <i class="bi bi-sliders me-1"></i>変数設定で会費を入力
+      </a>
+    </div>
+    {% endif %}
+
+    {% if reunion_fee > 0 and (no_expected_count or mismatched_fee_count) %}
+    <div class="alert alert-warning py-2 small">
+      <i class="bi bi-exclamation-triangle me-1"></i>
+      {% if no_expected_count %}予定金額が未設定のレコードが <strong>{{ no_expected_count }}</strong> 件あります。{% endif %}
+      {% if mismatched_fee_count %}現在の会費と異なる予定金額のレコードが <strong>{{ mismatched_fee_count }}</strong> 件あります（会費を途中で変更した場合に発生します）。{% endif %}
+      上の「予定金額を会費で揃える」で統一できます。
+    </div>
+    {% endif %}
+
     <div class="d-flex justify-content-end mb-2">
       <a href="{{ url_for('admin.payments_export') }}" class="btn btn-outline-secondary btn-sm">
         <i class="bi bi-download me-1"></i>入金一覧CSVエクスポート
@@ -98,7 +141,16 @@
                 <span class="badge bg-danger">未払い</span>
               {% endif %}
             </td>
-            <td>{{ payment.expected_amount }} 円</td>
+            <td class="text-nowrap">
+              {% if payment.expected_amount %}
+                {{ "{:,}".format(payment.expected_amount) }} 円
+                {% if reunion_fee > 0 and payment.expected_amount != reunion_fee %}
+                  <i class="bi bi-exclamation-triangle-fill text-warning" title="現在の会費（{{ reunion_fee_display }}円）と異なります"></i>
+                {% endif %}
+              {% else %}
+                <span class="text-danger" title="予定金額が未設定のため満額判定ができません">未設定</span>
+              {% endif %}
+            </td>
             <td>{{ payment.paid_amount }} 円</td>
             <td class="small">{{ payment.payment_date or '-' }}</td>
             <td class="small">{{ payment.transfer_name or '-' }}</td>
@@ -139,7 +191,27 @@
                     <div class="mb-3">
                       <label class="form-label fw-bold">支払金額（円）</label>
                       <input type="number" class="form-control" name="paid_amount"
-                             value="{{ payment.paid_amount }}">
+                             value="{{ payment.paid_amount }}" min="0" step="1">
+                    </div>
+                    <div class="mb-3">
+                      <label class="form-label fw-bold">予定金額（円）</label>
+                      <input type="number" class="form-control" name="expected_amount"
+                             value="{{ payment.expected_amount or '' }}" min="0" step="1"
+                             placeholder="{{ reunion_fee or '' }}">
+                      <div class="form-text">
+                        照合で「支払済み」と判定する基準額です。
+                        空欄にすると現在の会費（{{ reunion_fee_display or '未設定' }}円）が使われます。
+                      </div>
+                    </div>
+                    <div class="mb-3 form-check">
+                      <input class="form-check-input" type="checkbox" value="1"
+                             name="recalc_status" id="recalc{{ payment.id }}">
+                      <label class="form-check-label" for="recalc{{ payment.id }}">
+                        入金額と予定金額からステータスを自動判定する
+                        <span class="text-muted small d-block">
+                          チェックすると上の「ステータス」の選択は無視されます。
+                        </span>
+                      </label>
                     </div>
                     <div class="mb-3">
                       <label class="form-label fw-bold">支払日</label>

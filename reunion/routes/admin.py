@@ -38,7 +38,8 @@ from services.mail_service import (send_final_url, send_reminder, send_final_rem
                                     check_mail_vars, format_unset_mail_vars)
 from services.csv_service import parse_bank_csv, save_bank_imports
 from services.matching_service import run_auto_matching, confirm_match, unmatch
-from utils import normalize_transfer_name, MAJOR_BANKS, OTHER_BANK_VALUE
+from utils import (normalize_transfer_name, MAJOR_BANKS, OTHER_BANK_VALUE,
+                   parse_fee_amount, format_fee, get_reunion_fee)
 
 logger = logging.getLogger(__name__)
 
@@ -598,12 +599,7 @@ def set_final_status(participant_id):
     db.session.add(response)
 
     if status == "attending":
-        fee_setting = AppSetting.query.filter_by(key="reunion_fee").first()
-        reunion_fee_str = fee_setting.value if fee_setting else "0"
-        try:
-            payment_expected = int(reunion_fee_str.replace(",", "").replace("円", "").strip())
-        except ValueError:
-            payment_expected = 0
+        payment_expected = get_reunion_fee()
         payment = participant.payment
         if payment is None:
             payment = Payment(participant_id=participant.id)
@@ -1559,12 +1555,24 @@ def payments():
     # CSV照合タブ用のデータ
     bank_imports = BankImport.query.order_by(BankImport.import_date.desc()).limit(200).all()
 
+    # 会費設定と、それに揃っていないレコードの把握
+    fee = get_reunion_fee()
+    no_expected = [p for p in all_payments if not (p.expected_amount or 0)]
+    mismatched_fee = [
+        p for p in all_payments
+        if (p.expected_amount or 0) and fee > 0 and (p.expected_amount or 0) != fee
+    ]
+
     return render_template("admin/payments.html",
                            payments=all_payments,
                            status_filter=status_filter,
                            total_expected=total_expected,
                            total_paid=total_paid,
-                           bank_imports=bank_imports)
+                           bank_imports=bank_imports,
+                           reunion_fee=fee,
+                           reunion_fee_display=format_fee(fee),
+                           no_expected_count=len(no_expected),
+                           mismatched_fee_count=len(mismatched_fee))
 
 
 @admin_bp.route("/payments/export")
@@ -1621,17 +1629,20 @@ def update_payment(payment_id):
         flash("入金レコードが見つかりません。", "danger")
         return redirect(url_for("admin.payments"))
 
-    payment.payment_status = request.form.get("payment_status", payment.payment_status)
     paid_amount_str = request.form.get("paid_amount", "").strip()
+    expected_amount_str = request.form.get("expected_amount", "").strip()
     payment_date_str = request.form.get("payment_date", "").strip()
     payment.payment_method = request.form.get("payment_method", payment.payment_method)
     payment.transfer_name = normalize_transfer_name(request.form.get("transfer_name", payment.transfer_name))
 
     if paid_amount_str:
-        try:
-            payment.paid_amount = int(paid_amount_str)
-        except ValueError:
-            pass
+        payment.paid_amount = parse_fee_amount(paid_amount_str)
+
+    # 予定金額（照合に使う金額）の手動変更。空欄にすると会費設定に従う
+    if expected_amount_str:
+        payment.expected_amount = parse_fee_amount(expected_amount_str)
+    else:
+        payment.expected_amount = 0
 
     if payment_date_str:
         try:
@@ -1639,9 +1650,55 @@ def update_payment(payment_id):
         except ValueError:
             flash("日付の形式が正しくありません（例: 2025-01-01）", "warning")
 
+    # 「金額から自動判定」が選ばれていれば入金額と予定金額から決める
+    if request.form.get("recalc_status") == "1":
+        from services.matching_service import compute_payment_status, resolve_expected_amount
+        expected = resolve_expected_amount(payment)
+        payment.payment_status = compute_payment_status(payment.paid_amount or 0, expected)
+        note = f"（入金 {payment.paid_amount or 0:,}円 / 予定 {expected:,}円 から判定）"
+    else:
+        payment.payment_status = request.form.get("payment_status", payment.payment_status)
+        note = ""
+
     payment.updated_at = datetime.utcnow()
     db.session.commit()
-    flash("入金情報を更新しました。", "success")
+    flash(f"入金情報を更新しました。{note}", "success")
+    return redirect(url_for("admin.payments"))
+
+
+@admin_bp.route("/payments/apply-fee", methods=["POST"])
+def payments_apply_fee():
+    """
+    全入金レコードの予定金額を現在の会費設定で揃え直し、ステータスを再判定する。
+
+    会費を途中で変更した場合、既に本出欠に回答した人の予定金額は
+    回答時点の金額で固定されたままになるため、それを揃えるための操作。
+    """
+    from services.matching_service import compute_payment_status
+
+    fee = get_reunion_fee()
+    if fee <= 0:
+        flash("会費が設定されていません。先に「変数設定」で会費を数字で入力してください。", "danger")
+        return redirect(url_for("admin.payments"))
+
+    changed = 0
+    restatused = 0
+    for pay in Payment.query.all():
+        if (pay.expected_amount or 0) != fee:
+            pay.expected_amount = fee
+            changed += 1
+        new_status = compute_payment_status(pay.paid_amount or 0, fee)
+        if pay.payment_status != new_status:
+            pay.payment_status = new_status
+            restatused += 1
+        pay.updated_at = datetime.utcnow()
+    db.session.commit()
+
+    flash(
+        f"予定金額を {fee:,}円 に揃えました（{changed} 件更新 / "
+        f"ステータス再判定 {restatused} 件）。",
+        "success",
+    )
     return redirect(url_for("admin.payments"))
 
 
@@ -1975,9 +2032,20 @@ def settings_reunion():
         else:
             bank_value = bank_choice
 
+        # 会費は数字のみで保存する（入金照合の予定金額に使うため）
+        fee_raw = request.form.get("reunion_fee", "").strip()
+        fee_amount = parse_fee_amount(fee_raw)
+        if fee_raw and fee_amount <= 0:
+            flash(
+                f"会費「{fee_raw}」から金額を読み取れませんでした。数字のみで入力してください。",
+                "warning",
+            )
+
         for key in KEYS:
             if key == "transfer_bank":
                 val = bank_value
+            elif key == "reunion_fee":
+                val = str(fee_amount) if fee_amount > 0 else ""
             else:
                 val = request.form.get(key, "").strip()
             s = AppSetting.query.filter_by(key=key).first()
@@ -2001,6 +2069,11 @@ def settings_reunion():
     for key in KEYS:
         if key not in settings or not settings[key]:
             settings[key] = defaults.get(key, "")
+
+    # 会費は数値入力欄に入れるため、数字のみ（または空）に正規化する
+    # （config の既定値 "未定" がそのまま入ると number 入力に載らない）
+    fee_amount = parse_fee_amount(settings.get("reunion_fee", ""))
+    settings["reunion_fee"] = str(fee_amount) if fee_amount > 0 else ""
 
     # 主要6行に無い銀行名が入っている場合は「その他」を選択状態にする
     current_bank = settings.get("transfer_bank", "")
