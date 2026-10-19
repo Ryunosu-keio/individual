@@ -6,6 +6,7 @@ import unicodedata
 import logging
 from models import BankImport, Participant, Payment
 from extensions import db
+from utils import get_reunion_fee
 
 logger = logging.getLogger(__name__)
 
@@ -147,6 +148,21 @@ def confirm_match(bank_import_id: int, participant_id: int) -> Payment:
     return payment
 
 
+def resolve_expected_amount(payment: Payment) -> int:
+    """
+    入金判定に使う予定金額（円）を返す。
+
+    優先順位:
+      1. Payment.expected_amount（本出欠回答時に確定した額／管理画面で手動変更した額）
+      2. 現在の会費設定（reunion_fee）
+    どちらも0なら0を返し、呼び出し側は金額判定をしない。
+    """
+    manual = payment.expected_amount or 0
+    if manual > 0:
+        return manual
+    return get_reunion_fee()
+
+
 def _update_payment_from_import(participant: Participant, bank_import: BankImport) -> Payment:
     payment = participant.payment
     if payment is None:
@@ -157,15 +173,35 @@ def _update_payment_from_import(participant: Participant, bank_import: BankImpor
     payment.bank_csv_date = bank_import.raw_date
     payment.bank_csv_raw_name = bank_import.raw_name
     payment.bank_import_id = bank_import.id
-    if (payment.expected_amount or 0) > 0 and bank_import.raw_amount >= (payment.expected_amount or 0):
-        payment.payment_status = "paid"
+
+    expected = resolve_expected_amount(payment)
+    # 予定金額が未設定のレコードには、判定に使った会費を書き戻しておく
+    # （画面上で「予定金額0円」のまま残ると、何と比較されたのか分からなくなる）
+    if not (payment.expected_amount or 0) and expected > 0:
+        payment.expected_amount = expected
+
+    if bank_import.raw_amount > 0:
         payment.paid_amount = bank_import.raw_amount
         payment.payment_date = bank_import.raw_date
-    elif bank_import.raw_amount > 0:
-        payment.payment_status = "partial"
-        payment.paid_amount = bank_import.raw_amount
-        payment.payment_date = bank_import.raw_date
+        payment.payment_status = compute_payment_status(bank_import.raw_amount, expected)
     return payment
+
+
+def compute_payment_status(paid: int, expected: int) -> str:
+    """
+    入金額と予定金額から支払ステータスを決める。
+
+    expected が0（会費未設定）のときは満額かどうか判断できないため
+    partial（一部支払い）に留める。入金自体は記録されているので
+    「未払い」にはしない。該当レコードは入金管理画面で警告表示する。
+    """
+    paid = paid or 0
+    expected = expected or 0
+    if paid <= 0:
+        return "unpaid"
+    if expected <= 0:
+        return "partial"
+    return "paid" if paid >= expected else "partial"
 
 
 def unmatch(bank_import_id: int) -> None:

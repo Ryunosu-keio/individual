@@ -17,6 +17,69 @@ MAJOR_BANKS = [
 # プルダウンで「その他（手入力）」を表す値
 OTHER_BANK_VALUE = "__other__"
 
+
+# -----------------------------------------------
+# 参加費（会費）
+#
+# 設定キー reunion_fee は「数字のみ」で保存する。
+# 入金照合の予定金額（Payment.expected_amount）に使うため、
+# 「未定」「8000円〜」のような文字列が入ると金額が0になり、
+# いくら入金されても「一部支払い」のままになってしまう。
+#
+# メール本文のテンプレートは「会費　: {reunion_fee}円」の形なので、
+# 変数には単位を付けず桁区切りだけを付けた文字列（例: "8,000"）を渡す。
+# -----------------------------------------------
+
+_FULL_TO_HALF_DIGIT = str.maketrans("０１２３４５６７８９", "0123456789")
+
+
+def parse_fee_amount(value) -> int:
+    """
+    参加費の入力値から円単位の整数を取り出す。取れない場合は0。
+
+    全角数字・桁区切りカンマ・「￥」「¥」「円」・前後の空白を許容する。
+    「未定」のように数字を含まない値は0になる。
+    """
+    if value is None:
+        return 0
+    if isinstance(value, int):
+        return max(0, value)
+    import re
+    text = str(value).translate(_FULL_TO_HALF_DIGIT).replace("，", ",")
+    # 最初に現れた数値だけを採用する。
+    # 全ての数字を連結すると「一般8000円/教員5000円」が 80005000 になってしまう。
+    m = re.search(r"\d[\d,]*", text)
+    if not m:
+        return 0
+    try:
+        return int(m.group().replace(",", ""))
+    except ValueError:
+        return 0
+
+
+def format_fee(amount: int) -> str:
+    """円単位の整数を桁区切り文字列にする（単位は付けない）。0以下は空文字。"""
+    try:
+        amount = int(amount)
+    except (TypeError, ValueError):
+        return ""
+    return f"{amount:,}" if amount > 0 else ""
+
+
+def get_reunion_fee() -> int:
+    """
+    現在の参加費を円単位の整数で返す。未設定・不正なら0。
+
+    入金照合の予定金額はすべてこの関数を基準にする。
+    """
+    from models import AppSetting
+    from flask import current_app
+    s = AppSetting.query.filter_by(key="reunion_fee").first()
+    if s and s.value:
+        return parse_fee_amount(s.value)
+    # DB未設定なら .env / config のデフォルトを見る
+    return parse_fee_amount(current_app.config.get("REUNION_FEE", ""))
+
 _SMALL_TO_LARGE_KANA = str.maketrans(
     "ァィゥェォッャュョヮヵヶ",
     "アイウエオツヤユヨワカケ",

@@ -19,6 +19,7 @@ from datetime import datetime, date
 from flask import current_app
 from extensions import db
 from models import MailLog, AppSetting
+from utils import parse_fee_amount, format_fee
 
 logger = logging.getLogger(__name__)
 
@@ -690,7 +691,10 @@ def _get_reunion_info() -> dict:
         "reunion_date":     get("reunion_date",     cfg.get("REUNION_DATE", "")),
         "reunion_time":     get("reunion_time",     cfg.get("REUNION_TIME", "")),
         "reunion_venue":    get("reunion_venue",    cfg.get("REUNION_VENUE", "")),
-        "reunion_fee":      get("reunion_fee",      cfg.get("REUNION_FEE", "")),
+        # テンプレートは「会費　: {reunion_fee}円」の形なので単位は付けない。
+        # 数字が読み取れない場合は空文字にして、メール変数チェックで未設定として検出させる。
+        "reunion_fee":      format_fee(parse_fee_amount(
+            get("reunion_fee", cfg.get("REUNION_FEE", "")))),
         "dress_code":       get("dress_code",       cfg.get("DRESS_CODE", "")),
         "belongings":       get("belongings",       cfg.get("BELONGINGS", "")),
         "provisional_deadline":    get("provisional_deadline",    cfg.get("PROVISIONAL_DEADLINE", "")),

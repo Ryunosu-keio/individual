@@ -26,7 +26,7 @@ from models import Participant, ProvisionalResponse, FinalResponse, Payment, Ver
 from models import AppSetting
 from services.token_service import get_participant_by_token, ensure_token, generate_final_url
 from services.mail_service import send_provisional_confirmation, send_final_confirmation, send_cancel_confirmation, send_verification_email
-from utils import normalize_transfer_name, decompose_voiced
+from utils import normalize_transfer_name, decompose_voiced, get_reunion_fee, format_fee
 
 logger = logging.getLogger(__name__)
 
@@ -374,6 +374,9 @@ def final(token):
     transfer_info = {}
     for s in AppSetting.query.filter(AppSetting.key.in_(transfer_keys)).all():
         transfer_info[s.key] = s.value
+    # 会費は桁区切りで表示する（メール本文と表記を揃える）。
+    # テンプレート側でコピー用の値からはカンマを除いている。
+    transfer_info["reunion_fee"] = format_fee(get_reunion_fee())
 
     # 振込名義を自動生成: 学籍番号(クラス+出席番号) + カナ氏名
     # 学籍番号がない場合は "3000" をプレフィックスとして使用
@@ -471,13 +474,8 @@ def final(token):
                                can_cancel=False,
                                is_teacher=is_teacher)
 
-    # 会費を取得（AppSettingから）
-    fee_setting = AppSetting.query.filter_by(key="reunion_fee").first()
-    reunion_fee_str = fee_setting.value if fee_setting else "0"
-    try:
-        payment_expected = int(reunion_fee_str.replace(",", "").replace("円", "").strip())
-    except ValueError:
-        payment_expected = 0
+    # 会費（入金照合の予定金額）を取得。設定は数字のみで保存されている。
+    payment_expected = get_reunion_fee()
 
     response = FinalResponse(
         participant_id=participant.id,
