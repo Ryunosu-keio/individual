@@ -39,7 +39,9 @@ from services.mail_service import (send_final_url, send_reminder, send_final_rem
 from services.csv_service import parse_bank_csv, save_bank_imports
 from services.matching_service import run_auto_matching, confirm_match, unmatch
 from utils import (normalize_transfer_name, MAJOR_BANKS, OTHER_BANK_VALUE,
-                   parse_fee_amount, format_fee, get_reunion_fee)
+                   parse_fee_amount, format_fee, get_reunion_fee,
+                   get_student_fee, get_teacher_fee, is_teacher_fee_set,
+                   FEE_KEY_TEACHER)
 
 logger = logging.getLogger(__name__)
 
@@ -221,7 +223,7 @@ def index():
 
         if p.payment:
             final_status = final.status if final else None
-            if p.payment.payment_status == "paid":
+            if p.payment.payment_status in ("paid", "overpaid"):
                 paid_count += 1
             elif final_status not in ("not_attending", "cancelled"):
                 unpaid_count += 1
@@ -599,7 +601,7 @@ def set_final_status(participant_id):
     db.session.add(response)
 
     if status == "attending":
-        payment_expected = get_reunion_fee()
+        payment_expected = get_reunion_fee(participant.role)
         payment = participant.payment
         if payment is None:
             payment = Payment(participant_id=participant.id)
@@ -608,7 +610,8 @@ def set_final_status(participant_id):
         payment.payment_method = "bank_transfer"
     elif status in ("not_attending", "cancelled"):
         payment = participant.payment
-        if payment and payment.payment_status != "paid":
+        # 入金が記録されているレコードは消さない（お金が届いた記録を失うため）
+        if payment and not payment.has_received_money:
             db.session.delete(payment)
 
     participant.updated_at = datetime.utcnow()
@@ -943,7 +946,7 @@ def api_mail_preview(mail_type):
 
     segment = _resolve_segment(request.args.get("segment", DEFAULT_SEGMENT))
     is_teacher = MAIL_SEGMENTS[segment]["teacher"]
-    reunion = _get_reunion_info()
+    reunion = _get_reunion_info("教師" if is_teacher else "生徒")
     base_url = current_app.config.get("APP_BASE_URL", "http://localhost:5000")
 
     VALID_TYPES = {
@@ -987,6 +990,8 @@ def api_mail_preview(mail_type):
         "reunion_time": reunion["reunion_time"],
         "reunion_venue": reunion["reunion_venue"],
         "reunion_fee": reunion["reunion_fee"],
+        "reunion_fee_student": reunion["reunion_fee_student"],
+        "reunion_fee_teacher": reunion["reunion_fee_teacher"],
         "dress_code": reunion["dress_code"],
         "belongings": reunion["belongings"],
         "organizer_name": reunion["organizer_name"],
@@ -1090,9 +1095,9 @@ def api_mail_preview_individual(participant_id, mail_type):
     if participant is None:
         return jsonify({"error": "参加者が見つかりません"}), 404
 
-    reunion = _get_reunion_info()
-    base_url = current_app.config.get("APP_BASE_URL", "http://localhost:5000")
     is_teacher = _ms_is_teacher(participant.role or "")
+    reunion = _get_reunion_info(participant.role)
+    base_url = current_app.config.get("APP_BASE_URL", "http://localhost:5000")
     token = ensure_token(participant)
     final_url = f"{base_url}/form/final/{token}"
 
@@ -1132,6 +1137,8 @@ def api_mail_preview_individual(participant_id, mail_type):
         reunion_time=reunion["reunion_time"],
         reunion_venue=reunion["reunion_venue"],
         reunion_fee=reunion["reunion_fee"],
+        reunion_fee_student=reunion["reunion_fee_student"],
+        reunion_fee_teacher=reunion["reunion_fee_teacher"],
         dress_code=reunion["dress_code"],
         belongings=reunion["belongings"],
         organizer_name=reunion["organizer_name"],
@@ -1555,12 +1562,20 @@ def payments():
     # CSV照合タブ用のデータ
     bank_imports = BankImport.query.order_by(BankImport.import_date.desc()).limit(200).all()
 
-    # 会費設定と、それに揃っていないレコードの把握
-    fee = get_reunion_fee()
+    from services.matching_service import (get_payment_match_rule, MATCH_RULE_LABELS,
+                                            MATCH_RULE_DESCRIPTIONS)
+
+    # 会費設定と、それに揃っていないレコードの把握（先生は先生用の会費と比較）
+    fee = get_student_fee()
+    teacher_fee = get_teacher_fee()
+
+    def _fee_for(payment):
+        return get_reunion_fee(payment.participant.role if payment.participant else None)
+
     no_expected = [p for p in all_payments if not (p.expected_amount or 0)]
     mismatched_fee = [
         p for p in all_payments
-        if (p.expected_amount or 0) and fee > 0 and (p.expected_amount or 0) != fee
+        if (p.expected_amount or 0) and _fee_for(p) > 0 and (p.expected_amount or 0) != _fee_for(p)
     ]
 
     return render_template("admin/payments.html",
@@ -1571,8 +1586,14 @@ def payments():
                            bank_imports=bank_imports,
                            reunion_fee=fee,
                            reunion_fee_display=format_fee(fee),
+                           teacher_fee=teacher_fee,
+                           teacher_fee_display=format_fee(teacher_fee),
+                           teacher_fee_set=is_teacher_fee_set(),
                            no_expected_count=len(no_expected),
-                           mismatched_fee_count=len(mismatched_fee))
+                           mismatched_fee_count=len(mismatched_fee),
+                           match_rule=get_payment_match_rule(),
+                           match_rule_labels=MATCH_RULE_LABELS,
+                           match_rule_descriptions=MATCH_RULE_DESCRIPTIONS)
 
 
 @admin_bp.route("/payments/export")
@@ -1586,7 +1607,7 @@ def payments_export():
         .all()
     )
 
-    PAY_LABELS = {"unpaid": "未払い", "paid": "支払済み", "partial": "一部支払い"}
+    PAY_LABELS = {"unpaid": "未払い", "paid": "支払済み", "partial": "一部支払い", "overpaid": "過払い"}
 
     output = io.StringIO()
     writer = csv.writer(output)
@@ -1666,6 +1687,39 @@ def update_payment(payment_id):
     return redirect(url_for("admin.payments"))
 
 
+@admin_bp.route("/payments/match-rule", methods=["POST"])
+def payments_match_rule():
+    """入金照合の判定ルール（予定金額以上 / ピッタリ一致）を切り替える"""
+    from services.matching_service import (MATCH_RULE_LABELS, compute_payment_status,
+                                           resolve_expected_amount)
+
+    rule = request.form.get("match_rule", "").strip()
+    if rule not in MATCH_RULE_LABELS:
+        flash("不正な判定ルールです。", "danger")
+        return redirect(url_for("admin.payments"))
+
+    _set_setting("payment_match_rule", rule)
+    db.session.commit()
+
+    # 既存レコードのステータスを新ルールで再判定する
+    restatused = 0
+    for pay in Payment.query.all():
+        expected = resolve_expected_amount(pay)
+        new_status = compute_payment_status(pay.paid_amount or 0, expected, rule=rule)
+        if pay.payment_status != new_status:
+            pay.payment_status = new_status
+            pay.updated_at = datetime.utcnow()
+            restatused += 1
+    db.session.commit()
+
+    flash(
+        f"入金照合の判定を「{MATCH_RULE_LABELS[rule]}」に変更しました"
+        f"（ステータス再判定 {restatused} 件）。",
+        "success",
+    )
+    return redirect(url_for("admin.payments"))
+
+
 @admin_bp.route("/payments/apply-fee", methods=["POST"])
 def payments_apply_fee():
     """
@@ -1676,26 +1730,32 @@ def payments_apply_fee():
     """
     from services.matching_service import compute_payment_status
 
-    fee = get_reunion_fee()
-    if fee <= 0:
+    student_fee = get_student_fee()
+    if student_fee <= 0:
         flash("会費が設定されていません。先に「変数設定」で会費を数字で入力してください。", "danger")
         return redirect(url_for("admin.payments"))
 
     changed = 0
     restatused = 0
     for pay in Payment.query.all():
+        # 先生には先生用の会費を割り当てる
+        fee = get_reunion_fee(pay.participant.role if pay.participant else None)
         if (pay.expected_amount or 0) != fee:
             pay.expected_amount = fee
             changed += 1
-        new_status = compute_payment_status(pay.paid_amount or 0, fee)
+        new_status = compute_payment_status(pay.paid_amount or 0, fee)  # ルールは設定に従う
         if pay.payment_status != new_status:
             pay.payment_status = new_status
             restatused += 1
         pay.updated_at = datetime.utcnow()
     db.session.commit()
 
+    teacher_fee = get_teacher_fee()
+    amounts = f"{student_fee:,}円"
+    if teacher_fee != student_fee:
+        amounts += f"（先生は {teacher_fee:,}円）"
     flash(
-        f"予定金額を {fee:,}円 に揃えました（{changed} 件更新 / "
+        f"予定金額を {amounts} に揃えました（{changed} 件更新 / "
         f"ステータス再判定 {restatused} 件）。",
         "success",
     )
@@ -1720,8 +1780,11 @@ def csv_import():
     try:
         content = file.read()
         records = parse_bank_csv(content, filename=file.filename)
-        saved = save_bank_imports(records)
-        flash(f"CSV取込完了: {len(records)} 件読込、{len(saved)} 件新規保存しました。", "success")
+        result = save_bank_imports(records, replace=True)
+        msg = f"CSV取込完了: {len(records)} 件読込、{result['saved']} 件保存しました。"
+        if result["deleted"]:
+            msg += f"（前回取込の {result['deleted']} 件は入れ替えで削除）"
+        flash(msg, "success")
     except ValueError as e:
         flash(f"CSVの読み込みに失敗しました: {e}", "danger")
     except Exception as e:
@@ -2017,7 +2080,8 @@ def settings_mail_test():
 def settings_reunion():
     """同窓会情報設定画面"""
     KEYS = [
-        "reunion_name", "organizer_name", "reunion_date", "reunion_time", "reunion_venue", "reunion_fee",
+        "reunion_name", "organizer_name", "reunion_date", "reunion_time", "reunion_venue",
+        "reunion_fee", "reunion_fee_teacher",
         "dress_code", "belongings", "provisional_deadline",
         "final_deadline", "reminder_send_date", "final_reminder_deadline", "final_reminder_date",
         "transfer_bank", "transfer_branch", "transfer_branch_number",
@@ -2037,15 +2101,35 @@ def settings_reunion():
         fee_amount = parse_fee_amount(fee_raw)
         if fee_raw and fee_amount <= 0:
             flash(
-                f"会費「{fee_raw}」から金額を読み取れませんでした。数字のみで入力してください。",
+                f"生徒の会費「{fee_raw}」から金額を読み取れませんでした。数字のみで入力してください。",
                 "warning",
             )
+
+        # 先生用の会費は「未設定（空欄＝生徒と同額）」と「0円（無料）」を区別する
+        teacher_same = request.form.get("teacher_fee_same") == "1"
+        teacher_raw = request.form.get("reunion_fee_teacher", "").strip()
+        if teacher_same:
+            teacher_value = ""
+        elif teacher_raw == "":
+            teacher_value = ""
+        else:
+            teacher_amount = parse_fee_amount(teacher_raw)
+            if teacher_amount <= 0 and teacher_raw not in ("0",):
+                flash(
+                    f"先生の会費「{teacher_raw}」から金額を読み取れませんでした。数字のみで入力してください。",
+                    "warning",
+                )
+                teacher_value = ""
+            else:
+                teacher_value = str(teacher_amount)
 
         for key in KEYS:
             if key == "transfer_bank":
                 val = bank_value
             elif key == "reunion_fee":
                 val = str(fee_amount) if fee_amount > 0 else ""
+            elif key == "reunion_fee_teacher":
+                val = teacher_value
             else:
                 val = request.form.get(key, "").strip()
             s = AppSetting.query.filter_by(key=key).first()
@@ -2075,6 +2159,9 @@ def settings_reunion():
     fee_amount = parse_fee_amount(settings.get("reunion_fee", ""))
     settings["reunion_fee"] = str(fee_amount) if fee_amount > 0 else ""
 
+    teacher_fee_set = is_teacher_fee_set()
+    settings["reunion_fee_teacher"] = str(get_teacher_fee()) if teacher_fee_set else ""
+
     # 主要6行に無い銀行名が入っている場合は「その他」を選択状態にする
     current_bank = settings.get("transfer_bank", "")
     bank_is_other = bool(current_bank) and current_bank not in MAJOR_BANKS
@@ -2083,7 +2170,10 @@ def settings_reunion():
                            settings=settings,
                            major_banks=MAJOR_BANKS,
                            other_bank_value=OTHER_BANK_VALUE,
-                           bank_is_other=bank_is_other)
+                           bank_is_other=bank_is_other,
+                           teacher_fee_set=teacher_fee_set,
+                           student_fee=get_student_fee(),
+                           teacher_fee=get_teacher_fee())
 
 
 # -----------------------------------------------
@@ -2244,7 +2334,9 @@ def roster_import():
     FINAL_STATUS_MAP = {"参加": "attending", "不参加": "not_attending", "直前キャンセル": "cancelled",
                         "attending": "attending", "not_attending": "not_attending", "cancelled": "cancelled"}
     PAY_STATUS_MAP   = {"未払い": "unpaid", "支払済み": "paid", "一部支払い": "partial",
-                        "unpaid": "unpaid", "paid": "paid", "partial": "partial"}
+                        "過払い": "overpaid",
+                        "unpaid": "unpaid", "paid": "paid", "partial": "partial",
+                        "overpaid": "overpaid"}
 
     # CSVの行を先にパースしてから全削除→全追加
     import re
@@ -2437,7 +2529,7 @@ def roster_export():
 
     PROV_LABELS  = {"attending": "参加", "not_attending": "不参加", "undecided": "未定"}
     FINAL_LABELS = {"attending": "参加", "not_attending": "不参加", "cancelled": "直前キャンセル"}
-    PAY_LABELS   = {"unpaid": "未払い", "paid": "支払済み", "partial": "一部支払い"}
+    PAY_LABELS   = {"unpaid": "未払い", "paid": "支払済み", "partial": "一部支払い", "overpaid": "過払い"}
 
     for p in participants:
         email_out = "" if p.email and "@placeholder.local" in p.email else (p.email or "")

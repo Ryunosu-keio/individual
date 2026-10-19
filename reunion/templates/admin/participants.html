@@ -291,6 +291,7 @@
             <span class="text-muted small">-</span>
           {% elif p.payment %}
             {% if p.payment.payment_status == 'paid' %}<span class="badge bg-success">済</span>
+            {% elif p.payment.payment_status == 'overpaid' %}<span class="badge bg-info text-dark" title="過払い">過</span>
             {% elif p.payment.payment_status == 'partial' %}<span class="badge bg-warning text-dark">一部</span>
             {% else %}<span class="badge bg-danger">未</span>{% endif %}
           {% else %}

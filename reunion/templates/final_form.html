@@ -309,8 +309,7 @@
                   </div>
                 </div>
 
-                <!-- ===== 振込案内セクション（参加時のみ表示・先生は非表示） ===== -->
-                {% if not is_teacher %}
+                <!-- ===== 振込案内セクション（参加時のみ表示・生徒／先生 共通） ===== -->
                 <div id="transferSection" class="transfer-section mb-4">
                   <h6 class="fw-bold mb-3">
                     <i class="bi bi-bank me-1"></i>振込のご案内
@@ -557,7 +556,6 @@
                   </div>
                 </div>
                 <!-- ===== /振込案内セクション ===== -->
-                {% endif %}
 
                 <!-- 備考 -->
                 <div class="mb-4">
@@ -721,10 +719,10 @@
         .addEventListener("change", toggleTransferSection);
       toggleTransferSection();
 
-      var isTeacher = '{{ "1" if is_teacher else "0" }}' === '1';
       function validateForm() {
         var attending = document.getElementById("attending").checked;
-        if (attending && !isTeacher) {
+        // 先生も振込対象なので、コピー必須ゲートは生徒と同じく適用する
+        if (attending) {
           if (!document.getElementById("transferNameConfirm").checked) {
             alert(
               "振込名義と振込金額のコピーボタンを押し、チェックを入れてから送信してください。"

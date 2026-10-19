@@ -39,6 +39,8 @@
   <code>{reunion_fee}</code> 会費 &nbsp;
   <code>{dress_code}</code> 服装 &nbsp;
   <code>{belongings}</code> 持ち物<br>
+  <code>{reunion_fee_student}</code> 会費（生徒） &nbsp;
+  <code>{reunion_fee_teacher}</code> 会費（先生） &nbsp;
   <code>{transfer_bank}</code> 振込先銀行 &nbsp;
   <code>{transfer_branch}</code> 支店 &nbsp;
   <code>{transfer_branch_number}</code> 支店番号 &nbsp;
@@ -101,19 +103,64 @@
                    placeholder="〇〇ホテル 〇〇の間">
           </div>
 
-          <div class="mb-3">
-            <label class="form-label fw-bold" for="reunionFee">会費（円）</label>
-            <div class="input-group">
-              <input type="number" class="form-control" name="reunion_fee" id="reunionFee"
-                     value="{{ settings.get('reunion_fee', '') }}"
-                     min="0" step="1" inputmode="numeric" placeholder="10000">
-              <span class="input-group-text">円</span>
+          <!-- 会費ボックス -->
+          <div class="card border-primary mb-3">
+            <div class="card-header bg-primary-subtle fw-bold">
+              <i class="bi bi-cash-coin me-1"></i>会費（入金照合の基準金額）
             </div>
-            <div class="form-text">
-              <strong>数字のみ</strong>で入力してください（「円」「〜」「未定」は入れない）。
-              この金額が<strong>入金照合の予定金額</strong>になり、
-              振込額がこの金額以上なら「支払済み」と判定されます。
-              メールでは <code>{reunion_fee}</code> に桁区切り（例: 10,000）で入ります。
+            <div class="card-body">
+              <div class="row g-3">
+                <div class="col-sm-6">
+                  <label class="form-label fw-bold" for="reunionFee">
+                    生徒 <span class="text-danger">*</span>
+                  </label>
+                  <div class="input-group input-group-lg">
+                    <input type="number" class="form-control text-end" name="reunion_fee" id="reunionFee"
+                           value="{{ settings.get('reunion_fee', '') }}"
+                           min="0" step="100" inputmode="numeric" placeholder="10000">
+                    <span class="input-group-text">円</span>
+                  </div>
+                </div>
+                <div class="col-sm-6">
+                  <label class="form-label fw-bold" for="reunionFeeTeacher">先生</label>
+                  <div class="input-group input-group-lg">
+                    <input type="number" class="form-control text-end"
+                           name="reunion_fee_teacher" id="reunionFeeTeacher"
+                           value="{{ settings.get('reunion_fee_teacher', '') }}"
+                           min="0" step="100" inputmode="numeric"
+                           placeholder="{{ student_fee or '10000' }}"
+                           {{ 'disabled' if not teacher_fee_set }}>
+                    <span class="input-group-text">円</span>
+                  </div>
+                  <div class="form-check mt-2">
+                    <input class="form-check-input" type="checkbox" value="1"
+                           name="teacher_fee_same" id="teacherFeeSame"
+                           {{ 'checked' if not teacher_fee_set }}>
+                    <label class="form-check-label small" for="teacherFeeSame">
+                      生徒と同額にする
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 現在の設定の確認 -->
+              <div class="d-flex flex-wrap gap-2 mt-3">
+                <span class="badge bg-light text-dark border fs-6">
+                  生徒: <strong>{{ "{:,}".format(student_fee) if student_fee else '未設定' }}</strong>{% if student_fee %} 円{% endif %}
+                </span>
+                <span class="badge bg-light text-dark border fs-6">
+                  先生: <strong>{{ "{:,}".format(teacher_fee) if teacher_fee else ('0' if teacher_fee_set else '未設定') }}</strong>{% if teacher_fee %} 円{% endif %}
+                  {% if not teacher_fee_set %}<span class="text-muted">（生徒と同額）</span>{% endif %}
+                </span>
+              </div>
+
+              <div class="form-text mt-2">
+                <strong>数字のみ</strong>で入力してください（「円」「〜」「未定」は入れない）。<br>
+                この金額が<strong>入金照合の予定金額</strong>になります。先生には先生用の金額が使われます。<br>
+                メールと本出欠フォームでは <code>{reunion_fee}</code> が宛先に応じた金額（桁区切り・例 10,000）になります。
+                両方を並べたい場合は <code>{reunion_fee_student}</code> /
+                <code>{reunion_fee_teacher}</code> が使えます。
+              </div>
             </div>
           </div>
 
@@ -282,6 +329,29 @@
   }
 
   choice.addEventListener('change', sync);
+})();
+
+(function() {
+  // 会費: 「生徒と同額にする」で先生用の入力欄を無効化する
+  var same = document.getElementById('teacherFeeSame');
+  var box  = document.getElementById('reunionFeeTeacher');
+  var student = document.getElementById('reunionFee');
+  if (!same || !box) return;
+
+  function sync() {
+    box.disabled = same.checked;
+    if (same.checked) box.value = '';
+  }
+  same.addEventListener('change', function() {
+    sync();
+    if (!same.checked) box.focus();
+  });
+  // 生徒の金額を変えたら、同額モードのプレースホルダも追従させる
+  if (student) {
+    student.addEventListener('input', function() {
+      box.placeholder = student.value || '10000';
+    });
+  }
 })();
 </script>
 {% endblock %}

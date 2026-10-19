@@ -223,39 +223,64 @@ def parse_bank_csv(file_content: bytes, filename: str = "") -> list:
     return records
 
 
-def save_bank_imports(records: list) -> list:
+def save_bank_imports(records: list, replace: bool = True) -> dict:
     """
     パースした銀行CSVレコードをDBに保存する。
-    重複チェック（同一ファイル名・名義・日付・金額）を行い、重複はスキップする。
+
+    replace=True（既定）: 取込済みのレコードを全て削除してから保存する。
+      銀行明細は毎回「期間分まとめて」ダウンロードするため、取込を重ねると
+      同じ取引が別ファイル名で積み上がる。常に最新のファイルの内容だけを
+      残すことで、画面に出る明細をダウンロードしたCSVと一致させる。
+
+      確定済み（confirmed）の照合から作られた Payment はお金が届いた記録なので
+      消さない。削除するレコードを指していた Payment.bank_import_id だけ外す。
+
+    replace=False: 既存を残し、同一内容（ファイル名・名義・日付・金額）はスキップ。
+
+    Returns:
+        dict: {"saved": 保存件数, "deleted": 削除件数, "skipped": スキップ件数}
     """
-    from models import BankImport
+    from models import BankImport, Payment
     from extensions import db
 
-    saved = []
+    deleted = 0
+    if replace:
+        old_ids = [r.id for r in BankImport.query.all()]
+        if old_ids:
+            # 削除対象を参照している Payment の参照を外す（入金記録自体は残す）
+            for pay in Payment.query.filter(Payment.bank_import_id.in_(old_ids)).all():
+                pay.bank_import_id = None
+            db.session.flush()
+            deleted = BankImport.query.filter(BankImport.id.in_(old_ids)).delete(
+                synchronize_session=False
+            )
+            db.session.flush()
+
+    saved = 0
     skipped = 0
-
     for rec in records:
-        existing = BankImport.query.filter_by(
-            filename=rec["filename"],
-            raw_name=rec["raw_name"],
-            raw_date=rec["raw_date"],
-            raw_amount=rec["raw_amount"],
-        ).first()
+        if not replace:
+            existing = BankImport.query.filter_by(
+                filename=rec["filename"],
+                raw_name=rec["raw_name"],
+                raw_date=rec["raw_date"],
+                raw_amount=rec["raw_amount"],
+            ).first()
+            if existing:
+                skipped += 1
+                continue
 
-        if existing:
-            skipped += 1
-            continue
-
-        bank_import = BankImport(
+        db.session.add(BankImport(
             filename=rec["filename"],
             raw_name=rec["raw_name"],
             raw_date=rec["raw_date"],
             raw_amount=rec["raw_amount"],
             match_status="unmatched",
-        )
-        db.session.add(bank_import)
-        saved.append(bank_import)
+        ))
+        saved += 1
 
     db.session.commit()
-    logger.info(f"DB保存完了: {len(saved)} 件保存, {skipped} 件スキップ（重複）")
-    return saved
+    logger.info(
+        f"DB保存完了: {saved} 件保存 / {deleted} 件削除(入れ替え) / {skipped} 件スキップ"
+    )
+    return {"saved": saved, "deleted": deleted, "skipped": skipped}

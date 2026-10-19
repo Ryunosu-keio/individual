@@ -243,7 +243,9 @@ class Payment(db.Model):
     participant_id = db.Column(db.Integer, db.ForeignKey("participants.id"), nullable=False, unique=True)
     expected_amount = db.Column(db.Integer, default=0)         # 支払予定金額（円）
     paid_amount = db.Column(db.Integer, default=0)             # 実際の支払金額（円）
-    # payment_status: unpaid=未払い / paid=支払済み / partial=一部支払い
+    # payment_status: unpaid=未払い / paid=支払済み / partial=一部支払い / overpaid=過払い
+    #   overpaid は照合ルールが「ピッタリ一致」のときだけ付く
+    #   （「以上」ルールでは予定金額を超える入金も paid になる）
     payment_status = db.Column(db.String(20), default="unpaid")
     payment_date = db.Column(db.Date, nullable=True)           # 支払日
     payment_method = db.Column(db.String(50), default="bank_transfer")  # 支払方法
@@ -263,11 +265,21 @@ class Payment(db.Model):
         "unpaid": "未払い",
         "paid": "支払済み",
         "partial": "一部支払い",
+        "overpaid": "過払い",
     }
+
+    # 入金が記録されている（＝お金が届いている）とみなすステータス
+    RECEIVED_STATUSES = ("paid", "partial", "overpaid")
 
     @property
     def status_label(self):
         return self.STATUS_LABELS.get(self.payment_status, self.payment_status)
+
+    @property
+    def has_received_money(self) -> bool:
+        """入金が記録されているか（不参加に変更しても消してはいけない状態）"""
+        return bool((self.paid_amount or 0) > 0 or self.bank_csv_matched
+                    or self.payment_status in self.RECEIVED_STATUSES)
 
     def __repr__(self):
         return f"<Payment {self.id}: participant={self.participant_id} status={self.payment_status}>"

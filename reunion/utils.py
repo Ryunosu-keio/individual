@@ -66,19 +66,59 @@ def format_fee(amount: int) -> str:
     return f"{amount:,}" if amount > 0 else ""
 
 
-def get_reunion_fee() -> int:
-    """
-    現在の参加費を円単位の整数で返す。未設定・不正なら0。
+# 先生（教師・学年主任）として扱う役割
+TEACHER_ROLES = ("教師", "学年主任", "副担任")
 
-    入金照合の予定金額はすべてこの関数を基準にする。
-    """
+# 参加費の設定キー
+FEE_KEY_STUDENT = "reunion_fee"
+FEE_KEY_TEACHER = "reunion_fee_teacher"
+
+
+def is_teacher_role(role: str) -> bool:
+    return (role or "") in TEACHER_ROLES
+
+
+def get_student_fee() -> int:
+    """生徒の参加費（円）。未設定・不正なら0。"""
     from models import AppSetting
     from flask import current_app
-    s = AppSetting.query.filter_by(key="reunion_fee").first()
+    s = AppSetting.query.filter_by(key=FEE_KEY_STUDENT).first()
     if s and s.value:
         return parse_fee_amount(s.value)
-    # DB未設定なら .env / config のデフォルトを見る
     return parse_fee_amount(current_app.config.get("REUNION_FEE", ""))
+
+
+def get_teacher_fee() -> int:
+    """
+    先生の参加費（円）。未設定なら生徒と同額として扱う。
+
+    「0円（無料）」にしたい場合は 0 を明示的に保存する。
+    未設定（空）と 0 を区別するため、値の有無で判定している。
+    """
+    from models import AppSetting
+    s = AppSetting.query.filter_by(key=FEE_KEY_TEACHER).first()
+    if s is not None and s.value != "" and s.value is not None:
+        return parse_fee_amount(s.value)
+    return get_student_fee()
+
+
+def is_teacher_fee_set() -> bool:
+    """先生用の参加費が明示的に設定されているか（未設定なら生徒と同額）"""
+    from models import AppSetting
+    s = AppSetting.query.filter_by(key=FEE_KEY_TEACHER).first()
+    return s is not None and s.value != "" and s.value is not None
+
+
+def get_reunion_fee(role: str = None) -> int:
+    """
+    参加費を円単位の整数で返す。未設定・不正なら0。
+
+    role を渡すと、先生（教師・学年主任）なら先生用の金額を返す。
+    入金照合の予定金額はすべてこの関数を基準にする。
+    """
+    if role is not None and is_teacher_role(role):
+        return get_teacher_fee()
+    return get_student_fee()
 
 _SMALL_TO_LARGE_KANA = str.maketrans(
     "ァィゥェォッャュョヮヵヶ",

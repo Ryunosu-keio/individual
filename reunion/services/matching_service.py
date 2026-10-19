@@ -1,12 +1,13 @@
 """
 services/matching_service.py - 銀行CSV照合サービス
 """
+import difflib
 import re
 import unicodedata
 import logging
 from models import BankImport, Participant, Payment
 from extensions import db
-from utils import get_reunion_fee
+from utils import get_reunion_fee, _SMALL_TO_LARGE_KANA, _FULL_TO_HALF_DIGIT
 
 logger = logging.getLogger(__name__)
 
@@ -36,32 +37,64 @@ def _hankaku_to_zenkaku_kana(text: str) -> str:
 
 
 def _normalize_name(name: str) -> str:
+    """
+    照合用に名義を正規化する。
+
+    銀行の振込名義は拗音・促音（ャュョッ等）を使えず大文字カナになるため、
+    名簿側のカナ（例: キヨタリュウノスケ）と銀行側（キヨタリユウノスケ）で
+    文字が食い違う。小文字カナを大文字カナへ寄せてから比較する。
+    """
     if not name:
         return ""
     # 半角カナ→全角カナ（NFKC正規化）
     normalized = _hankaku_to_zenkaku_kana(name)
     # 銀行CSVのプレフィックス除去
     normalized = _BANK_PREFIXES.sub("", normalized)
+    # 拗音・促音を大文字カナへ（ュ→ユ、ッ→ツ など）
+    normalized = normalized.translate(_SMALL_TO_LARGE_KANA)
+    # 全角数字→半角数字（名簿側は全角、銀行側は半角になりうる）
+    normalized = normalized.translate(_FULL_TO_HALF_DIGIT)
     normalized = normalized.upper().strip()
-    for char in [" ", "　", "-", "ー", ".", "．", ")", "）", "(", "（"]:
+    for char in [" ", "　", "-", "ー", ".", "．", ")", "）", "(", "（",
+                 "ﬞ", "゛", "゜", "ﾞ", "ﾟ"]:
         normalized = normalized.replace(char, "")
     return normalized
 
 
+def _leading_id(name: str) -> str:
+    """名義の先頭にある学籍番号（クラス+出席番号）を取り出す。無ければ空文字。"""
+    m = re.match(r"^(\d{3,6})", name)
+    return m.group(1) if m else ""
+
+
 def _similarity_score(a: str, b: str) -> float:
+    """
+    銀行CSVの名義と参加者の期待名義の類似度を 0.0〜1.0 で返す。
+
+    名義の先頭には振込指示で学籍番号（クラス+出席番号）を付けてもらっている。
+    両方に学籍番号があって不一致なら別人なので0を返す。
+    これが無いと、同姓同名に近い別人（例: ナカタハルカ と タナカハルヤ）が
+    文字の重なりだけで満点になり、入金が別人に紐づいてしまう。
+    """
     a_norm = _normalize_name(a)
     b_norm = _normalize_name(b)
     if not a_norm or not b_norm:
         return 0.0
     if a_norm == b_norm:
         return 1.0
+
+    # 学籍番号が両方にあって違うなら別人
+    id_a, id_b = _leading_id(a_norm), _leading_id(b_norm)
+    if id_a and id_b and id_a != id_b:
+        return 0.0
+
+    # 片方がもう片方に完全に含まれる（姓だけで振込んだ場合など）
     if a_norm in b_norm or b_norm in a_norm:
-        shorter = min(len(a_norm), len(b_norm))
-        longer = max(len(a_norm), len(b_norm))
-        return shorter / longer
-    common = sum(1 for c in a_norm if c in b_norm)
-    longer = max(len(a_norm), len(b_norm))
-    return common / longer if longer > 0 else 0.0
+        return min(len(a_norm), len(b_norm)) / max(len(a_norm), len(b_norm))
+
+    # 文字の並び順を考慮した類似度
+    # （文字の重なりだけで数えると並べ替えただけの別人が満点になる）
+    return difflib.SequenceMatcher(None, a_norm, b_norm).ratio()
 
 
 def _expected_transfer_name(participant) -> str:
@@ -154,13 +187,14 @@ def resolve_expected_amount(payment: Payment) -> int:
 
     優先順位:
       1. Payment.expected_amount（本出欠回答時に確定した額／管理画面で手動変更した額）
-      2. 現在の会費設定（reunion_fee）
+      2. 現在の会費設定（参加者が先生なら先生用の会費）
     どちらも0なら0を返し、呼び出し側は金額判定をしない。
     """
     manual = payment.expected_amount or 0
     if manual > 0:
         return manual
-    return get_reunion_fee()
+    role = payment.participant.role if payment.participant else None
+    return get_reunion_fee(role)
 
 
 def _update_payment_from_import(participant: Participant, bank_import: BankImport) -> Payment:
@@ -187,21 +221,54 @@ def _update_payment_from_import(participant: Participant, bank_import: BankImpor
     return payment
 
 
-def compute_payment_status(paid: int, expected: int) -> str:
+# 入金照合の判定ルール
+MATCH_RULE_AT_LEAST = "at_least"   # 予定金額以上なら支払済み
+MATCH_RULE_EXACT    = "exact"      # 予定金額とピッタリ一致なら支払済み
+DEFAULT_MATCH_RULE  = MATCH_RULE_AT_LEAST
+
+MATCH_RULE_LABELS = {
+    MATCH_RULE_AT_LEAST: "予定金額以上",
+    MATCH_RULE_EXACT:    "予定金額とピッタリ一致",
+}
+MATCH_RULE_DESCRIPTIONS = {
+    MATCH_RULE_AT_LEAST: "振込額が予定金額以上なら「支払済み」。多めに振込まれた場合も支払済みになります。",
+    MATCH_RULE_EXACT:    "振込額が予定金額と同額のときだけ「支払済み」。多ければ「過払い」として要確認で残ります。",
+}
+
+
+def get_payment_match_rule() -> str:
+    """現在の入金照合ルールを返す（未設定なら「以上」）"""
+    from models import AppSetting
+    s = AppSetting.query.filter_by(key="payment_match_rule").first()
+    value = s.value if (s and s.value) else ""
+    return value if value in MATCH_RULE_LABELS else DEFAULT_MATCH_RULE
+
+
+def compute_payment_status(paid: int, expected: int, rule: str = None) -> str:
     """
     入金額と予定金額から支払ステータスを決める。
+
+    rule を省略すると現在の設定（payment_match_rule）に従う。
+      MATCH_RULE_AT_LEAST : 予定金額以上なら paid（超過も paid）
+      MATCH_RULE_EXACT    : 同額なら paid、超過は overpaid（過払い）
 
     expected が0（会費未設定）のときは満額かどうか判断できないため
     partial（一部支払い）に留める。入金自体は記録されているので
     「未払い」にはしない。該当レコードは入金管理画面で警告表示する。
     """
+    if rule is None:
+        rule = get_payment_match_rule()
     paid = paid or 0
     expected = expected or 0
     if paid <= 0:
         return "unpaid"
     if expected <= 0:
         return "partial"
-    return "paid" if paid >= expected else "partial"
+    if paid == expected:
+        return "paid"
+    if paid > expected:
+        return "paid" if rule == MATCH_RULE_AT_LEAST else "overpaid"
+    return "partial"
 
 
 def unmatch(bank_import_id: int) -> None:
@@ -216,7 +283,7 @@ def unmatch(bank_import_id: int) -> None:
             p.bank_csv_date = None
             p.bank_csv_raw_name = ""
             p.bank_import_id = None
-            if p.payment_status in ("paid", "partial"):
+            if p.payment_status in Payment.RECEIVED_STATUSES:
                 p.payment_status = "unpaid"
     bank_import.matched_participant_id = None
     bank_import.match_status = "unmatched"
