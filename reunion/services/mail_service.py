@@ -19,7 +19,8 @@ from datetime import datetime, date
 from flask import current_app
 from extensions import db
 from models import MailLog, AppSetting
-from utils import parse_fee_amount, format_fee
+from utils import (parse_fee_amount, format_fee, get_student_fee, get_teacher_fee,
+                   is_teacher_role)
 
 logger = logging.getLogger(__name__)
 
@@ -240,7 +241,8 @@ MAIL_DEFAULTS = {
         "日時　: {reunion_date} {reunion_time}\n"
         "会場　: {reunion_venue}\n"
         "服装　: {dress_code}\n"
-        "持ち物: {belongings}\n\n"
+        "持ち物: {belongings}\n"
+        "会費　: {reunion_fee}円\n\n"
         "━━━━━━━━━━━━━━━━━━━━\n"
         "■ 出欠フォーム\n"
         "━━━━━━━━━━━━━━━━━━━━\n"
@@ -266,7 +268,8 @@ MAIL_DEFAULTS = {
         "日時　: {reunion_date} {reunion_time}\n"
         "会場　: {reunion_venue}\n"
         "服装　: {dress_code}\n"
-        "持ち物: {belongings}\n\n"
+        "持ち物: {belongings}\n"
+        "会費　: {reunion_fee}円\n\n"
         "━━━━━━━━━━━━━━━━━━━━\n"
         "■ 出欠フォーム\n"
         "━━━━━━━━━━━━━━━━━━━━\n"
@@ -289,7 +292,8 @@ MAIL_DEFAULTS = {
         "日時　: {reunion_date} {reunion_time}\n"
         "会場　: {reunion_venue}\n"
         "服装　: {dress_code}\n"
-        "持ち物: {belongings}\n\n"
+        "持ち物: {belongings}\n"
+        "会費　: {reunion_fee}円\n\n"
         "※詳細は添付のご案内PDFをご確認ください。\n"
         "※やむを得ずご欠席される場合は、{final_reminder_deadline_short} 23:59 JST までに\n"
         "　下記の本出欠フォームより欠席のご連絡をお願いいたします。\n"
@@ -406,6 +410,14 @@ MAIL_DEFAULTS = {
         "会場　: {reunion_venue}\n"
         "服装　: {dress_code}\n"
         "持ち物: {belongings}\n\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        "■ 振込のご案内\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        "会費　　: {reunion_fee}円\n"
+        "振込先　: {transfer_bank} {transfer_branch}（支店番号: {transfer_branch_number}）\n"
+        "口座　　: {transfer_account_type}口座 {transfer_account_number}\n"
+        "口座名義: {transfer_account_name}\n"
+        "振込期限: {transfer_deadline}\n\n"
         "内容を変更する場合は、下記URLから再度ご回答ください。\n"
         "{final_url}\n\n"
         "━━━━━━━━━━━━━━━━━━━━\n"
@@ -680,8 +692,13 @@ def _get_template(key: str, fallback: str) -> str:
     return s.value if (s and s.value) else fallback
 
 
-def _get_reunion_info() -> dict:
-    """DBから同窓会情報を取得。なければcurrent_app.configから取得"""
+def _get_reunion_info(role: str = None) -> dict:
+    """
+    DBから同窓会情報を取得。なければcurrent_app.configから取得。
+
+    role を渡すと {reunion_fee} が宛先に応じた金額になる
+    （先生なら先生用の会費）。省略時は生徒の金額。
+    """
     cfg = current_app.config
     def get(key, fallback):
         s = AppSetting.query.filter_by(key=key).first()
@@ -693,8 +710,11 @@ def _get_reunion_info() -> dict:
         "reunion_venue":    get("reunion_venue",    cfg.get("REUNION_VENUE", "")),
         # テンプレートは「会費　: {reunion_fee}円」の形なので単位は付けない。
         # 数字が読み取れない場合は空文字にして、メール変数チェックで未設定として検出させる。
-        "reunion_fee":      format_fee(parse_fee_amount(
-            get("reunion_fee", cfg.get("REUNION_FEE", "")))),
+        # 宛先が先生なら先生用の会費に差し替える。
+        "reunion_fee":         format_fee(get_teacher_fee() if is_teacher_role(role)
+                                          else get_student_fee()),
+        "reunion_fee_student": format_fee(get_student_fee()),
+        "reunion_fee_teacher": format_fee(get_teacher_fee()),
         "dress_code":       get("dress_code",       cfg.get("DRESS_CODE", "")),
         "belongings":       get("belongings",       cfg.get("BELONGINGS", "")),
         "provisional_deadline":    get("provisional_deadline",    cfg.get("PROVISIONAL_DEADLINE", "")),
@@ -717,7 +737,7 @@ def _get_reunion_info() -> dict:
 
 def _build_final_url_mail_body(participant_name: str, final_url: str, role: str = "") -> tuple:
     """本出欠URL送信メールの件名・本文を生成する（DBテンプレート優先）"""
-    reunion = _get_reunion_info()
+    reunion = _get_reunion_info(role)
     teacher = _is_teacher(role)
     vars = dict(
         name=participant_name,
@@ -745,7 +765,7 @@ def _build_final_url_mail_body(participant_name: str, final_url: str, role: str 
 
 def _build_reminder_mail_body(participant_name: str, final_url: str, role: str = "") -> tuple:
     """リマインドメールの件名・本文を生成する（DBテンプレート優先）"""
-    reunion = _get_reunion_info()
+    reunion = _get_reunion_info(role)
     teacher = _is_teacher(role)
     vars = dict(
         name=participant_name,
@@ -972,7 +992,7 @@ def _build_provisional_confirm_body(participant_name: str, status_label: str, pr
     teacher_suffix = "_teacher" if _is_teacher(role) else ""
     s_key = f"mail_provisional_confirm_{key_suffix}_subject{teacher_suffix}"
     b_key = f"mail_provisional_confirm_{key_suffix}_body{teacher_suffix}"
-    reunion = _get_reunion_info()
+    reunion = _get_reunion_info(role)
     base_url = current_app.config.get("APP_BASE_URL", "")
     vars = dict(
         name=participant_name,
@@ -1003,7 +1023,7 @@ def _build_final_confirm_body(participant_name: str, status_label: str, final_ur
     teacher_suffix = "_teacher" if _is_teacher(role) else ""
     s_key = f"mail_final_confirm_{key_suffix}_subject{teacher_suffix}"
     b_key = f"mail_final_confirm_{key_suffix}_body{teacher_suffix}"
-    reunion = _get_reunion_info()
+    reunion = _get_reunion_info(role)
     base_url = current_app.config.get("APP_BASE_URL", "")
     vars = dict(
         name=participant_name,
@@ -1205,7 +1225,7 @@ def send_reminder(participant, final_url: str) -> MailLog:
 
 def _build_final_reminder_body(participant_name: str, role: str = "", final_url: str = "") -> tuple:
     """最終リマインドメールの件名・本文を生成する"""
-    reunion = _get_reunion_info()
+    reunion = _get_reunion_info(role)
     teacher = _is_teacher(role)
     vars = dict(
         name=participant_name,
@@ -1296,7 +1316,7 @@ def get_remaining_today() -> int:
 def send_cancel_confirmation(participant, cancel_reason: str) -> MailLog:
     """直前キャンセル時の確認メールを送信する。"""
     mail_cfg = _get_mail_config()
-    reunion = _get_reunion_info()
+    reunion = _get_reunion_info(participant.role)
     teacher = _is_teacher(participant.role or "")
     suffix = "_teacher" if teacher else ""
     vars = dict(
@@ -1332,7 +1352,7 @@ def send_cancel_confirmation(participant, cancel_reason: str) -> MailLog:
 def send_attendance_confirmation(participant) -> MailLog:
     """会場QR出席登録完了メールを送信する。"""
     mail_cfg = _get_mail_config()
-    reunion = _get_reunion_info()
+    reunion = _get_reunion_info(participant.role)
     subject = f"【{reunion['reunion_name']}】会場出席登録を受け付けました"
     body = (
         f"{participant.display_name} 様\n\n"
@@ -1367,7 +1387,7 @@ def send_attendance_confirmation(participant) -> MailLog:
 def send_unlock_notice(participant, final_url: str, deadline_str: str) -> MailLog:
     """フォームロック解除通知メールを送信する。deadline_str は 'M月D日' 形式。"""
     mail_cfg = _get_mail_config()
-    reunion = _get_reunion_info()
+    reunion = _get_reunion_info(participant.role)
     teacher = _is_teacher(participant.role or "")
     suffix = "_teacher" if teacher else ""
     vars = dict(
@@ -1416,6 +1436,8 @@ MAIL_SETTING_VAR_LABELS = {
     "reunion_time":                  "開催時間",
     "reunion_venue":                 "会場",
     "reunion_fee":                   "参加費",
+    "reunion_fee_student":           "参加費（生徒）",
+    "reunion_fee_teacher":           "参加費（先生）",
     "dress_code":                    "服装",
     "belongings":                    "持ち物",
     "organizer_name":                "幹事名",
@@ -1456,7 +1478,7 @@ def _is_unset_value(value: str) -> str:
     return ""
 
 
-def find_unset_mail_vars(*templates: str) -> list:
+def find_unset_mail_vars(*templates: str, role: str = None) -> list:
     """
     テンプレート中で実際に使われている変数のうち、値が空欄または「未定」のものを返す。
 
@@ -1466,7 +1488,7 @@ def find_unset_mail_vars(*templates: str) -> list:
     """
     import re
 
-    reunion = _get_reunion_info()
+    reunion = _get_reunion_info(role)
     seen = set()
     problems = []
 
@@ -1539,4 +1561,5 @@ def check_mail_vars(mail_type: str, teacher: bool = False) -> list:
         return []
     subject = _get_template(s_key, MAIL_DEFAULTS.get(s_key, ""))
     body    = _get_template(b_key, MAIL_DEFAULTS.get(b_key, ""))
-    return find_unset_mail_vars(subject, body)
+    # 先生宛のテンプレートは先生用の会費で検証する
+    return find_unset_mail_vars(subject, body, role="教師" if teacher else "生徒")

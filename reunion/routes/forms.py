@@ -375,8 +375,9 @@ def final(token):
     for s in AppSetting.query.filter(AppSetting.key.in_(transfer_keys)).all():
         transfer_info[s.key] = s.value
     # 会費は桁区切りで表示する（メール本文と表記を揃える）。
+    # 先生には先生用の金額を表示する。
     # テンプレート側でコピー用の値からはカンマを除いている。
-    transfer_info["reunion_fee"] = format_fee(get_reunion_fee())
+    transfer_info["reunion_fee"] = format_fee(get_reunion_fee(participant.role))
 
     # 振込名義を自動生成: 学籍番号(クラス+出席番号) + カナ氏名
     # 学籍番号がない場合は "3000" をプレフィックスとして使用
@@ -429,7 +430,8 @@ def final(token):
             )
             db.session.add(response)
             payment = participant.payment
-            if payment and payment.payment_status != "paid":
+            # 入金が記録されているレコードは消さない
+            if payment and not payment.has_received_money:
                 db.session.delete(payment)
             participant.updated_at = datetime.utcnow()
             db.session.commit()
@@ -474,8 +476,8 @@ def final(token):
                                can_cancel=False,
                                is_teacher=is_teacher)
 
-    # 会費（入金照合の予定金額）を取得。設定は数字のみで保存されている。
-    payment_expected = get_reunion_fee()
+    # 会費（入金照合の予定金額）を取得。先生は先生用の金額。
+    payment_expected = get_reunion_fee(participant.role)
 
     response = FinalResponse(
         participant_id=participant.id,
@@ -501,7 +503,8 @@ def final(token):
         payment.transfer_name   = transfer_name
     elif status == "not_attending":
         payment = participant.payment
-        if payment and payment.payment_status != "paid":
+        # 入金が記録されているレコードは消さない
+        if payment and not payment.has_received_money:
             db.session.delete(payment)
 
     participant.updated_at = datetime.utcnow()

@@ -246,6 +246,8 @@
             <dd class="col-7">
               {% if payment.payment_status == 'paid' %}
                 <span class="badge bg-success">支払済み</span>
+              {% elif payment.payment_status == 'overpaid' %}
+                <span class="badge bg-info text-dark">過払い</span>
               {% elif payment.payment_status == 'partial' %}
                 <span class="badge bg-warning text-dark">一部支払い</span>
               {% else %}
